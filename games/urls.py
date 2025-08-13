@@ -9,4 +9,6 @@ urlpatterns = [
     path('<int:pk>/move/', views.make_move, name='make-move'),
     path('<int:pk>/', views.GameDetailView.as_view(), name='game-detail'),
     path('', views.GameListView.as_view(), name='game-list'),
+    path("list/", views.game_list_page, name="game_list_page"),
+
 ]

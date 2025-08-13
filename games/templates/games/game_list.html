@@ -1,0 +1,26 @@
+{% load static %} 
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Games</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <h1>Available Games</h1>
+
+    <!-- Create Game Button -->
+    <button id="createGameBtn">Create Game</button>
+
+    <!-- Games List -->
+    <ul id="gamesList">
+        <!-- Games will be loaded here by script.js -->
+    </ul>
+
+    <!-- Link to external JS -->
+    <script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>
