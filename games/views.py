@@ -1,28 +1,22 @@
 import chess
 from django.db import transaction
+from django.shortcuts import get_object_or_404, render
 from rest_framework import status, generics
-from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
-from rest_framework.permissions import AllowAny
-
+from rest_framework.response import Response
 
 from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
-from django.shortcuts import render
-
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])  # Make public for now
-
+@permission_classes([IsAuthenticated])
 def create_game(request):
     """Create a new chess game with the current user as white."""
     game = Game.objects.create(
         white_player=request.user,
-        fen=chess.STARTING_FEN,     # proper FEN
+        fen=chess.STARTING_FEN,
         status='waiting'
     )
     serializer = GameSerializer(game)
@@ -44,19 +38,18 @@ def join_game(request, pk):
                         status=status.HTTP_400_BAD_REQUEST)
 
     game.black_player = request.user
-    game.status = 'active'   # <-- important: match model choices
+    game.status = 'active'
     game.save()
 
     serializer = GameSerializer(game)
     return Response(serializer.data)
 
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def make_move(request, pk):
-    """Submit a move for the game using python-chess for rules/legality."""
+    """Submit a move, validate with python-chess, and update game state."""
     game = get_object_or_404(Game, pk=pk)
 
     # Must be a participant
@@ -64,7 +57,7 @@ def make_move(request, pk):
         return Response({"detail": "You are not a player in this game."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    # Load board
+    # Load board from FEN
     try:
         board = chess.Board(game.fen)
     except Exception:
@@ -77,16 +70,16 @@ def make_move(request, pk):
         return Response({"detail": "It is not your turn."},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Read payload
+    # Read request data
     from_sq = (request.data.get('from_square') or "").strip().lower()
     to_sq = (request.data.get('to_square') or "").strip().lower()
-    promotion = request.data.get('promotion')  # optional: 'q','r','b','n'
+    promotion = request.data.get('promotion')  # 'q','r','b','n'
 
     if not (len(from_sq) == 2 and len(to_sq) == 2):
         return Response({"detail": "from_square/to_square must be like 'e2' and 'e4'."},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Build UCI, handle optional promotion
+    # Build UCI string
     uci = f"{from_sq}{to_sq}"
     if promotion:
         promo = str(promotion).lower()
@@ -102,35 +95,28 @@ def make_move(request, pk):
                         status=status.HTTP_400_BAD_REQUEST)
 
     if move not in board.legal_moves:
-        # (Optional) show a few legal SAN moves to help debugging
-        sample_legal = []
-        for i, m in enumerate(board.legal_moves):
-            if i >= 10:
-                break
-            sample_legal.append(board.san(m))
+        sample_legal = [board.san(m) for i, m in enumerate(board.legal_moves) if i < 10]
         return Response({
             "detail": "Illegal move for current position.",
             "hint_sample_legal_san": sample_legal
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Notation must be computed BEFORE pushing
+    # SAN before pushing
     san = board.san(move)
 
     # Apply move
     board.push(move)
     new_fen = board.fen()
 
-    # Prepare serializer for Move creation (keep your existing serializer)
+    # Save move record
     move_number = game.moves.count() + 1
     serializer = MoveSerializer(data={
         "from_square": from_sq,
         "to_square": to_sq,
     })
-
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # Save Move row
     serializer.save(
         game=game,
         player=request.user,
@@ -141,7 +127,6 @@ def make_move(request, pk):
 
     # Update game state
     game.fen = new_fen
-
     if board.is_game_over():
         game.status = 'finished'
         result = board.result()  # '1-0', '0-1', '1/2-1/2'
@@ -153,11 +138,9 @@ def make_move(request, pk):
             game.winner = None
     else:
         game.status = 'active'
-
     game.save()
 
     return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 
 class GameListView(generics.ListAPIView):
@@ -167,14 +150,12 @@ class GameListView(generics.ListAPIView):
 
 
 class GameDetailView(generics.RetrieveAPIView):
-    """Get a single game."""
-    queryset = Game.objects.all()
-    serializer_class = GameSerializer
-    
-class GameListCreateView(generics.ListCreateAPIView):
+    """Get details of a single game."""
     queryset = Game.objects.all()
     serializer_class = GameSerializer
 
-    
+
+# Optional: HTML view for testing in browser
 def game_list_page(request):
+    """Render HTML game list page (non-API)."""
     return render(request, "games/game_list.html")

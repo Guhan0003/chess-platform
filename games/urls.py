@@ -1,14 +1,10 @@
 from django.urls import path
 from . import views
-from .views import GameListCreateView
 
 urlpatterns = [
-    path('games/', GameListCreateView.as_view(), name='game-list-create'),
-    path('create/', views.create_game, name='create-game'),
-    path('<int:pk>/join/', views.join_game, name='join-game'),
-    path('<int:pk>/move/', views.make_move, name='make-move'),
-    path('<int:pk>/', views.GameDetailView.as_view(), name='game-detail'),
-    path('', views.GameListView.as_view(), name='game-list'),
-    path("list/", views.game_list_page, name="game_list_page"),
-
+    path("", views.GameListView.as_view(), name="game-list"),                  # GET list
+    path("create/", views.create_game, name="game-create"),                    # POST create
+    path("<int:pk>/", views.GameDetailView.as_view(), name="game-detail"),     # GET detail
+    path("<int:pk>/join/", views.join_game, name="game-join"),                 # POST join
+    path("<int:pk>/move/", views.make_move, name="game-move"),                 # POST make move
 ]

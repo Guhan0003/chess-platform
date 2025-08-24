@@ -27,5 +27,8 @@ class GameSerializer(serializers.ModelSerializer):
             'status', 'fen', 'winner',
             'created_at', 'updated_at', 'moves'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'moves',
-                            'white_player_username', 'black_player_username']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at', 'moves',
+            'white_player', 'black_player',     # prevent clients from sending
+            'white_player_username', 'black_player_username'
+        ]
