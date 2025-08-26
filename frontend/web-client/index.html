@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chess Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- keep filenames exactly as agreed -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="container">
+    <h1>Chess Platform</h1>
+    <p class="note">Vanilla HTML/CSS/JS talking to Django API</p>
+  </header>
+
+  <main class="container grid">
+    <!-- Auth Panel -->
+    <section class="card" id="auth">
+      <h2>Authentication</h2>
+
+      <div class="stack">
+        <h3>Login</h3>
+        <form id="loginForm" autocomplete="on">
+          <label>
+            Username
+            <input id="login-username" name="username" required />
+          </label>
+          <label>
+            Password
+            <input id="login-password" name="password" type="password" required />
+          </label>
+          <button type="submit">Login</button>
+        </form>
+      </div>
+
+      <hr />
+
+      <div class="stack">
+        <h3>Register</h3>
+        <form id="registerForm" autocomplete="on">
+          <label>
+            Username
+            <input id="register-username" name="username" required />
+          </label>
+          <label>
+            Email
+            <input id="register-email" name="email" type="email" />
+          </label>
+          <label>
+            Password
+            <input id="register-password" name="password" type="password" required />
+          </label>
+          <button type="submit">Register</button>
+        </form>
+      </div>
+
+      <div class="stack">
+        <h3>Session</h3>
+        <div class="row">
+          <button id="btn-logout" type="button">Logout</button>
+          <button id="btn-refresh" type="button">Refresh Token</button>
+        </div>
+        <p><strong>Status:</strong> <span id="auth-status">Signed out</span></p>
+      </div>
+    </section>
+
+    <!-- Game Actions -->
+    <section class="card" id="actions">
+      <h2>Game Actions</h2>
+
+      <div class="stack">
+        <button id="btn-create" type="button">Create New Game (You as White)</button>
+      </div>
+
+      <div class="stack">
+        <h3>Join a Game</h3>
+        <form id="joinForm">
+          <label>
+            Game ID
+            <input id="join-game-id" name="gameId" type="number" required />
+          </label>
+          <button type="submit">Join as Black</button>
+        </form>
+      </div>
+
+      <div class="stack">
+        <h3>Make a Move</h3>
+        <form id="moveForm" autocomplete="off">
+          <label>
+            Game ID
+            <input id="move-game-id" name="gameId" type="number" required />
+          </label>
+          <label>
+            From (e.g., e2)
+            <input id="move-from" name="from" maxlength="2" required />
+          </label>
+          <label>
+            To (e.g., e4)
+            <input id="move-to" name="to" maxlength="2" required />
+          </label>
+          <label>
+            Promotion (q/r/b/n, optional)
+            <input id="move-promo" name="promotion" maxlength="1" />
+          </label>
+          <button type="submit">Submit Move</button>
+        </form>
+      </div>
+
+      <div class="stack">
+        <h3>Quick Fetch Game</h3>
+        <form id="detailsForm" class="row">
+          <label>
+            Game ID
+            <input id="details-game-id" name="gameId" type="number" />
+          </label>
+          <button type="submit">Fetch</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Chessboard + Move List -->
+    <section class="card" id="board-card">
+      <h2>Board</h2>
+      <!-- data-asset-base lets script.js choose where piece images load from:
+           - "/static" when served by Django
+           - "../assets" when opened directly from filesystem
+      -->
+      <div id="board-wrapper">
+        <div id="chessboard" data-asset-base="/static"></div>
+        <aside id="sidebar">
+          <div class="stack">
+            <h3>Current Game</h3>
+            <p><strong>ID:</strong> <span id="current-game-id">—</span></p>
+            <p><strong>Status:</strong> <span id="current-game-status">—</span></p>
+            <p><strong>Turn:</strong> <span id="current-turn">—</span></p>
+          </div>
+          <div class="stack">
+            <h3>Moves</h3>
+            <ol id="move-list" class="move-list"></ol>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Data Panels -->
+    <section class="card" id="games">
+      <h2>Available Games</h2>
+      <div id="games-list" class="list">Loading…</div>
+    </section>
+
+    <section class="card" id="details">
+      <h2>Game Details (Raw)</h2>
+      <pre id="details-output" class="pre">No game loaded.</pre>
+    </section>
+  </main>
+
+  <footer class="container">
+    <small>© Your Chess Platform</small>
+  </footer>
+
+  <!-- keep filename exactly as agreed -->
+  <script src="script.js"></script>
+</body>
+</html>
