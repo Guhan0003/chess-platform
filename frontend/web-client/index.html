@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <title>Chess Platform</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- keep filenames exactly as agreed -->
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="/static/assets/favicon.jpeg">
+
 </head>
 <body>
   <header class="container">
@@ -14,7 +15,6 @@
   </header>
 
   <main class="container grid">
-    <!-- Auth Panel -->
     <section class="card" id="auth">
       <h2>Authentication</h2>
 
@@ -64,7 +64,6 @@
       </div>
     </section>
 
-    <!-- Game Actions -->
     <section class="card" id="actions">
       <h2>Game Actions</h2>
 
@@ -118,15 +117,11 @@
       </div>
     </section>
 
-    <!-- Chessboard + Move List -->
     <section class="card" id="board-card">
       <h2>Board</h2>
-      <!-- data-asset-base lets script.js choose where piece images load from:
-           - "/static" when served by Django
-           - "../assets" when opened directly from filesystem
-      -->
       <div id="board-wrapper">
-        <div id="chessboard" data-asset-base="/static"></div>
+        <div id="chessboard" data-asset-base="/static/assets"></div>
+
         <aside id="sidebar">
           <div class="stack">
             <h3>Current Game</h3>
@@ -142,7 +137,6 @@
       </div>
     </section>
 
-    <!-- Data Panels -->
     <section class="card" id="games">
       <h2>Available Games</h2>
       <div id="games-list" class="list">Loading…</div>
@@ -158,7 +152,6 @@
     <small>© Your Chess Platform</small>
   </footer>
 
-  <!-- keep filename exactly as agreed -->
   <script src="script.js"></script>
 </body>
 </html>

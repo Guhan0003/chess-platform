@@ -1,8 +1,4 @@
-/* style.css — Clean professional UI for Chess Platform
-   - Designed for the provided index.html structure
-   - Responsive: desktop 3-column-ish layout, stacks on small screens
-   - Visual hierarchy: cards, subtle shadows, rounded corners
-*/
+/* style.css — Clean professional UI for Chess Platform */
 
 /* ========================
    Variables & Reset
@@ -100,11 +96,8 @@ header h1 {
 
 h2 { margin: 0 0 0.5rem 0; font-size: 1.05rem; }
 h3 { margin: 0; font-size: 0.95rem; color: var(--muted-2); }
-
-/* stacking helper */
+hr { border: none; border-top: 1px solid rgba(255,255,255,0.03); margin: 0.8rem 0; }
 .stack > * + * { margin-top: 0.6rem; }
-
-/* row helper */
 .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
 /* forms */
@@ -112,9 +105,7 @@ label { display: block; font-size: 0.95rem; color: var(--muted); }
 input[type="text"],
 input[type="password"],
 input[type="email"],
-input[type="number"],
-select,
-textarea {
+input[type="number"] {
   width: 100%;
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
@@ -125,7 +116,7 @@ textarea {
   transition: box-shadow .12s ease, border-color .12s ease;
   font-size: 0.95rem;
 }
-input:focus, textarea:focus, select:focus {
+input:focus {
   box-shadow: 0 4px 18px rgba(59,130,246,0.12);
   border-color: var(--accent-strong);
 }
@@ -149,32 +140,13 @@ button {
 }
 button:hover { transform: translateY(-1px); }
 button:active { transform: translateY(0); }
-button[disabled] {
-  opacity: .6;
-  cursor: default;
-  transform: none;
-}
-
-/* neutral secondary button */
-button.secondary {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,0.04);
-  box-shadow: none;
-}
-
-/* session status */
+button[disabled] { opacity: .6; cursor: default; transform: none; }
 #auth-status { font-weight: 600; color: var(--muted); }
-
-/* hr-like */
-hr { border: none; border-top: 1px solid rgba(255,255,255,0.03); margin: 0.8rem 0; }
 
 /* ========================
    Games list / details
    ======================== */
 .list { display: grid; gap: 0.5rem; }
-
-/* each game entry */
 .game-item {
   display: flex;
   justify-content: space-between;
@@ -185,15 +157,9 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.03); margin: 0.8rem 
   background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));
   border: 1px solid rgba(255,255,255,0.02);
 }
-.game-meta {
-  display: flex;
-  gap: 0.6rem;
-  align-items: baseline;
-}
+.game-meta { display: flex; gap: 0.6rem; align-items: baseline; }
 .game-meta .players { font-size: 0.95rem; color: var(--text); }
 .game-meta .status { font-size: 0.84rem; color: var(--muted); }
-
-/* raw details */
 .pre {
   background: rgba(255,255,255,0.02);
   border: 1px solid rgba(255,255,255,0.03);
@@ -209,17 +175,14 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.03); margin: 0.8rem 
    ======================== */
 #board-wrapper {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 240px; /* Adjusted sidebar width */
   gap: 1rem;
   align-items: start;
 }
-
-/* compact for smaller screens */
 @media (max-width: 980px) {
   #board-wrapper { grid-template-columns: 1fr; }
 }
 
-/* chessboard container */
 #chessboard {
   width: min(var(--board-max), 86vw);
   display: grid;
@@ -229,71 +192,31 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.03); margin: 0.8rem 
   background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
   box-shadow: 0 12px 30px rgba(2,6,23,0.6);
   border: 1px solid rgba(255,255,255,0.03);
+  /* >>> ADDED: This is the key fix to make the board visible */
+  aspect-ratio: 1 / 1;
+  /* <<< ADDED */
+}
+.square.selected {
+  outline: 3px solid yellow;
 }
 
-/* each square keeps perfect aspect ratio */
 .square {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1 / 1; /* Each square is also a square */
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
-  transition: background-color .12s ease, transform .08s ease;
-  cursor: pointer;
 }
-
-/* light/dark squares — choose colors that look good on dark theme */
 .square.light { background-color: #f0d9b5; }
 .square.dark  { background-color: #b58863; }
-
-/* coordinates (optional small letters/numbers) */
-.square .coord {
-  position: absolute;
-  bottom: 4px;
-  right: 6px;
-  font-size: 10px;
-  color: rgba(0,0,0,0.45);
-}
-
 .square img {
   width: 78%;
-  height: auto;
-  max-height: 78%;
+  height: 78%;
+  object-fit: contain;
   pointer-events: none;
-
-  /* Disable image dragging in WebKit browsers */
   -webkit-user-drag: none;
-
-  /* Disable text selection */
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
-}
-
-
-/* visual states */
-.square.selected {
-  outline: 3px solid rgba(59,130,246,0.85);
-  outline-offset: -3px;
-  z-index: 3;
-}
-.square.highlight {
-  box-shadow: inset 0 0 0 3px rgba(96,165,250,0.18);
-}
-.square.last-move {
-  filter: saturate(1.05) brightness(1.05);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08);
-}
-
-/* small dot for legal-move target */
-.square .move-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(2,6,23,0.8);
-  opacity: 0.9;
 }
 
 /* ========================
@@ -307,11 +230,9 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.03); margin: 0.8rem 
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
   border: 1px solid rgba(255,255,255,0.03);
-  max-height: calc(var(--board-max) + 20px);
+  max-height: calc(var(--board-max) + 20px); /* Syncs with board height */
   overflow: auto;
 }
-
-/* move list */
 .move-list {
   list-style: none;
   margin: 0;
@@ -337,28 +258,4 @@ footer.container {
   text-align: center;
   color: var(--muted);
   font-size: 0.9rem;
-}
-
-/* ========================
-   Accessibility & Misc
-   ======================== */
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-/* Focus states for keyboard nav */
-button:focus, input:focus, select:focus {
-  outline: 3px solid rgba(59,130,246,0.12);
-  outline-offset: 2px;
-}
-
-/* Tiny utility classes */
-.text-muted { color: var(--muted); }
-.small { font-size: 0.9rem; color: var(--muted); }
-.center { text-align: center; }
-
-/* ========================
-   Helpful dev styles (can be toggled off in production)
-   ======================== */
-.debug-grid {
-  outline: 1px dashed rgba(255,255,255,0.03);
 }
