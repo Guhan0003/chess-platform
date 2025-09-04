@@ -44,7 +44,6 @@ def join_game(request, pk):
     serializer = GameSerializer(game)
     return Response(serializer.data)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
@@ -73,7 +72,7 @@ def make_move(request, pk):
     # Read request data
     from_sq = (request.data.get('from_square') or "").strip().lower()
     to_sq = (request.data.get('to_square') or "").strip().lower()
-    promotion = request.data.get('promotion')  # 'q','r','b','n'
+    promotion = request.data.get('promotion')
 
     if not (len(from_sq) == 2 and len(to_sq) == 2):
         return Response({"detail": "from_square/to_square must be like 'e2' and 'e4'."},
@@ -108,39 +107,39 @@ def make_move(request, pk):
     board.push(move)
     new_fen = board.fen()
 
-    # Save move record
+    # Save move record (now including ALL required fields)
     move_number = game.moves.count() + 1
-    serializer = MoveSerializer(data={
+    move_serializer = MoveSerializer(data={
         "from_square": from_sq,
         "to_square": to_sq,
+        "move_number": move_number,
+        "notation": san,
+        "fen_after_move": new_fen,
     })
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if not move_serializer.is_valid():
+        return Response(move_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer.save(
-        game=game,
-        player=request.user,
-        move_number=move_number,
-        notation=san,
-        fen_after_move=new_fen
-    )
+    move_serializer.save(game=game, player=request.user)
 
     # Update game state
     game.fen = new_fen
     if board.is_game_over():
         game.status = 'finished'
-        result = board.result()  # '1-0', '0-1', '1/2-1/2'
+        result = board.result()
         if result == '1-0':
             game.winner = game.white_player
         elif result == '0-1':
             game.winner = game.black_player
-        else:
-            game.winner = None
     else:
         game.status = 'active'
     game.save()
 
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    # ✅ Always return updated game info (so frontend refreshes properly)
+    game_data = GameSerializer(game).data
+    return Response({
+        "move": move_serializer.data,
+        "game": game_data
+    }, status=status.HTTP_201_CREATED)
 
 
 class GameListView(generics.ListAPIView):

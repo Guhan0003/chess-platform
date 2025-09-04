@@ -11,7 +11,11 @@ class MoveSerializer(serializers.ModelSerializer):
             'id', 'game', 'move_number', 'player', 'player_username',
             'from_square', 'to_square', 'notation', 'fen_after_move', 'created_at'
         ]
-        read_only_fields = ['id', 'created_at', 'player_username']
+        # Mark all auto-filled fields as read-only so they aren't required in input
+        read_only_fields = [
+            'id', 'created_at', 'player_username',
+            'game', 'player', 'move_number', 'notation', 'fen_after_move'
+        ]
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -29,6 +33,6 @@ class GameSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at', 'moves',
-            'white_player', 'black_player',     # prevent clients from sending
+            'white_player', 'black_player',
             'white_player_username', 'black_player_username'
         ]
