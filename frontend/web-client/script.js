@@ -118,39 +118,76 @@ async function joinGame(gameId) {
   const res = await apiFetch(`${API_BASE}/games/${gameId}/join/`, { method: "POST" });
   return { ok: res.ok, data: await res.json() };
 }
+// Add this debug version to your script.js or replace the makeMove function
 
-// IMPORTANT: unify makeMove signature to include gameId (backend requires it)
 async function makeMove(gameId, from, to, promotion = null) {
+  console.log("=== MAKING MOVE ===");
+  console.log("Game ID:", gameId);
+  console.log("From:", from, "To:", to);
+  console.log("Promotion:", promotion);
+  console.log("Access Token:", accessToken ? "Present" : "Missing");
+
   if (!gameId) {
     console.error("No active game selected.");
-    alert("No active game selected.");
+    alert("No active game selected. Please create or join a game first!");
     return { ok: false, data: { detail: "No active game selected" } };
   }
 
   const payload = { from_square: from, to_square: to };
   if (promotion) payload.promotion = promotion;
+  
+  console.log("Payload:", JSON.stringify(payload));
+  
+  const url = `${API_BASE}/games/${gameId}/move/`;
+  console.log("URL:", url);
 
   try {
-    const res = await apiFetch(`${API_BASE}/games/${gameId}/move/`, {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+    
+    console.log("Headers:", headers);
+    
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: headers,
       body: JSON.stringify(payload),
     });
 
+    console.log("Response status:", res.status);
+    console.log("Response headers:", res.headers);
+    
     const data = await res.json();
-    console.log("Move API response:", data);
+    console.log("Response data:", data);
 
     if (!res.ok) {
+      console.error("Move failed:", data);
       return { ok: false, data };
     }
 
+    console.log("Move successful!");
     return { ok: true, data };
   } catch (err) {
     console.error("Network/move error:", err);
-    return { ok: false, data: { detail: "Network error" } };
+    return { ok: false, data: { detail: "Network error: " + err.message } };
   }
 }
 
+// Also add this debug function to test moves manually
+function testMove() {
+  console.log("Testing move e2 to e4...");
+  makeMove(activeGameId, "e2", "e4").then(result => {
+    console.log("Test move result:", result);
+  });
+}
+
+// Add this to window for manual testing in console
+window.testMove = testMove;
+window.debugMakeMove = makeMove;
 async function getGames() {
   const res = await apiFetch(`${API_BASE}/games/`);
   return { ok: res.ok, data: await res.json() };

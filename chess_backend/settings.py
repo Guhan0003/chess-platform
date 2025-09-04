@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'games',
+    'corsheaders',
 
 ]
 
@@ -55,6 +56,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+
+
 ]
 
 ROOT_URLCONF = 'chess_backend.urls'
@@ -153,3 +158,8 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,   # ✅ Fix here
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    
+]
