@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Chess Platform</title>
+  <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Page-specific styles for login */
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: 
+        radial-gradient(ellipse at top, rgba(118, 150, 86, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, rgba(240, 217, 181, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+      background-attachment: fixed;
+      padding: var(--space-lg);
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      padding: var(--space-2xl);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: var(--space-2xl);
+    }
+
+    .auth-logo {
+      font-size: var(--font-size-4xl);
+      font-weight: var(--font-weight-bold);
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: var(--space-sm);
+      display: block;
+    }
+
+    .auth-subtitle {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin-bottom: 0;
+    }
+
+    .auth-form {
+      gap: var(--space-lg) 0;
+    }
+
+    .form-group {
+      position: relative;
+      margin-bottom: var(--space-lg);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: var(--space-md) var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+      transition: all var(--transition-normal);
+      position: relative;
+    }
+
+    .form-input:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 3px rgba(118, 150, 86, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .form-input::placeholder {
+      color: var(--color-text-muted);
+      transition: opacity var(--transition-normal);
+    }
+
+    .form-input:focus::placeholder {
+      opacity: 0.7;
+    }
+
+    .auth-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      margin-top: var(--space-xl);
+    }
+
+    .login-btn {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-btn:hover::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      animation: shine 0.6s ease-in-out;
+    }
+
+    @keyframes shine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      margin: var(--space-xl) 0;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+
+    .auth-divider span {
+      padding: 0 var(--space-md);
+    }
+
+    .auth-link {
+      text-align: center;
+      margin-top: var(--space-lg);
+    }
+
+    .auth-link a {
+      color: var(--color-accent-primary);
+      text-decoration: none;
+      font-weight: var(--font-weight-medium);
+      transition: color var(--transition-fast);
+    }
+
+    .auth-link a:hover {
+      color: var(--color-accent-light);
+      text-decoration: underline;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--color-error);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-md);
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Loading state */
+    .loading .login-btn {
+      pointer-events: none;
+    }
+
+    .loading .btn-text {
+      opacity: 0;
+    }
+
+    .loading .btn-spinner {
+      display: block;
+    }
+
+    .btn-spinner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Chess piece decorations */
+    .chess-decoration {
+      position: absolute;
+      opacity: 0.1;
+      font-size: 120px;
+      color: var(--color-accent-primary);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .chess-decoration.king {
+      top: 10%;
+      right: 10%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .chess-decoration.queen {
+      bottom: 15%;
+      left: 15%;
+      animation: float 8s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+
+    /* Responsive design */
+    @media (max-width: 480px) {
+      .auth-container {
+        padding: var(--space-md);
+      }
+      
+      .auth-card {
+        padding: var(--space-xl);
+      }
+      
+      .chess-decoration {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Page Loader -->
+  <div id="page-loader" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 10, 10, 0.9); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="btn-spinner" style="display: block; position: static; transform: none; width: 40px; height: 40px; border-width: 3px;"></div>
+  </div>
+
+  <!-- Main App Container -->
+  <div id="app">
+    <div class="auth-container">
+      <!-- Chess Decorations -->
+      <div class="chess-decoration king">♔</div>
+      <div class="chess-decoration queen">♕</div>
+
+      <div class="auth-card glass-card fade-in">
+        <div class="auth-header">
+          <h1 class="auth-logo">Chess Platform</h1>
+          <p class="auth-subtitle">Welcome back! Please sign in to continue.</p>
+        </div>
+
+        <div id="error-container" class="error-message">
+          <span id="error-text"></span>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <div class="form-group">
+            <input 
+              type="text" 
+              id="username" 
+              name="username" 
+              class="form-input" 
+              placeholder="Username" 
+              required 
+              autocomplete="username"
+              autofocus
+            >
+          </div>
+
+          <div class="form-group">
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              class="form-input" 
+              placeholder="Password" 
+              required 
+              autocomplete="current-password"
+            >
+          </div>
+
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary btn-full login-btn">
+              <span class="btn-text">Sign In</span>
+              <div class="btn-spinner"></div>
+            </button>
+          </div>
+        </form>
+
+        <div class="auth-divider">
+          <span>New to Chess Platform?</span>
+        </div>
+
+        <div class="auth-link">
+          <a href="#" data-route="/register">Create an account</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../utils/router.js"></script>
+  <script src="../../utils/api.js"></script>
+  
+  <script>
+    // Login page controller
+    function initLoginPage() {
+      const form = document.getElementById('loginForm');
+      const errorContainer = document.getElementById('error-container');
+      const errorText = document.getElementById('error-text');
+      const loginBtn = document.querySelector('.login-btn');
+      
+      // Clear any existing errors
+      hideError();
+
+      // Handle form submission
+      form.addEventListener('submit', handleLogin);
+
+      // Handle input changes (clear errors)
+      const inputs = form.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.addEventListener('input', hideError);
+      });
+
+      async function handleLogin(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const username = formData.get('username').trim();
+        const password = formData.get('password');
+
+        // Validate inputs
+        if (!username || !password) {
+          showError('Please fill in all fields');
+          return;
+        }
+
+        // Show loading state
+        setLoading(true);
+        hideError();
+
+        try {
+          const response = await api.login(username, password);
+          
+          if (response.ok) {
+            // Login successful
+            api.showSuccess('Welcome back!');
+            
+            // Redirect to lobby after short delay
+            setTimeout(() => {
+              router.navigate('/lobby');
+            }, 500);
+          } else {
+            // Login failed
+            showError(api.formatError(response));
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          showError('Connection failed. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function showError(message) {
+        errorText.textContent = message;
+        errorContainer.classList.add('show');
+      }
+
+      function hideError() {
+        errorContainer.classList.remove('show');
+      }
+
+      function setLoading(loading) {
+        if (loading) {
+          document.body.classList.add('loading');
+          loginBtn.disabled = true;
+        } else {
+          document.body.classList.remove('loading');
+          loginBtn.disabled = false;
+        }
+      }
+
+      // Focus first input
+      setTimeout(() => {
+        document.getElementById('username').focus();
+      }, 100);
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initLoginPage);
+    } else {
+      initLoginPage();
+    }
+  </script>
+</body>
+</html>
