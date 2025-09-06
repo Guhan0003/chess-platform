@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Professional Chess Platform - Play chess online with rating system">
+  <meta name="keywords" content="chess, online chess, chess platform, chess games, rating">
+  <title>Chess Platform</title>
+  
+  <!-- Preload critical resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="../src/assets/images/favicon.png">
+  
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="../src/styles/global.css">
+  
+  <style>
+    /* App container styles */
+    #app {
+      min-height: 100vh;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    #app.loaded {
+      opacity: 1;
+    }
+    
+    /* Initial loading screen */
+    .initial-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      transition: opacity 0.5s ease-out;
+    }
+    
+    .initial-loader.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loader-logo {
+      font-size: var(--font-size-4xl);
+      font-weight: var(--font-weight-bold);
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: var(--space-xl);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .loader-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(118, 150, 86, 0.2);
+      border-top: 3px solid var(--color-accent-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: var(--space-lg);
+    }
+    
+    .loader-text {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      text-align: center;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    /* Page loader (for navigation) */
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .page-loader.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .page-loader .loader-spinner {
+      width: 32px;
+      height: 32px;
+      border-width: 2px;
+    }
+    
+    /* Error state */
+    .error-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-lg);
+    }
+    
+    .error-icon {
+      font-size: 4rem;
+      color: var(--color-error);
+      margin-bottom: var(--space-lg);
+    }
+    
+    .error-title {
+      font-size: var(--font-size-2xl);
+      margin-bottom: var(--space-md);
+    }
+    
+    .error-message {
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xl);
+    }
+    
+    /* Offline indicator */
+    .offline-indicator {
+      position: fixed;
+      bottom: var(--space-lg);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-error);
+      color: white;
+      padding: var(--space-sm) var(--space-lg);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-sm);
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease-in-out;
+    }
+    
+    .offline-indicator.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      .loader-logo {
+        font-size: var(--font-size-3xl);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Initial Loading Screen -->
+  <div id="initialLoader" class="initial-loader">
+    <h1 class="loader-logo">Chess Platform</h1>
+    <div class="loader-spinner"></div>
+    <p class="loader-text">Loading your chess experience...</p>
+  </div>
+  
+  <!-- Page Navigation Loader -->
+  <div id="pageLoader" class="page-loader">
+    <div class="loader-spinner"></div>
+  </div>
+  
+  <!-- Offline Indicator -->
+  <div id="offlineIndicator" class="offline-indicator">
+    You're currently offline. Some features may not work.
+  </div>
+  
+  <!-- Main Application Container -->
+  <div id="app" role="main">
+    <!-- Content will be dynamically loaded here -->
+    <div class="error-page">
+      <div class="error-icon">⚠️</div>
+      <h1 class="error-title">Loading...</h1>
+      <p class="error-message">Please wait while we set up your chess platform.</p>
+    </div>
+  </div>
+
+  <!-- Core Scripts -->
+  <script src="../src/utils/router.js"></script>
+  <script src="../src/utils/api.js"></script>
+  
+  <script>
+    // Application initialization
+    class ChessApp {
+      constructor() {
+        this.initialized = false;
+        this.routes = {};
+        this.init();
+      }
+      
+      async init() {
+        try {
+          // Show initial loader
+          this.showInitialLoader();
+          
+          // Register routes
+          this.registerRoutes();
+          
+          // Check browser compatibility
+          if (!this.checkCompatibility()) {
+            this.showError('Your browser is not supported. Please use a modern browser.');
+            return;
+          }
+          
+          // Set up offline detection
+          this.setupOfflineDetection();
+          
+          // Initialize router
+          await this.initializeRouter();
+          
+          // Mark as initialized
+          this.initialized = true;
+          
+          // Hide initial loader and show app
+          this.hideInitialLoader();
+          
+          console.log('Chess Platform initialized successfully');
+          
+        } catch (error) {
+          console.error('Failed to initialize Chess Platform:', error);
+          this.showError('Failed to load the application. Please refresh the page.');
+        }
+      }
+      
+      registerRoutes() {
+        // Authentication routes
+        router.addRoute('/login', {
+          title: 'Login - Chess Platform',
+          template: '../src/pages/auth/login.html',
+          controller: this.loginController,
+          public: true
+        });
+        
+        router.addRoute('/register', {
+          title: 'Register - Chess Platform', 
+          template: '../src/pages/auth/register.html',
+          controller: this.registerController,
+          public: true
+        });
+        
+        // Main application routes
+        router.addRoute('/lobby', {
+          title: 'Lobby - Chess Platform',
+          template: '../src/pages/dashboard/lobby.html',
+          controller: this.lobbyController,
+          requiresAuth: true
+        });
+        
+        router.addRoute('/game/:id', {
+          title: 'Game - Chess Platform',
+          template: '../src/pages/game/play.html',
+          controller: this.gameController,
+          requiresAuth: true
+        });
+        
+        router.addRoute('/profile', {
+          title: 'Profile - Chess Platform',
+          template: '../src/pages/profile/profile.html',
+          controller: this.profileController,
+          requiresAuth: true
+        });
+        
+        // Future routes
+        router.addRoute('/puzzles', {
+          title: 'Puzzles - Chess Platform',
+          template: '../src/pages/puzzles/puzzles.html',
+          controller: this.puzzlesController,
+          requiresAuth: true
+        });
+      }
+      
+      async initializeRouter() {
+        // Override router's loadPage method to integrate with our app
+        const originalLoadPage = router.loadPage.bind(router);
+        
+        router.loadPage = async (route) => {
+          try {
+            this.showPageLoader();
+            await originalLoadPage(route);
+            this.hidePageLoader();
+          } catch (error) {
+            this.hidePageLoader();
+            throw error;
+          }
+        };
+        
+        // Set up router event handlers
+        router.showLoading = () => this.showPageLoader();
+        router.hideLoading = () => this.hidePageLoader();
+      }
+      
+      // Route Controllers
+      async loginController() {
+        // Login page specific initialization
+        const script = document.createElement('script');
+        script.src = '../src/pages/auth/login.js';
+        document.head.appendChild(script);
+      }
+      
+      async registerController() {
+        // Register page specific initialization  
+        const script = document.createElement('script');
+        script.src = '../src/pages/auth/register.js';
+        document.head.appendChild(script);
+      }
+      
+      async lobbyController() {
+        // Lobby page specific initialization
+        const script = document.createElement('script');
+        script.src = '../src/pages/dashboard/lobby.js';
+        document.head.appendChild(script);
+      }
+      
+      async gameController() {
+        // Game page specific initialization
+        const script = document.createElement('script');
+        script.src = '../src/pages/game/game.js';
+        document.head.appendChild(script);
+      }
+      
+      async profileController() {
+        // Profile page specific initialization
+        const script = document.createElement('script');
+        script.src = '../src/pages/profile/profile.js';
+        document.head.appendChild(script);
+      }
+      
+      async puzzlesController() {
+        // Puzzles page specific initialization
+        const script = document.createElement('script');
+        script.src = '../src/pages/puzzles/puzzles.js';
+        document.head.appendChild(script);
+      }
+      
+      checkCompatibility() {
+        // Check for required features
+        const required = [
+          'fetch',
+          'Promise',
+          'localStorage',
+          'addEventListener'
+        ];
+        
+        return required.every(feature => {
+          return feature in window || feature in window.constructor.prototype;
+        });
+      }
+      
+      setupOfflineDetection() {
+        const offlineIndicator = document.getElementById('offlineIndicator');
+        
+        const showOffline = () => {
+          offlineIndicator.classList.add('show');
+        };
+        
+        const hideOffline = () => {
+          offlineIndicator.classList.remove('show');
+        };
+        
+        window.addEventListener('online', hideOffline);
+        window.addEventListener('offline', showOffline);
+        
+        // Check initial state
+        if (!navigator.onLine) {
+          showOffline();
+        }
+      }
+      
+      showInitialLoader() {
+        const loader = document.getElementById('initialLoader');
+        if (loader) {
+          loader.classList.remove('hide');
+        }
+      }
+      
+      hideInitialLoader() {
+        const loader = document.getElementById('initialLoader');
+        const app = document.getElementById('app');
+        
+        if (loader && app) {
+          loader.classList.add('hide');
+          app.classList.add('loaded');
+          
+          // Remove loader after animation
+          setTimeout(() => {
+            loader.style.display = 'none';
+          }, 500);
+        }
+      }
+      
+      showPageLoader() {
+        const loader = document.getElementById('pageLoader');
+        if (loader) {
+          loader.classList.add('show');
+        }
+      }
+      
+      hidePageLoader() {
+        const loader = document.getElementById('pageLoader');
+        if (loader) {
+          loader.classList.remove('show');
+        }
+      }
+      
+      showError(message) {
+        const app = document.getElementById('app');
+        if (app) {
+          app.innerHTML = `
+            <div class="error-page">
+              <div class="error-icon">⚠️</div>
+              <h1 class="error-title">Oops! Something went wrong</h1>
+              <p class="error-message">${message}</p>
+              <button class="btn btn-primary" onclick="location.reload()">
+                Refresh Page
+              </button>
+            </div>
+          `;
+          app.classList.add('loaded');
+        }
+        this.hideInitialLoader();
+      }
+      
+      // Public methods for external access
+      isInitialized() {
+        return this.initialized;
+      }
+      
+      // Global error handler
+      setupGlobalErrorHandling() {
+        window.addEventListener('error', (event) => {
+          console.error('Global error:', event.error);
+          api.showError('An unexpected error occurred');
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+          console.error('Unhandled promise rejection:', event.reason);
+          api.showError('An unexpected error occurred');
+        });
+      }
+    }
+    
+    // Global app instance
+    let app;
+    
+    // Initialize app when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        app = new ChessApp();
+      });
+    } else {
+      app = new ChessApp();
+    }
+    
+    // Make app available globally
+    window.chessApp = app;
+    
+    // Service worker registration (for future PWA features)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful');
+          })
+          .catch(error => {
+            console.log('ServiceWorker registration failed');
+          });
+      });
+    }
+  </script>
+</body>
+</html>

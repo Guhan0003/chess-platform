@@ -576,6 +576,12 @@ class ChessAPI {
     
     return 'An error occurred';
   }
+
+  // User profile methods
+  async getUserProfile() {
+    const response = await this.fetch('/auth/profile/');
+    return { ok: response.ok, data: await response.json() };
+  }
 }
 
 // Create global API instance
