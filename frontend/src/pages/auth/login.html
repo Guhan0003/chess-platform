@@ -328,7 +328,7 @@
         </div>
 
         <div class="auth-link">
-          <a href="#" data-route="/register">Create an account</a>
+          <a href="../auth/register.html">Create an account</a>
         </div>
       </div>
     </div>
@@ -384,7 +384,7 @@
             
             // Redirect to lobby after short delay
             setTimeout(() => {
-              router.navigate('/lobby');
+              window.location.href = '../dashboard/lobby.html';
             }, 500);
           } else {
             // Login failed

@@ -135,8 +135,29 @@ class ChessRouter {
 
   // Check if user is authenticated
   checkAuth() {
-    // Simple check - you might want to implement more sophisticated auth
-    return localStorage.getItem('access') !== null;
+    const token = localStorage.getItem('access');
+    if (!token) return false;
+    
+    try {
+      // Basic token expiration check (decode JWT payload)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp > currentTime;
+    } catch (error) {
+      console.warn('Invalid token format:', error);
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      return false;
+    }
+  }
+
+  // Set authentication state
+  setAuth(isAuthenticated) {
+    // This can be called by the API when auth state changes
+    if (!isAuthenticated) {
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+    }
   }
 
   // Show error page

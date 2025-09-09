@@ -138,17 +138,17 @@ class Game(models.Model):
     )
 
     # Timers
-    time_control = models.ForeignKey(TimeControl, on_delete=models.SET_NULL, null=True, blank=True)
-    white_time_remaining = models.IntegerField(default=0, help_text="Remaining time in seconds for white")
-    black_time_remaining = models.IntegerField(default=0, help_text="Remaining time in seconds for black")
-    last_move_time = models.DateTimeField(null=True, blank=True)
+    time_control = models.CharField(max_length=20, default='rapid', help_text="Time control format")
+    white_time_left = models.IntegerField(default=600, help_text="Remaining time in seconds for white")
+    black_time_left = models.IntegerField(default=600, help_text="Remaining time in seconds for black")
+    last_move_at = models.DateTimeField(null=True, blank=True)
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'games'
+        db_table = 'games_game'  # Use existing table name
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['created_at']),
@@ -208,14 +208,20 @@ class Move(models.Model):
     move_number = models.IntegerField()
     from_square = models.CharField(max_length=5)
     to_square = models.CharField(max_length=5)
-    promotion = models.CharField(max_length=1, blank=True, null=True)
     notation = models.CharField(max_length=20)
-    fen_after = models.CharField(max_length=200, help_text="FEN after move", default=chess.STARTING_FEN)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    elapsed_time = models.IntegerField(default=0, help_text="Seconds spent on this move")
+    fen_after_move = models.CharField(max_length=200, help_text="FEN after move", default=chess.STARTING_FEN)
+    created_at = models.DateTimeField(auto_now_add=True)
+    time_taken = models.IntegerField(default=0, help_text="Seconds spent on this move")
+    time_left = models.IntegerField(default=600, help_text="Time remaining after this move")
+    captured_piece = models.CharField(max_length=2, blank=True, null=True)
+    is_check = models.BooleanField(default=False)
+    is_checkmate = models.BooleanField(default=False)
+    is_castling = models.BooleanField(default=False)
+    is_en_passant = models.BooleanField(default=False)
+    promotion_piece = models.CharField(max_length=2, blank=True, null=True)
 
     class Meta:
-        db_table = 'moves'
+        db_table = 'games_move'  # Use existing table name
         ordering = ['move_number']
         indexes = [
             models.Index(fields=['game', 'move_number']),
@@ -230,9 +236,9 @@ class Move(models.Model):
             "move_number": self.move_number,
             "from": self.from_square,
             "to": self.to_square,
-            "promotion": self.promotion,
+            "promotion": self.promotion_piece,
             "notation": self.notation,
-            "fen_after": self.fen_after,
-            "timestamp": self.timestamp.isoformat(),
-            "elapsed_time": self.elapsed_time,
+            "fen_after": self.fen_after_move,
+            "timestamp": self.created_at.isoformat(),
+            "time_taken": self.time_taken,
         }

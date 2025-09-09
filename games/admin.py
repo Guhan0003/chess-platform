@@ -11,6 +11,6 @@ class GameAdmin(admin.ModelAdmin):
 
 @admin.register(Move)
 class MoveAdmin(admin.ModelAdmin):
-    list_display = ('id', 'game', 'move_number', 'player', 'notation', 'timestamp')
-    list_filter = ('timestamp',)
+    list_display = ('id', 'game', 'move_number', 'player', 'notation', 'created_at')
+    list_filter = ('created_at',)
     search_fields = ('notation', 'player__username')

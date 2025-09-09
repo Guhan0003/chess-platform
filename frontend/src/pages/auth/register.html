@@ -474,7 +474,7 @@
         </div>
 
         <div class="auth-link">
-          <a href="#" data-route="/login">Sign in here</a>
+          <a href="../auth/login.html">Sign in here</a>
         </div>
       </div>
     </div>
@@ -706,7 +706,7 @@
             
             // Redirect to login after delay
             setTimeout(() => {
-              router.navigate('/login');
+              window.location.href = '../auth/login.html';
             }, 2000);
           } else {
             // Registration failed

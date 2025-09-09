@@ -5,7 +5,7 @@
 
 class ChessAPI {
   constructor() {
-    this.baseURL = 'http://127.0.0.1:8000/api';
+    this.baseURL = 'http://localhost:8000/api';
     this.accessToken = localStorage.getItem('access');
     this.refreshToken = localStorage.getItem('refresh');
     this.isRefreshing = false;

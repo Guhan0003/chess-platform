@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Puzzle | Chess Platform</title>
+  <style>
+    /* ==== Base Theme ==== */
+    :root {
+      --bg: #0f0f0f;
+      --glass: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --text: #f1f1f1;
+      --text-light: #bdbdbd;
+      --accent: #769656;
+      --danger: #c23b3b;
+      --radius: 1rem;
+      --transition: 0.25s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ==== Glass Elements ==== */
+    .glass {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: var(--radius);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* ==== Header ==== */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .logo {
+      font-weight: bold;
+      font-size: 1.3rem;
+      color: var(--accent);
+    }
+    .nav-links a {
+      margin-left: 1.5rem;
+      text-decoration: none;
+      color: var(--text-light);
+      transition: var(--transition);
+    }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--accent);
+    }
+
+    /* ==== Layout ==== */
+    .puzzle-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 2rem;
+      padding: 0 2rem;
+      flex: 1;
+    }
+    .puzzle-board {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    .chessboard {
+      width: 100%;
+      max-width: 500px;
+      aspect-ratio: 1/1;
+      background: #1e1e1e;
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .chessboard p {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      text-align: center;
+      padding: 1rem;
+    }
+    .puzzle-status {
+      text-align: center;
+    }
+    .puzzle-status h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+    .goal-text {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ==== Sidebar ==== */
+    .puzzle-sidebar {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .sidebar-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      padding: 0.7rem 1rem;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #5c7e48; }
+    .btn-secondary {
+      background: #333;
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #444; }
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+    .btn-danger:hover { background: #9d2c2c; }
+
+    .puzzle-info h3 {
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+    .puzzle-info p {
+      margin: 0.3rem 0;
+      font-size: 0.95rem;
+      color: var(--text-light);
+    }
+
+    /* ==== Footer ==== */
+    .app-footer {
+      text-align: center;
+      padding: 1rem;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: var(--text-light);
+    }
+
+    /* ==== Responsive ==== */
+    @media (max-width: 900px) {
+      .puzzle-layout { grid-template-columns: 1fr; }
+      .puzzle-sidebar { margin-top: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header glass">
+    <div class="logo">♟ Chess Platform</div>
+    <nav class="nav-links">
+      <a href="#/lobby">Lobby</a>
+      <a href="#/play">Play</a>
+      <a href="#/puzzle" class="active">Puzzles</a>
+      <a href="#/profile">Profile</a>
+    </nav>
+  </header>
+
+  <!-- Main Puzzle Layout -->
+  <main class="puzzle-layout">
+    <!-- Puzzle Board -->
+    <section class="puzzle-board glass">
+      <div id="chessboard" class="chessboard">
+        <p>Board will be rendered here</p>
+      </div>
+      <div class="puzzle-status">
+        <h2 id="puzzle-title">Loading Puzzle...</h2>
+        <p id="puzzle-goal" class="goal-text">Goal will appear here</p>
+      </div>
+    </section>
+
+    <!-- Puzzle Sidebar -->
+    <aside class="puzzle-sidebar glass">
+      <h2 class="sidebar-title">Puzzle Controls</h2>
+      <div class="sidebar-actions">
+        <button id="btn-next-puzzle" class="btn btn-primary">Next Puzzle</button>
+        <button id="btn-restart-puzzle" class="btn btn-secondary">Restart</button>
+        <button id="btn-show-solution" class="btn btn-danger">Show Solution</button>
+      </div>
+      <div class="puzzle-info">
+        <h3>Details</h3>
+        <p><strong>Rating:</strong> <span id="puzzle-rating">--</span></p>
+        <p><strong>Category:</strong> <span id="puzzle-category">--</span></p>
+        <p><strong>Progress:</strong> <span id="puzzle-progress">--</span></p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer glass">
+    <p>♟ Chess Platform — Train your tactics with puzzles</p>
+  </footer>
+
+  <!-- Script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const titleEl = document.getElementById("puzzle-title");
+      const goalEl = document.getElementById("puzzle-goal");
+      const ratingEl = document.getElementById("puzzle-rating");
+      const categoryEl = document.getElementById("puzzle-category");
+      const progressEl = document.getElementById("puzzle-progress");
+      const boardEl = document.getElementById("chessboard");
+
+      let currentPuzzle = null;
+
+      async function loadPuzzle() {
+        try {
+          titleEl.textContent = "Loading Puzzle...";
+          goalEl.textContent = "Please wait...";
+
+          // Example API call (replace with real endpoint)
+          const puzzle = {
+            id: 42,
+            fen: "r1bqkbnr/pppppppp/n7/8/1P6/P7/2PPPPPP/RNBQKBNR b KQkq - 0 2",
+            goal: "White to move and win material",
+            rating: 1450,
+            category: "Tactics",
+            progress: "Not started"
+          };
+
+          currentPuzzle = puzzle;
+
+          titleEl.textContent = `Puzzle #${puzzle.id}`;
+          goalEl.textContent = puzzle.goal;
+          ratingEl.textContent = puzzle.rating;
+          categoryEl.textContent = puzzle.category;
+          progressEl.textContent = puzzle.progress;
+
+          renderBoard(puzzle.fen);
+        } catch (err) {
+          console.error(err);
+          titleEl.textContent = "Failed to load puzzle";
+          goalEl.textContent = "Try again later.";
+        }
+      }
+
+      function renderBoard(fen) {
+        // TODO: Replace with your actual chessboard renderer
+        boardEl.innerHTML = `
+          <p>FEN: ${fen}</p>
+          <p>[Interactive board goes here]</p>
+        `;
+      }
+
+      async function showSolution() {
+        if (!currentPuzzle) return;
+        alert("Solution: Example solution sequence (replace with API)");
+      }
+
+      document.getElementById("btn-next-puzzle").addEventListener("click", loadPuzzle);
+      document.getElementById("btn-restart-puzzle").addEventListener("click", () => {
+        if (currentPuzzle) renderBoard(currentPuzzle.fen);
+      });
+      document.getElementById("btn-show-solution").addEventListener("click", showSolution);
+
+      loadPuzzle();
+    });
+  </script>
+</body>
+</html>

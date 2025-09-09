@@ -49,6 +49,18 @@
       color: var(--color-text-primary);
     }
 
+    .current-user-info {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+    }
+
+    .current-user-info strong {
+      color: var(--color-accent-primary);
+    }
+
     .game-status-badge {
       padding: var(--space-xs) var(--space-sm);
       border-radius: var(--radius-sm);
@@ -685,6 +697,12 @@
           <div class="game-status-badge" id="gameStatus">Loading...</div>
         </div>
         
+        <div class="current-user-info" id="currentUserInfo" style="display: none;">
+          <span>Playing as: </span>
+          <strong id="currentUserName">---</strong>
+          <span>(</span><span id="currentUserRating">----</span><span>)</span>
+        </div>
+        
         <div class="game-actions">
           <a href="#" class="back-btn" data-route="/lobby">
             <span>←</span>
@@ -837,6 +855,9 @@
     </div>
   </div>
 
+  <!-- Scripts -->
+  <script src="../../utils/api.js"></script>
+  
   <script>
     // Game page controller
     function initGamePage() {
@@ -846,17 +867,25 @@
       let gameId = null;
       let currentUser = null;
       let moveHistory = [];
+      let api;
       
       // Initialize game
       initializeGame();
       
       async function initializeGame() {
         try {
+          // Initialize API
+          api = new ChessAPI();
+          window.api = api;
+          
+          // Check authentication - for demo purposes, auto-login testuser
+          await ensureAuthentication();
+          
           // Get game ID from URL
           gameId = getGameIdFromUrl();
           if (!gameId) {
             api.showError('Invalid game URL');
-            router.navigate('/lobby');
+            navigateToRoute('/lobby');
             return;
           }
           
@@ -879,6 +908,14 @@
       }
       
       function getGameIdFromUrl() {
+        // Check URL parameters first (e.g., ?game=123)
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameIdParam = urlParams.get('game');
+        if (gameIdParam) {
+          return parseInt(gameIdParam);
+        }
+        
+        // Fallback to path-based extraction
         const path = window.location.pathname;
         const matches = path.match(/\/game\/(\d+)/);
         return matches ? parseInt(matches[1]) : null;
@@ -889,9 +926,74 @@
           const response = await api.getUserProfile();
           if (response.ok) {
             currentUser = response.data;
+            updateCurrentUserDisplay();
           }
         } catch (error) {
           console.error('Failed to load current user:', error);
+        }
+      }
+      
+      function updateCurrentUserDisplay() {
+        if (currentUser) {
+          document.getElementById('currentUserName').textContent = currentUser.username;
+          document.getElementById('currentUserRating').textContent = currentUser.rating || 1200;
+          document.getElementById('currentUserInfo').style.display = 'block';
+        }
+      }
+      
+      async function ensureAuthentication() {
+        // Check if already authenticated
+        if (api.isAuthenticated()) {
+          console.log('Already authenticated');
+          return;
+        }
+        
+        // For professional implementation, this would redirect to login page
+        // For demo purposes, auto-login with testuser
+        try {
+          console.log('Authenticating user...');
+          const loginResponse = await fetch('http://localhost:8000/api/auth/login/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username: 'testuser',
+              password: 'test123'
+            })
+          });
+          
+          if (loginResponse.ok) {
+            const tokens = await loginResponse.json();
+            api.setTokens(tokens.access, tokens.refresh);
+            console.log('Authentication successful');
+          } else {
+            throw new Error('Login failed');
+          }
+        } catch (error) {
+          console.error('Authentication failed:', error);
+          // In professional implementation, redirect to login page
+          api.showError('Please login to continue');
+        }
+      }
+      
+      // Professional navigation helper function
+      function navigateToRoute(path) {
+        if (window.router) {
+          window.router.navigate(path);
+        } else {
+          // Fallback for direct page access
+          const pathMap = {
+            '/lobby': '../dashboard/lobby.html',
+            '/login': '../auth/login.html',
+            '/profile': '../profile/index.html'
+          };
+          
+          if (pathMap[path]) {
+            window.location.href = pathMap[path];
+          } else {
+            console.warn(`No route mapping found for: ${path}`);
+          }
         }
       }
       
@@ -1304,10 +1406,11 @@
       }
       
       function setupEventListeners() {
-        // Back button
+        // Back button navigation
         document.querySelector('.back-btn').addEventListener('click', (e) => {
           e.preventDefault();
-          router.navigate('/lobby');
+          const route = e.currentTarget.dataset.route;
+          navigateToRoute(route);
         });
         
         // Game controls

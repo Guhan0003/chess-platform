@@ -59,7 +59,7 @@ class CustomUser(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'chess_users'
+        db_table = 'accounts_customuser'  # Use existing table name
         indexes = [
             models.Index(fields=['blitz_rating']),
             models.Index(fields=['rapid_rating']),
