@@ -57,7 +57,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
 
 
 ]
@@ -88,14 +87,30 @@ WSGI_APPLICATION = 'chess_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'game_db',
-        'USER': 'games_user',
-        'PASSWORD': 'chesspass',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# PostgreSQL configuration (temporarily commented - will set up after app is working)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'game_db',
+#         'USER': 'games_user',
+#         'PASSWORD': 'chesspass',
+#         'HOST': '127.0.0.1',
+#         'PORT': '5432',
+#     }
+# }
+
+# SQLite configuration (for testing purposes)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 
 
@@ -138,7 +153,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "engine", "assets"),  # expose engine/assets
-    os.path.join(BASE_DIR, "frontend", "web-client"),  # if needed
+    os.path.join(BASE_DIR, "frontend", "assets"),  # frontend assets
 ]
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

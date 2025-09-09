@@ -79,8 +79,8 @@ class ChessRouter {
       }
     } else {
       console.warn(`No route handler found for: ${path}`);
-      // Default fallback - show error instead of redirecting to prevent loops
-      this.showError(`Page not found: ${path}`);
+      // Default fallback - redirect to login or home
+      this.navigate('/login');
     }
   }
 
@@ -154,12 +154,6 @@ class ChessRouter {
         </div>
       `;
     }
-  }
-
-  // Set authentication state
-  setAuth(isAuthenticated) {
-    // This method is called by API when auth state changes
-    console.log('Auth state changed:', isAuthenticated);
   }
 
   // Initialize router

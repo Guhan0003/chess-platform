@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Chess Platform</title>
+  <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Profile-specific styles maintaining design consistency */
+    .profile-container {
+      min-height: 100vh;
+      background: 
+        radial-gradient(ellipse at top left, rgba(118, 150, 86, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(240, 217, 181, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Profile Header */
+    .profile-header {
+      height: var(--header-height);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-xl);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .profile-title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .profile-title h1 {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin: 0;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      font-size: var(--font-size-sm);
+      transition: all var(--transition-normal);
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-accent-primary);
+      transform: translateX(-2px);
+    }
+
+    /* Profile Content */
+    .profile-content {
+      flex: 1;
+      padding: var(--space-xl);
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: var(--space-xl);
+      align-items: start;
+    }
+
+    /* Profile Card */
+    .profile-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      position: sticky;
+      top: calc(var(--header-height) + var(--space-xl));
+    }
+
+    .profile-banner {
+      height: 120px;
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      position: relative;
+    }
+
+    .profile-info {
+      padding: var(--space-xl);
+      text-align: center;
+      position: relative;
+      margin-top: -40px;
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-inverse);
+      font-weight: var(--font-weight-bold);
+      font-size: 2rem;
+      margin: 0 auto var(--space-md);
+      border: 4px solid var(--color-bg-primary);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .profile-avatar:hover {
+      transform: scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .avatar-upload-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity var(--transition-normal);
+      font-size: var(--font-size-sm);
+      color: white;
+    }
+
+    .profile-avatar:hover .avatar-upload-overlay {
+      opacity: 1;
+    }
+
+    .profile-username {
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .profile-rating {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+    }
+
+    .rating-value {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-accent-primary);
+    }
+
+    .rating-change {
+      font-size: var(--font-size-sm);
+      padding: 2px var(--space-xs);
+      border-radius: var(--radius-sm);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .rating-change.positive {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--color-success);
+    }
+
+    .rating-change.negative {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-error);
+    }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-value {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .edit-profile-btn {
+      width: 100%;
+      padding: var(--space-md);
+      background: rgba(118, 150, 86, 0.1);
+      border: 1px solid var(--color-accent-primary);
+      border-radius: var(--radius-md);
+      color: var(--color-accent-primary);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .edit-profile-btn:hover {
+      background: rgba(118, 150, 86, 0.2);
+      transform: translateY(-1px);
+    }
+
+    /* Profile Content */
+    .profile-main {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xl);
+    }
+
+    .section-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: var(--space-lg) var(--space-xl);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .section-icon {
+      font-size: var(--font-size-xl);
+    }
+
+    .section-content {
+      padding: var(--space-xl);
+    }
+
+    /* Rating History Chart */
+    .rating-chart {
+      height: 200px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    /* Recent Games */
+    .games-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .game-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-lg);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-normal);
+      cursor: pointer;
+    }
+
+    .game-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--color-accent-primary);
+      transform: translateX(2px);
+    }
+
+    .game-result {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+    }
+
+    .game-result.win {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--color-success);
+    }
+
+    .game-result.loss {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-error);
+    }
+
+    .game-result.draw {
+      background: rgba(156, 163, 175, 0.2);
+      color: #9ca3af;
+    }
+
+    .game-details {
+      flex: 1;
+    }
+
+    .game-opponent {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .game-meta {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    .game-rating-change {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+    }
+
+    .rating-up {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--color-success);
+    }
+
+    .rating-down {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-error);
+    }
+
+    /* Achievements */
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-md);
+    }
+
+    .achievement-item {
+      text-align: center;
+      padding: var(--space-lg);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-normal);
+    }
+
+    .achievement-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+    }
+
+    .achievement-item.unlocked {
+      border-color: var(--color-accent-primary);
+      background: rgba(118, 150, 86, 0.05);
+    }
+
+    .achievement-icon {
+      font-size: 2rem;
+      margin-bottom: var(--space-sm);
+      display: block;
+    }
+
+    .achievement-item.unlocked .achievement-icon {
+      filter: none;
+    }
+
+    .achievement-item:not(.unlocked) .achievement-icon {
+      filter: grayscale(100%);
+      opacity: 0.3;
+    }
+
+    .achievement-title {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .achievement-description {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    /* Edit Profile Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      width: 90%;
+      max-width: 500px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      transform: scale(0.9);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.show .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: var(--space-lg) var(--space-xl);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin: 0;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-primary);
+    }
+
+    .modal-body {
+      padding: var(--space-xl);
+    }
+
+    .edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .form-label {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-secondary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+      transition: all var(--transition-normal);
+    }
+
+    .form-input:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 3px rgba(118, 150, 86, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: var(--space-md);
+      justify-content: flex-end;
+      margin-top: var(--space-lg);
+    }
+
+    .btn-cancel {
+      padding: var(--space-md) var(--space-lg);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-save {
+      padding: var(--space-md) var(--space-lg);
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-secondary) 100%);
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--color-text-inverse);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Loading States */
+    .loading-skeleton {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-md);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton-text {
+      height: 1rem;
+      margin-bottom: var(--space-sm);
+    }
+
+    .skeleton-title {
+      height: 1.5rem;
+      margin-bottom: var(--space-md);
+    }
+
+    /* Empty States */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-3xl) var(--space-xl);
+      color: var(--color-text-muted);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: var(--space-lg);
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      margin-bottom: var(--space-sm);
+      color: var(--color-text-secondary);
+    }
+
+    .empty-description {
+      font-size: var(--font-size-sm);
+      line-height: 1.5;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .profile-content {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+      }
+
+      .profile-card {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .profile-content {
+        padding: var(--space-lg);
+      }
+
+      .profile-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .achievements-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .game-meta {
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .profile-header {
+        padding: 0 var(--space-lg);
+      }
+
+      .profile-content {
+        padding: var(--space-md);
+      }
+
+      .achievements-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-content {
+        width: 95%;
+      }
+
+      .modal-header,
+      .modal-body {
+        padding: var(--space-lg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="profile-container fade-in">
+      <!-- Profile Header -->
+      <header class="profile-header">
+        <div class="profile-title">
+          <h1>Player Profile</h1>
+        </div>
+        
+        <a href="#" class="back-btn" data-route="/lobby">
+          <span>←</span>
+          <span>Back to Lobby</span>
+        </a>
+      </header>
+
+      <!-- Profile Content -->
+      <div class="profile-content">
+        <!-- Profile Card -->
+        <div class="profile-card">
+          <div class="profile-banner"></div>
+          <div class="profile-info">
+            <div class="profile-avatar" id="profileAvatar">
+              <span id="avatarText">?</span>
+              <div class="avatar-upload-overlay">
+                📷 Change
+              </div>
+            </div>
+            <h2 class="profile-username" id="profileUsername">Loading...</h2>
+            
+            <div class="profile-rating">
+              <span class="rating-value" id="currentRating">----</span>
+              <span class="rating-change positive" id="ratingChange" style="display: none;">
+                +24
+              </span>
+            </div>
+
+            <div class="profile-stats">
+              <div class="stat-item">
+                <div class="stat-value" id="totalGames">--</div>
+                <div class="stat-label">Games</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="winRate">--%</div>
+                <div class="stat-label">Win Rate</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="bestRating">----</div>
+                <div class="stat-label">Peak Rating</div>
+              </div>
+            </div>
+
+            <button class="edit-profile-btn" id="editProfileBtn">
+              ✏️ Edit Profile
+            </button>
+          </div>
+        </div>
+
+        <!-- Profile Main Content -->
+        <div class="profile-main">
+          <!-- Rating History -->
+          <div class="section-card">
+            <div class="section-header">
+              <h3 class="section-title">
+                <span class="section-icon">📈</span>
+                Rating History
+              </h3>
+            </div>
+            <div class="section-content">
+              <div class="rating-chart" id="ratingChart">
+                📊 Rating chart will be displayed here
+              </div>
+              <div class="rating-stats">
+                <div class="profile-stats">
+                  <div class="stat-item">
+                    <div class="stat-value" id="ratingGain">+0</div>
+                    <div class="stat-label">This Month</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-value" id="currentStreak">0</div>
+                    <div class="stat-label">Win Streak</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-value" id="bestStreak">0</div>
+                    <div class="stat-label">Best Streak</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Games -->
+          <div class="section-card">
+            <div class="section-header">
+              <h3 class="section-title">
+                <span class="section-icon">🎮</span>
+                Recent Games
+              </h3>
+              <a href="#" class="view-all-link" style="color: var(--color-accent-primary); font-size: var(--font-size-sm);">
+                View All
+              </a>
+            </div>
+            <div class="section-content">
+              <div class="games-list" id="recentGamesList">
+                <!-- Loading skeletons -->
+                <div class="loading-skeleton skeleton-text"></div>
+                <div class="loading-skeleton skeleton-text"></div>
+                <div class="loading-skeleton skeleton-text"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Achievements -->
+          <div class="section-card">
+            <div class="section-header">
+              <h3 class="section-title">
+                <span class="section-icon">🏆</span>
+                Achievements
+              </h3>
+            </div>
+            <div class="section-content">
+              <div class="achievements-grid" id="achievementsList">
+                <!-- Achievements will be loaded here -->
+                <div class="achievement-item unlocked">
+                  <span class="achievement-icon">🎯</span>
+                  <div class="achievement-title">First Game</div>
+                  <div class="achievement-description">Played your first chess game</div>
+                </div>
+                
+                <div class="achievement-item">
+                  <span class="achievement-icon">🔥</span>
+                  <div class="achievement-title">Hot Streak</div>
+                  <div class="achievement-description">Win 5 games in a row</div>
+                </div>
+                
+                <div class="achievement-item">
+                  <span class="achievement-icon">⭐</span>
+                  <div class="achievement-title">Rising Star</div>
+                  <div class="achievement-description">Reach 1400 rating</div>
+                </div>
+                
+                <div class="achievement-item">
+                  <span class="achievement-icon">👑</span>
+                  <div class="achievement-title">Chess Master</div>
+                  <div class="achievement-description">Reach 1800 rating</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Profile Modal -->
+      <div class="modal-overlay" id="editProfileModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 class="modal-title">Edit Profile</h3>
+            <button class="modal-close" id="closeModalBtn">×</button>
+          </div>
+          <div class="modal-body">
+            <form class="edit-form" id="editForm">
+              <div class="form-group">
+                <label class="form-label">Display Name</label>
+                <input type="text" class="form-input" id="editUsername" placeholder="Enter your username" required>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Bio</label>
+                <textarea class="form-input form-textarea" id="editBio" placeholder="Tell us about yourself..."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Country</label>
+                <select class="form-input" id="editCountry">
+                  <option value="">Select Country</option>
+                  <option value="US">United States</option>
+                  <option value="IN">India</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="CA">Canada</option>
+                  <option value="AU">Australia</option>
+                  <!-- Add more countries as needed -->
+                </select>
+              </div>
+
+              <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelEditBtn">Cancel</button>
+                <button type="submit" class="btn-save">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden file input for avatar upload -->
+      <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+    </div>
+  </div>
+
+  <script>
+    // Profile page controller
+    function initProfilePage() {
+      let currentUser = null;
+      let userStats = null;
+      let recentGames = [];
+      
+      // Initialize profile
+      initializeProfile();
+      
+      async function initializeProfile() {
+        try {
+          // Load user profile and stats
+          await loadUserProfile();
+          await loadUserStats();
+          await loadRecentGames();
+          
+          // Set up event listeners
+          setupEventListeners();
+          
+        } catch (error) {
+          console.error('Failed to initialize profile:', error);
+          api.showError('Failed to load profile data');
+        }
+      }
+      
+      async function loadUserProfile() {
+        try {
+          const response = await api.getUserProfile();
+          if (response.ok) {
+            currentUser = response.data;
+            updateProfileDisplay();
+          }
+        } catch (error) {
+          console.error('Failed to load user profile:', error);
+          // Show skeleton/loading state
+          showLoadingState();
+        }
+      }
+      
+      function updateProfileDisplay() {
+        if (!currentUser) return;
+        
+        // Update profile info
+        document.getElementById('profileUsername').textContent = currentUser.username;
+        document.getElementById('avatarText').textContent = currentUser.username.charAt(0).toUpperCase();
+        document.getElementById('currentRating').textContent = currentUser.rating || 1200;
+        
+        // Update stats
+        document.getElementById('totalGames').textContent = currentUser.games_played || 0;
+        const winRate = currentUser.games_played > 0 
+          ? Math.round((currentUser.games_won / currentUser.games_played) * 100)
+          : 0;
+        document.getElementById('winRate').textContent = winRate + '%';
+        document.getElementById('bestRating').textContent = currentUser.best_rating || currentUser.rating || 1200;
+      }
+      
+      async function loadUserStats() {
+        try {
+          // Mock stats for now - replace with actual API
+          userStats = {
+            ratingGain: Math.floor(Math.random() * 100) - 50,
+            currentStreak: Math.floor(Math.random() * 10),
+            bestStreak: Math.floor(Math.random() * 15) + 5
+          };
+          
+          updateStatsDisplay();
+        } catch (error) {
+          console.error('Failed to load user stats:', error);
+        }
+      }
+      
+      function updateStatsDisplay() {
+        if (!userStats) return;
+        
+        const ratingGainEl = document.getElementById('ratingGain');
+        ratingGainEl.textContent = userStats.ratingGain >= 0 
+          ? `+${userStats.ratingGain}` 
+          : `${userStats.ratingGain}`;
+        ratingGainEl.style.color = userStats.ratingGain >= 0 
+          ? 'var(--color-success)' 
+          : 'var(--color-error)';
+        
+        document.getElementById('currentStreak').textContent = userStats.currentStreak;
+        document.getElementById('bestStreak').textContent = userStats.bestStreak;
+      }
+      
+      async function loadRecentGames() {
+        try {
+          const response = await api.getGames();
+          if (response.ok) {
+            recentGames = response.data.slice(0, 5); // Last 5 games
+            updateRecentGamesDisplay();
+          }
+        } catch (error) {
+          console.error('Failed to load recent games:', error);
+          showEmptyGames();
+        }
+      }
+      
+      function updateRecentGamesDisplay() {
+        const gamesListEl = document.getElementById('recentGamesList');
+        
+        if (!recentGames || recentGames.length === 0) {
+          showEmptyGames();
+          return;
+        }
+        
+        gamesListEl.innerHTML = recentGames.map(game => {
+          const isWhite = currentUser && currentUser.id === game.white_player;
+          const opponent = isWhite ? game.black_player_username : game.white_player_username;
+          const opponentRating = isWhite ? game.black_player_rating : game.white_player_rating;
+          
+          // Determine result
+          let result = 'draw';
+          let resultSymbol = '½';
+          let ratingChange = 0;
+          
+          if (game.winner) {
+            if ((isWhite && game.winner === game.white_player) || 
+                (!isWhite && game.winner === game.black_player)) {
+              result = 'win';
+              resultSymbol = '1';
+              ratingChange = Math.floor(Math.random() * 20) + 5;
+            } else {
+              result = 'loss';
+              resultSymbol = '0';
+              ratingChange = -(Math.floor(Math.random() * 20) + 5);
+            }
+          }
+          
+          return `
+            <div class="game-item" data-game-id="${game.id}">
+              <div class="game-result ${result}">
+                ${resultSymbol}
+              </div>
+              <div class="game-details">
+                <div class="game-opponent">vs ${opponent || 'Anonymous'}</div>
+                <div class="game-meta">
+                  <span>Rating: ${opponentRating || '----'}</span>
+                  <span>${getTimeAgo(game.created_at)}</span>
+                  <span>${isWhite ? 'White' : 'Black'}</span>
+                </div>
+              </div>
+              <div class="game-rating-change ${ratingChange >= 0 ? 'rating-up' : 'rating-down'}">
+                ${ratingChange >= 0 ? '+' : ''}${ratingChange}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        // Add click handlers
+        document.querySelectorAll('.game-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const gameId = item.dataset.gameId;
+            router.navigate(`/game/${gameId}`);
+          });
+        });
+      }
+      
+      function showEmptyGames() {
+        const gamesListEl = document.getElementById('recentGamesList');
+        gamesListEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🎮</div>
+            <div class="empty-title">No Recent Games</div>
+            <div class="empty-description">Start playing to see your game history here!</div>
+          </div>
+        `;
+      }
+      
+      function showLoadingState() {
+        // Show skeleton loading states
+        document.getElementById('profileUsername').textContent = 'Loading...';
+        document.getElementById('currentRating').textContent = '----';
+      }
+      
+      function setupEventListeners() {
+        // Back button
+        document.querySelector('.back-btn').addEventListener('click', (e) => {
+          e.preventDefault();
+          router.navigate('/lobby');
+        });
+        
+        // Edit profile button
+        document.getElementById('editProfileBtn').addEventListener('click', () => {
+          openEditModal();
+        });
+        
+        // Modal controls
+        document.getElementById('closeModalBtn').addEventListener('click', closeEditModal);
+        document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+        
+        // Modal overlay click
+        document.getElementById('editProfileModal').addEventListener('click', (e) => {
+          if (e.target.id === 'editProfileModal') {
+            closeEditModal();
+          }
+        });
+        
+        // Avatar upload
+        document.getElementById('profileAvatar').addEventListener('click', () => {
+          document.getElementById('avatarUpload').click();
+        });
+        
+        document.getElementById('avatarUpload').addEventListener('change', handleAvatarUpload);
+        
+        // Edit form submission
+        document.getElementById('editForm').addEventListener('submit', handleProfileUpdate);
+      }
+      
+      function openEditModal() {
+        const modal = document.getElementById('editProfileModal');
+        modal.classList.add('show');
+        
+        // Populate form with current data
+        if (currentUser) {
+          document.getElementById('editUsername').value = currentUser.username || '';
+          document.getElementById('editBio').value = currentUser.bio || '';
+          document.getElementById('editCountry').value = currentUser.country || '';
+        }
+      }
+      
+      function closeEditModal() {
+        const modal = document.getElementById('editProfileModal');
+        modal.classList.remove('show');
+      }
+      
+      async function handleAvatarUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        try {
+          api.showToast('Uploading avatar...', 'info');
+          
+          // Mock upload - replace with actual API call
+          setTimeout(() => {
+            api.showSuccess('Avatar updated successfully!');
+          }, 2000);
+          
+        } catch (error) {
+          console.error('Avatar upload error:', error);
+          api.showError('Failed to upload avatar');
+        }
+      }
+      
+      async function handleProfileUpdate(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(event.target);
+        const profileData = {
+          username: document.getElementById('editUsername').value,
+          bio: document.getElementById('editBio').value,
+          country: document.getElementById('editCountry').value
+        };
+        
+        try {
+          api.showToast('Updating profile...', 'info');
+          
+          // Mock update - replace with actual API call
+          setTimeout(() => {
+            currentUser = { ...currentUser, ...profileData };
+            updateProfileDisplay();
+            closeEditModal();
+            api.showSuccess('Profile updated successfully!');
+          }, 1000);
+          
+        } catch (error) {
+          console.error('Profile update error:', error);
+          api.showError('Failed to update profile');
+        }
+      }
+      
+      // Utility functions
+      function getTimeAgo(dateString) {
+        const now = new Date();
+        const date = new Date(dateString);
+        const diffInMs = now - date;
+        const diffInMins = Math.floor(diffInMs / 60000);
+        
+        if (diffInMins < 1) return 'Just now';
+        if (diffInMins < 60) return `${diffInMins}m ago`;
+        
+        const diffInHours = Math.floor(diffInMins / 60);
+        if (diffInHours < 24) return `${diffInHours}h ago`;
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays}d ago`;
+      }
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initProfilePage);
+    } else {
+      initProfilePage();
+    }
+  </script>
+</body>
+</html>

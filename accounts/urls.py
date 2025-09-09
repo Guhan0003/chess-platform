@@ -15,7 +15,6 @@ urlpatterns = [
     path('protected/', ProtectedView.as_view(), name='protected'),
     path('profile/', UserProfileView.as_view(), name='profile'),  
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('api/', include('games.urls')),
 
 
 
