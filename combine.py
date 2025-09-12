@@ -13,7 +13,7 @@ include_extensions = [
 ]
 
 # Optional folders to exclude (e.g., static/media/migrations/venv)
-exclude_dirs = {'__pycache__', 'static', 'media', 'migrations', 'venv', '.git', 'node_modules'}
+exclude_dirs = {'__pycache__', 'static', 'media', 'migrations', 'venv', '.venv', '.git', 'node_modules'}
 
 with open(output_file_path, 'w', encoding='utf-8') as output_file:
     for root, dirs, files in os.walk(base_directory):
@@ -24,7 +24,9 @@ with open(output_file_path, 'w', encoding='utf-8') as output_file:
             filepath = os.path.join(root, filename)
             if any(filename.endswith(ext) for ext in include_extensions):
                 relative_path = os.path.relpath(filepath, base_directory)
-                output_file.write(f"\n===== {relative_path} =====\n")
+                # Format path to start from chess-platform
+                clean_path = f"chess-platform/{relative_path.replace(os.sep, '/')}"
+                output_file.write(f"\n===== {clean_path} =====\n")
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         output_file.write(f.read())

@@ -7,6 +7,106 @@ import chess
 import json
 
 
+class ChessManager:
+    """Manager class for chess platform data initialization and management"""
+    
+    @staticmethod
+    def create_default_time_controls():
+        """Create standard time controls used in professional chess"""
+        defaults = [
+            # Bullet (< 3 minutes)
+            {'name': 'Bullet 1+0', 'category': 'bullet', 'initial_time': 60, 'increment': 0, 
+             'description': 'Ultra-fast games for quick thinking'},
+            {'name': 'Bullet 2+1', 'category': 'bullet', 'initial_time': 120, 'increment': 1,
+             'description': 'Fast-paced games with small increment'},
+
+            # Blitz (3-10 minutes)
+            {'name': 'Blitz 3+0', 'category': 'blitz', 'initial_time': 180, 'increment': 0,
+             'description': 'Classic blitz format'},
+            {'name': 'Blitz 3+2', 'category': 'blitz', 'initial_time': 180, 'increment': 2,
+             'description': 'Popular online blitz format'},
+            {'name': 'Blitz 5+0', 'category': 'blitz', 'initial_time': 300, 'increment': 0,
+             'description': 'Standard 5-minute blitz'},
+            {'name': 'Blitz 5+3', 'category': 'blitz', 'initial_time': 300, 'increment': 3,
+             'description': '5-minute blitz with increment'},
+
+            # Rapid (10-60 minutes)
+            {'name': 'Rapid 10+0', 'category': 'rapid', 'initial_time': 600, 'increment': 0,
+             'description': 'Quick rapid games'},
+            {'name': 'Rapid 10+5', 'category': 'rapid', 'initial_time': 600, 'increment': 5,
+             'description': 'Popular rapid format with increment'},
+            {'name': 'Rapid 15+10', 'category': 'rapid', 'initial_time': 900, 'increment': 10,
+             'description': 'Tournament-style rapid'},
+
+            # Classical (> 60 minutes)
+            {'name': 'Classical 30+0', 'category': 'classical', 'initial_time': 1800, 'increment': 0,
+             'description': 'Classical time control'},
+            {'name': 'Classical 30+30', 'category': 'classical', 'initial_time': 1800, 'increment': 30,
+             'description': 'FIDE-style classical with increment'},
+            {'name': 'Classical 90+30', 'category': 'classical', 'initial_time': 5400, 'increment': 30,
+             'description': 'Long classical games'},
+        ]
+
+        created_count = 0
+        for tc_data in defaults:
+            time_control, created = TimeControl.objects.get_or_create(
+                name=tc_data['name'],
+                defaults=tc_data
+            )
+            if created:
+                created_count += 1
+        
+        return created_count
+    
+    @staticmethod
+    def create_default_achievements():
+        """Create standard chess achievements"""
+        from accounts.models import Achievement
+        
+        defaults = [
+            # Milestone Achievements
+            {'name': 'First Victory', 'description': 'Win your first game', 
+             'category': 'milestone', 'condition': 'games_won >= 1', 'points': 10, 'icon': '🎯'},
+            {'name': 'Veteran Player', 'description': 'Play 100 games', 
+             'category': 'milestone', 'condition': 'total_games >= 100', 'points': 50, 'icon': '🏆'},
+            {'name': 'Chess Master', 'description': 'Play 1000 games', 
+             'category': 'milestone', 'condition': 'total_games >= 1000', 'points': 200, 'icon': '👑'},
+            
+            # Rating Achievements
+            {'name': 'Rising Star', 'description': 'Reach 1400 rating', 
+             'category': 'rating', 'condition': 'rapid_rating >= 1400', 'points': 25, 'icon': '⭐'},
+            {'name': 'Strong Player', 'description': 'Reach 1600 rating', 
+             'category': 'rating', 'condition': 'rapid_rating >= 1600', 'points': 50, 'icon': '💪'},
+            {'name': 'Expert Level', 'description': 'Reach 1800 rating', 
+             'category': 'rating', 'condition': 'rapid_rating >= 1800', 'points': 100, 'icon': '🎓'},
+            {'name': 'Master Level', 'description': 'Reach 2000 rating', 
+             'category': 'rating', 'condition': 'rapid_rating >= 2000', 'points': 200, 'icon': '🥇'},
+            
+            # Streak Achievements
+            {'name': 'Win Streak', 'description': 'Win 5 games in a row', 
+             'category': 'streak', 'condition': 'current_win_streak >= 5', 'points': 30, 'icon': '🔥'},
+            {'name': 'Unstoppable', 'description': 'Win 10 games in a row', 
+             'category': 'streak', 'condition': 'current_win_streak >= 10', 'points': 75, 'icon': '⚡'},
+            
+            # Special Achievements
+            {'name': 'Speed Demon', 'description': 'Win 50 blitz games', 
+             'category': 'special', 'condition': 'blitz_games >= 50', 'points': 40, 'icon': '💨'},
+            {'name': 'Puzzle Solver', 'description': 'Solve 100 puzzles', 
+             'category': 'puzzle', 'condition': 'puzzles_solved >= 100', 'points': 35, 'icon': '🧩'},
+        ]
+
+        created_count = 0
+        for ach_data in defaults:
+            achievement, created = Achievement.objects.get_or_create(
+                name=ach_data['name'],
+                defaults=ach_data
+            )
+            if created:
+                created_count += 1
+        
+        return created_count
+
+
 class TimeControl(models.Model):
     """Define different time control formats"""
 
@@ -42,37 +142,6 @@ class TimeControl(models.Model):
         if self.increment > 0:
             return f"{self.name} ({minutes}+{self.increment})"
         return f"{self.name} ({minutes} min)"
-
-    @classmethod
-    def get_default_time_controls(cls):
-        """Create default time controls if they don't exist"""
-        defaults = [
-            # Bullet
-            {'name': 'Bullet 1+0', 'category': 'bullet', 'initial_time': 60, 'increment': 0},
-            {'name': 'Bullet 2+1', 'category': 'bullet', 'initial_time': 120, 'increment': 1},
-
-            # Blitz
-            {'name': 'Blitz 3+0', 'category': 'blitz', 'initial_time': 180, 'increment': 0},
-            {'name': 'Blitz 3+2', 'category': 'blitz', 'initial_time': 180, 'increment': 2},
-            {'name': 'Blitz 5+0', 'category': 'blitz', 'initial_time': 300, 'increment': 0},
-            {'name': 'Blitz 5+3', 'category': 'blitz', 'initial_time': 300, 'increment': 3},
-
-            # Rapid
-            {'name': 'Rapid 10+0', 'category': 'rapid', 'initial_time': 600, 'increment': 0},
-            {'name': 'Rapid 10+5', 'category': 'rapid', 'initial_time': 600, 'increment': 5},
-            {'name': 'Rapid 15+10', 'category': 'rapid', 'initial_time': 900, 'increment': 10},
-
-            # Classical
-            {'name': 'Classical 30+0', 'category': 'classical', 'initial_time': 1800, 'increment': 0},
-            {'name': 'Classical 30+30', 'category': 'classical', 'initial_time': 1800, 'increment': 30},
-            {'name': 'Classical 90+30', 'category': 'classical', 'initial_time': 5400, 'increment': 30},
-        ]
-
-        for tc_data in defaults:
-            cls.objects.get_or_create(
-                name=tc_data['name'],
-                defaults=tc_data
-            )
 
 
 class Game(models.Model):
@@ -242,3 +311,86 @@ class Move(models.Model):
             "timestamp": self.created_at.isoformat(),
             "time_taken": self.time_taken,
         }
+
+
+class GameInvitation(models.Model):
+    """Handle game invitations between players"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    from_player = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_invitations'
+    )
+    to_player = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_invitations'
+    )
+    time_control = models.ForeignKey(TimeControl, on_delete=models.CASCADE)
+    message = models.TextField(max_length=200, blank=True, help_text="Optional invitation message")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(help_text="When this invitation expires")
+    responded_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'games_gameinvitation'  # Following your naming convention
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['from_player', 'status']),
+            models.Index(fields=['to_player', 'status']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.from_player.username} → {self.to_player.username} ({self.time_control})"
+    
+    def is_expired(self):
+        """Check if invitation has expired"""
+        return timezone.now() > self.expires_at
+    
+    def accept(self):
+        """Accept the invitation and create game"""
+        if self.status != 'pending' or self.is_expired():
+            return None
+            
+        self.status = 'accepted'
+        self.responded_at = timezone.now()
+        self.save()
+        
+        # Create the game with proper time control format
+        game = Game.objects.create(
+            white_player=self.from_player,
+            black_player=self.to_player,
+            time_control=self.time_control.category,  # Use category string to match Game model
+            white_time_left=self.time_control.initial_time,
+            black_time_left=self.time_control.initial_time,
+            status='waiting'
+        )
+        return game
+    
+    def decline(self):
+        """Decline the invitation"""
+        self.status = 'declined'
+        self.responded_at = timezone.now()
+        self.save()
+    
+    def cancel(self):
+        """Cancel the invitation (only by sender)"""
+        if self.status == 'pending':
+            self.status = 'cancelled'
+            self.responded_at = timezone.now()
+            self.save()
+    
+    def get_display_name(self):
+        """Get user-friendly display for the invitation"""
+        return f"{self.time_control.get_display_name()} game"
