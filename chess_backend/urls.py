@@ -2,24 +2,78 @@
 
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import TemplateView
+from django.conf import settings
+from django.conf.urls.static import static
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
+import os
 from accounts.views import RegisterView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
+def serve_frontend_static(request, path=""):
+    """Custom view to serve frontend static files"""
+    file_path = os.path.join(settings.BASE_DIR, 'frontend', path)
+    if os.path.exists(file_path):
+        return FileResponse(open(file_path, 'rb'))
+    else:
+        raise Http404("File not found")
+
+def serve_professional_frontend(request, page_path=""):
+    """Serve professional frontend pages"""
+    # Map routes to actual files
+    route_map = {
+        '': 'src/pages/auth/login.html',  # Root goes to login
+        'login': 'src/pages/auth/login.html',
+        'register': 'src/pages/auth/register.html',
+        'lobby': 'src/pages/dashboard/lobby.html',
+        'play': 'src/pages/game/play.html',
+        'forgot-password': 'src/pages/auth/forgot-password.html',
+        'profile': 'src/pages/profile/profile.html',
+        'puzzles': 'src/pages/puzzles/puzzles.html'
+    }
+    
+    # Get the file path
+    file_relative_path = route_map.get(page_path, 'src/pages/auth/login.html')
+    file_path = os.path.join(settings.BASE_DIR, 'frontend', file_relative_path)
+    
+    if os.path.exists(file_path):
+        return FileResponse(open(file_path, 'rb'))
+    else:
+        # Default to login page if route not found
+        login_path = os.path.join(settings.BASE_DIR, 'frontend', 'src/pages/auth/login.html')
+        return FileResponse(open(login_path, 'rb'))
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/', include('accounts.urls')),  # ✅ Make sure this is here
+    path('api/auth/', include('accounts.urls')),
     path('api/games/', include('games.urls')),
 
-
+    # Serve frontend static files (CSS, JS, images) - Fix paths for professional frontend
+    path('styles/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/styles/{filename}')),
+    path('utils/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/utils/{filename}')),
+    path('assets/<path:path>', lambda request, path: serve_frontend_static(request, f'src/assets/{path}')),
+    path('src/styles/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/styles/{filename}')),
+    path('src/utils/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/utils/{filename}')),
+    path('src/assets/<path:path>', lambda request, path: serve_frontend_static(request, f'src/assets/{path}')),
     
-    # # Auth routes
-    # path('api/auth/register/', RegisterView.as_view(), name='register'),
-    # path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    # path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
-    # # Optional: protected test
-    # path('api/auth/protected/', include('accounts.urls')),  # only if you already have a protected endpoint
+    # Professional frontend pages
+    path('login/', serve_professional_frontend, {'page_path': 'login'}, name='login'),
+    path('register/', serve_professional_frontend, {'page_path': 'register'}, name='register'),
+    path('lobby/', serve_professional_frontend, {'page_path': 'lobby'}, name='lobby'),
+    path('play/', serve_professional_frontend, {'page_path': 'play'}, name='play'),
+    path('forgot-password/', serve_professional_frontend, {'page_path': 'forgot-password'}, name='forgot-password'),
+    path('profile/', serve_professional_frontend, {'page_path': 'profile'}, name='profile'),
+    path('puzzles/', serve_professional_frontend, {'page_path': 'puzzles'}, name='puzzles'),
+    
+    # Root serves login page
+    path('', serve_professional_frontend, name='home'),
 ]
+
+# Serve static and media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

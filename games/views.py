@@ -5,14 +5,24 @@ from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model
 import json
 import logging
 
 from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
 
+# Import chess engine
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'engine'))
+from engine import get_computer_move
+
 # Add logging
 logger = logging.getLogger(__name__)
+
+# Get the custom user model
+User = get_user_model()
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -195,3 +205,305 @@ class GameDetailView(generics.RetrieveAPIView):
     """Get details of a single game."""
     queryset = Game.objects.all()
     serializer_class = GameSerializer
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_legal_moves(request, pk):
+    """Get legal moves for a specific square in the game."""
+    game = get_object_or_404(Game, pk=pk)
+    
+    # Must be a participant
+    if request.user not in [game.white_player, game.black_player]:
+        return Response({"detail": "You are not a player in this game."},
+                        status=status.HTTP_403_FORBIDDEN)
+    
+    # Get the square parameter
+    from_square = request.GET.get('from_square', '').strip().lower()
+    
+    if not from_square or len(from_square) != 2:
+        return Response({"detail": "from_square parameter required (e.g., 'e2')"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Handle "startpos" FEN
+        if game.fen == "startpos":
+            game.fen = chess.STARTING_FEN
+            game.save()
+        
+        board = chess.Board(game.fen)
+        
+        # Convert square name to chess.Square
+        try:
+            square = chess.parse_square(from_square)
+        except ValueError:
+            return Response({"detail": "Invalid square name"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get piece at square
+        piece = board.piece_at(square)
+        if not piece:
+            return Response({"moves": []})
+        
+        # Check if it's the player's piece
+        is_white_piece = piece.color == chess.WHITE
+        is_white_player = request.user == game.white_player
+        
+        if is_white_piece != is_white_player:
+            return Response({"detail": "Not your piece"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get all legal moves from this square
+        legal_moves = []
+        for move in board.legal_moves:
+            if move.from_square == square:
+                to_square_name = chess.square_name(move.to_square)
+                is_capture = board.is_capture(move)
+                
+                legal_moves.append({
+                    "to": to_square_name,
+                    "capture": is_capture,
+                    "uci": move.uci()
+                })
+        
+        return Response({
+            "from_square": from_square,
+            "moves": legal_moves,
+            "count": len(legal_moves)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting legal moves for game {pk}: {e}")
+        return Response({"detail": "Error calculating legal moves"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_game_timer(request, pk):
+    """Get timer status for a game."""
+    game = get_object_or_404(Game, pk=pk)
+    
+    # Must be a participant
+    if request.user not in [game.white_player, game.black_player]:
+        return Response({"detail": "You are not a player in this game."},
+                        status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        # Parse FEN to get current turn
+        if game.fen == "startpos":
+            game.fen = chess.STARTING_FEN
+            game.save()
+        
+        board = chess.Board(game.fen)
+        current_turn = "white" if board.turn == chess.WHITE else "black"
+        
+        return Response({
+            "game_id": game.id,
+            "white_time": game.white_time_left,
+            "black_time": game.black_time_left,
+            "current_turn": current_turn,
+            "game_status": game.status,
+            "last_move_at": game.last_move_at
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting timer for game {pk}: {e}")
+        return Response({"detail": "Error getting timer data"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def make_computer_move(request, pk):
+    """Make a computer move for the game."""
+    logger.info(f"Computer move request for game {pk} by user {request.user}")
+    
+    game = get_object_or_404(Game, pk=pk)
+    
+    # Must be a participant
+    if request.user not in [game.white_player, game.black_player]:
+        return Response({"detail": "You are not a player in this game."},
+                        status=status.HTTP_403_FORBIDDEN)
+    
+    # Check if game allows computer moves (could add a field for this)
+    # For now, allow if one player is None (indicating computer opponent)
+    if game.white_player and game.black_player:
+        return Response({"detail": "This is a human vs human game."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Handle "startpos" FEN
+        if game.fen == "startpos":
+            game.fen = chess.STARTING_FEN
+            game.save()
+        
+        board = chess.Board(game.fen)
+        
+        # Get difficulty from request or use default
+        difficulty = request.data.get('difficulty', 'medium')
+        if difficulty not in ['easy', 'medium', 'hard', 'expert']:
+            difficulty = 'medium'
+        
+        logger.info(f"Making computer move with difficulty: {difficulty}")
+        
+        # Get computer move
+        result = get_computer_move(game.fen, difficulty)
+        
+        if not result['success']:
+            logger.error(f"Computer move failed: {result['error']}")
+            return Response({"detail": f"Computer move failed: {result['error']}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        move_info = result['move']
+        new_fen = result['new_fen']
+        
+        # Determine which player is the computer
+        current_turn = board.turn
+        computer_player = None
+        if current_turn == chess.WHITE and not game.white_player:
+            # White is computer, create a virtual computer user if needed
+            computer_player, created = User.objects.get_or_create(
+                username='computer_white',
+                defaults={'first_name': 'Computer', 'last_name': 'White'}
+            )
+            if not game.white_player:
+                game.white_player = computer_player
+        elif current_turn == chess.BLACK and not game.black_player:
+            # Black is computer
+            computer_player, created = User.objects.get_or_create(
+                username='computer_black', 
+                defaults={'first_name': 'Computer', 'last_name': 'Black'}
+            )
+            if not game.black_player:
+                game.black_player = computer_player
+        else:
+            return Response({"detail": "It's not the computer's turn."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        # Parse the move
+        try:
+            chess_move = chess.Move.from_uci(move_info['uci'])
+            san = board.san(chess_move)
+        except Exception as e:
+            logger.error(f"Error parsing computer move: {e}")
+            return Response({"detail": "Invalid computer move generated."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Create move record
+        move_number = game.moves.count() + 1
+        
+        move_obj = Move.objects.create(
+            game=game,
+            player=computer_player,
+            move_number=move_number,
+            from_square=move_info['from_square'],
+            to_square=move_info['to_square'],
+            notation=san,
+            fen_after_move=new_fen
+        )
+        
+        logger.info(f"Computer move saved: {move_obj}")
+        
+        # Update game state
+        game.fen = new_fen
+        
+        # Check if game is over
+        new_board = chess.Board(new_fen)
+        if new_board.is_game_over():
+            game.status = 'finished'
+            result_str = new_board.result()
+            if result_str == '1-0':
+                game.winner = game.white_player
+            elif result_str == '0-1':
+                game.winner = game.black_player
+            logger.info(f"Game finished with result: {result_str}")
+        else:
+            game.status = 'active'
+        
+        game.save()
+        logger.info(f"Game updated after computer move: status={game.status}")
+        
+        # Return response
+        game_serializer = GameSerializer(game)
+        move_serializer = MoveSerializer(move_obj)
+        
+        response_data = {
+            "move": move_serializer.data,
+            "game": game_serializer.data,
+            "computer_move": {
+                "from_square": move_info['from_square'],
+                "to_square": move_info['to_square'],
+                "notation": san,
+                "uci": move_info['uci']
+            },
+            "engine_info": result['engine_info'],
+            "game_status": result['game_status']
+        }
+        
+        logger.info(f"Computer move response: {response_data}")
+        return Response(response_data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error making computer move for game {pk}: {e}")
+        return Response({"detail": f"Error making computer move: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_computer_game(request):
+    """Create a new game against the computer."""
+    try:
+        # Get player color preference (default to white)
+        player_color = request.data.get('player_color', 'white').lower()
+        difficulty = request.data.get('difficulty', 'medium')
+        
+        if player_color not in ['white', 'black']:
+            player_color = 'white'
+        
+        if difficulty not in ['easy', 'medium', 'hard', 'expert']:
+            difficulty = 'medium'
+        
+        # Create computer user if it doesn't exist
+        if player_color == 'white':
+            computer_user, created = User.objects.get_or_create(
+                username='computer_black',
+                defaults={'first_name': 'Computer', 'last_name': 'Black'}
+            )
+            game = Game.objects.create(
+                white_player=request.user,
+                black_player=computer_user,
+                fen=chess.STARTING_FEN,
+                status='active'
+            )
+        else:
+            computer_user, created = User.objects.get_or_create(
+                username='computer_white',
+                defaults={'first_name': 'Computer', 'last_name': 'White'}
+            )
+            game = Game.objects.create(
+                white_player=computer_user,
+                black_player=request.user,
+                fen=chess.STARTING_FEN,
+                status='active'
+            )
+        
+        # Store difficulty in game metadata (you might want to add this field to the model)
+        # For now, we'll include it in the response
+        
+        serializer = GameSerializer(game)
+        logger.info(f"Computer game created: {game.id} by {request.user}, player_color: {player_color}, difficulty: {difficulty}")
+        
+        response_data = serializer.data
+        response_data['difficulty'] = difficulty
+        response_data['player_color'] = player_color
+        response_data['is_computer_game'] = True
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error creating computer game: {e}")
+        return Response({"detail": f"Error creating computer game: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)

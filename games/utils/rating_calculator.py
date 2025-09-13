@@ -1,4 +1,4 @@
-# utils/rating_calculator.py
+# games/utils/rating_calculator.py
 import math
 from typing import Tuple
 from django.conf import settings
@@ -331,6 +331,10 @@ def update_player_ratings(white_user, black_user, game_result, time_control='rap
     
     white_user.update_game_stats(white_result, time_control)
     black_user.update_game_stats(black_result, time_control)
+    
+    # Save both users
+    white_user.save()
+    black_user.save()
     
     # Create rating history records
     RatingHistory.objects.create(

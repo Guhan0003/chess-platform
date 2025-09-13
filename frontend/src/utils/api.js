@@ -318,6 +318,13 @@ class ChessAPI {
   // =================================
 
   /**
+   * Get game timer status
+   */
+  async getGameTimer(gameId) {
+    return this.request(`/games/${gameId}/timer/`);
+  }
+
+  /**
    * Get all games
    */
   async getGames() {
@@ -374,6 +381,60 @@ class ChessAPI {
     });
   }
 
+  /**
+   * Make a computer move
+   * @param {number} gameId - Game ID
+   * @param {string} difficulty - AI difficulty ('easy', 'medium', 'hard', 'expert')
+   */
+  async makeComputerMove(gameId, difficulty = 'medium') {
+    const payload = {
+      difficulty: difficulty
+    };
+
+    return this.request(`/games/${gameId}/computer-move/`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  /**
+   * Create a game against the computer
+   * @param {string} playerColor - Player's color ('white' or 'black')
+   * @param {string} difficulty - AI difficulty ('easy', 'medium', 'hard', 'expert')
+   */
+  async createComputerGame(playerColor = 'white', difficulty = 'medium') {
+    const payload = {
+      player_color: playerColor,
+      difficulty: difficulty
+    };
+
+    return this.request('/games/create-computer/', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  /**
+   * Get legal moves for a piece at a specific square
+   * @param {number} gameId - Game ID  
+   * @param {string} fromSquare - Square to get legal moves from (e.g., 'e2')
+   */
+  async getLegalMoves(gameId, fromSquare) {
+    return this.request(`/games/${gameId}/legal-moves/?from_square=${fromSquare}`, {
+      method: 'GET'
+    });
+  }
+
+  /**
+   * Get game timer data
+   * @param {number} gameId - Game ID
+   */
+  async getGameTimer(gameId) {
+    return this.request(`/games/${gameId}/timer/`, {
+      method: 'GET'
+    });
+  }
+
   // =================================
   // Profile API Methods
   // =================================
@@ -390,17 +451,46 @@ class ChessAPI {
   }
 
   /**
-   * Upload profile avatar
-   * @param {File} file - Image file
+   * Upload user avatar
+   * @param {File} file - Avatar image file
    */
   async uploadAvatar(file) {
     const formData = new FormData();
     formData.append('avatar', file);
 
-    return this.request('/profiles/avatar/', {
-      method: 'POST',
-      headers: {}, // Let browser set Content-Type for FormData
-      body: formData
+    // Don't set Content-Type header - let browser handle it for FormData
+    const headers = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const url = `${this.baseURL}/auth/avatar/upload/`;
+    console.log('Uploading avatar to:', url);
+    console.log('File details:', { name: file.name, type: file.type, size: file.size });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+
+      console.log('Upload response status:', response.status);
+      console.log('Upload response headers:', response.headers);
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Upload fetch error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user avatar
+   */
+  async deleteAvatar() {
+    return this.request('/auth/avatar/delete/', {
+      method: 'DELETE'
     });
   }
 
@@ -575,12 +665,6 @@ class ChessAPI {
     }
     
     return 'An error occurred';
-  }
-
-  // User profile methods
-  async getUserProfile() {
-    const response = await this.fetch('/auth/profile/');
-    return { ok: response.ok, data: await response.json() };
   }
 }
 

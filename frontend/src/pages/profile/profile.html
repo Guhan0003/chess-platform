@@ -136,15 +136,29 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.7);
       border-radius: var(--radius-full);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       opacity: 0;
       transition: opacity var(--transition-normal);
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-xs);
       color: white;
+      gap: var(--space-xs);
+    }
+
+    .avatar-action {
+      padding: var(--space-xs) var(--space-sm);
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .avatar-action:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     .profile-avatar:hover .avatar-upload-overlay {
@@ -633,57 +647,328 @@
       line-height: 1.5;
     }
 
-    /* Responsive Design */
-    @media (max-width: 1200px) {
+    /* Mobile-First Responsive Design */
+    
+    /* Base mobile styles (up to 640px) */
+    .profile-header {
+      height: var(--header-height-mobile);
+      padding: 0 var(--space-md);
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .profile-title h1 {
+      font-size: var(--font-size-lg);
+    }
+
+    .back-btn {
+      padding: var(--space-sm) var(--space-md);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-sm);
+      min-height: var(--touch-target-min);
+      min-width: var(--touch-target-min);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .profile-content {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+      padding: var(--space-md);
+    }
+
+    .profile-card {
+      position: static;
+      width: 100%;
+      order: -1; /* Move profile card to top on mobile */
+    }
+
+    .profile-banner {
+      height: 120px; /* Smaller banner on mobile */
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      font-size: var(--font-size-xl);
+      border-width: 3px;
+      margin-top: -40px; /* Adjust for smaller banner */
+    }
+
+    .profile-username {
+      font-size: var(--font-size-lg);
+      margin: var(--space-sm) 0;
+    }
+
+    .profile-rating {
+      margin-bottom: var(--space-md);
+    }
+
+    .rating-value {
+      font-size: var(--font-size-xl);
+    }
+
+    .profile-stats {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: var(--space-sm);
+    }
+
+    .stat-value {
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-semibold);
+      margin-bottom: var(--space-xs);
+    }
+
+    .stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+    }
+
+    .edit-profile-btn {
+      width: 100%;
+      padding: var(--space-md);
+      font-size: var(--font-size-sm);
+      min-height: var(--touch-target-min);
+      border-radius: var(--radius-md);
+    }
+
+    .section-card {
+      margin-bottom: var(--space-md);
+      border-radius: var(--radius-md);
+    }
+
+    .section-header {
+      padding: var(--space-md);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .section-title {
+      font-size: var(--font-size-md);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .section-content {
+      padding: var(--space-md);
+    }
+
+    .rating-chart {
+      height: 200px; /* Smaller chart on mobile */
+      margin-bottom: var(--space-md);
+    }
+
+    .game-row {
+      padding: var(--space-md);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-sm);
+    }
+
+    .game-meta {
+      flex-direction: column;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-sm);
+    }
+
+    .game-players {
+      flex-direction: column;
+      gap: var(--space-sm);
+      text-align: center;
+    }
+
+    .game-result {
+      margin-top: var(--space-sm);
+      text-align: center;
+    }
+
+    .achievements-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+    }
+
+    .achievement-card {
+      padding: var(--space-md);
+      text-align: center;
+    }
+
+    .modal-content {
+      width: calc(100vw - var(--space-lg));
+      max-width: 500px;
+      margin: var(--space-md);
+      border-radius: var(--radius-md);
+    }
+
+    .modal-header {
+      padding: var(--space-md);
+    }
+
+    .modal-body {
+      padding: var(--space-md);
+    }
+
+    .modal-actions {
+      padding: var(--space-md);
+      gap: var(--space-sm);
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      flex: 1;
+      min-height: var(--touch-target-min);
+      padding: var(--space-md);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Small tablet styles (641px to 768px) */
+    @media (min-width: 641px) {
+      .profile-header {
+        height: var(--header-height);
+        padding: 0 var(--space-lg);
+      }
+
+      .profile-title h1 {
+        font-size: var(--font-size-xl);
+      }
+
       .profile-content {
-        grid-template-columns: 1fr;
+        padding: var(--space-lg);
         gap: var(--space-lg);
       }
 
-      .profile-card {
-        position: static;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .profile-content {
-        padding: var(--space-lg);
+      .profile-banner {
+        height: 150px;
       }
 
-      .profile-stats {
-        grid-template-columns: 1fr;
+      .profile-avatar {
+        width: 100px;
+        height: 100px;
+        margin-top: -50px;
+      }
+
+      .rating-chart {
+        height: 250px;
       }
 
       .achievements-grid {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      .game-meta {
-        flex-direction: column;
-        gap: var(--space-xs);
+      .game-players {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .game-result {
+        text-align: right;
+        margin-top: 0;
       }
     }
 
-    @media (max-width: 480px) {
-      .profile-header {
-        padding: 0 var(--space-lg);
+    /* Large tablet styles (769px to 1024px) */
+    @media (min-width: 769px) {
+      .profile-content {
+        grid-template-columns: 300px 1fr;
+        gap: var(--space-xl);
+        padding: var(--space-xl);
       }
 
-      .profile-content {
-        padding: var(--space-md);
+      .profile-card {
+        position: sticky;
+        top: calc(var(--header-height) + var(--space-lg));
+        order: 0;
+      }
+
+      .profile-banner {
+        height: 180px;
+      }
+
+      .profile-avatar {
+        width: 120px;
+        height: 120px;
+        margin-top: -60px;
+      }
+
+      .rating-chart {
+        height: 300px;
       }
 
       .achievements-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Desktop styles (1025px to 1280px) */
+    @media (min-width: 1025px) {
+      .profile-content {
+        grid-template-columns: 350px 1fr;
+        gap: var(--space-2xl);
+        padding: var(--space-2xl);
       }
 
-      .modal-content {
-        width: 95%;
+      .profile-banner {
+        height: 200px;
       }
 
-      .modal-header,
-      .modal-body {
+      .rating-chart {
+        height: 350px;
+      }
+
+      .achievements-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    /* Large desktop styles (1281px and up) */
+    @media (min-width: 1281px) {
+      .profile-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-2xl);
+      }
+
+      .rating-chart {
+        height: 400px;
+      }
+    }
+
+    /* Touch device optimizations */
+    @media (hover: none) and (pointer: coarse) {
+      .back-btn,
+      .edit-profile-btn,
+      .btn-primary,
+      .btn-secondary,
+      .avatar-action {
+        min-height: var(--touch-target-min);
+        padding: var(--space-md);
+      }
+
+      .game-row {
         padding: var(--space-lg);
+      }
+
+      .achievement-card {
+        padding: var(--space-lg);
+      }
+
+      /* Enhanced touch areas for avatar upload */
+      .avatar-upload-overlay {
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      .avatar-upload-overlay .avatar-action {
+        padding: var(--space-sm) var(--space-md);
+        margin: var(--space-xs);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-xs);
       }
     }
   </style>
@@ -712,7 +997,12 @@
             <div class="profile-avatar" id="profileAvatar">
               <span id="avatarText">?</span>
               <div class="avatar-upload-overlay">
-                📷 Change
+                <div class="avatar-action" onclick="event.stopPropagation(); document.getElementById('avatarUpload').click()">
+                  📷 Upload
+                </div>
+                <div class="avatar-action" id="deleteAvatarBtn" onclick="event.stopPropagation(); handleAvatarDelete()" style="display: none;">
+                  🗑️ Delete
+                </div>
               </div>
             </div>
             <h2 class="profile-username" id="profileUsername">Loading...</h2>
@@ -887,6 +1177,8 @@
     </div>
   </div>
 
+  <script src="../../utils/api.js"></script>
+  <script src="../../utils/router.js"></script>
   <script>
     // Profile page controller
     function initProfilePage() {
@@ -904,6 +1196,9 @@
           await loadUserStats();
           await loadRecentGames();
           
+          // Set up router routes
+          setupRoutes();
+          
           // Set up event listeners
           setupEventListeners();
           
@@ -911,6 +1206,49 @@
           console.error('Failed to initialize profile:', error);
           api.showError('Failed to load profile data');
         }
+      }
+      
+      // Set up router routes
+      function setupRoutes() {
+        console.log('Setting up routes for profile page...');
+        
+        // Add route for lobby
+        router.addRoute('/lobby', {
+          title: 'Lobby - Chess Platform',
+          controller: () => {
+            window.location.href = '/lobby/';
+          },
+          requiresAuth: true
+        });
+        
+        // Add route for profile (current page)
+        router.addRoute('/profile', {
+          title: 'Profile - Chess Platform',
+          controller: () => {
+            window.location.reload();
+          },
+          requiresAuth: true
+        });
+        
+        // Add route for puzzles
+        router.addRoute('/puzzles', {
+          title: 'Puzzles - Chess Platform',
+          controller: () => {
+            window.location.href = '/puzzles/';
+          },
+          requiresAuth: true
+        });
+        
+        // Add route for game
+        router.addRoute('/game/:id', {
+          title: 'Game - Chess Platform',
+          controller: () => {
+            window.location.href = '/play/';
+          },
+          requiresAuth: true
+        });
+        
+        console.log('Routes configured for profile page');
       }
       
       async function loadUserProfile() {
@@ -932,7 +1270,33 @@
         
         // Update profile info
         document.getElementById('profileUsername').textContent = currentUser.username;
-        document.getElementById('avatarText').textContent = currentUser.username.charAt(0).toUpperCase();
+        
+        // Update avatar display
+        const avatarElement = document.getElementById('profileAvatar');
+        const avatarText = document.getElementById('avatarText');
+        const deleteBtn = document.getElementById('deleteAvatarBtn');
+        
+        if (currentUser.avatar) {
+          // User has an avatar
+          if (avatarElement && avatarText) {
+            avatarElement.style.backgroundImage = `url(${currentUser.avatar})`;
+            avatarElement.style.backgroundSize = 'cover';
+            avatarElement.style.backgroundPosition = 'center';
+            avatarText.style.display = 'none';
+            if (deleteBtn) deleteBtn.style.display = 'block';
+          }
+        } else {
+          // No avatar, show initials
+          if (avatarText) {
+            avatarText.textContent = currentUser.username.charAt(0).toUpperCase();
+            avatarText.style.display = 'block';
+            if (deleteBtn) deleteBtn.style.display = 'none';
+          }
+          if (avatarElement) {
+            avatarElement.style.backgroundImage = 'none';
+          }
+        }
+        
         document.getElementById('currentRating').textContent = currentUser.rating || 1200;
         
         // Update stats
@@ -1068,7 +1432,7 @@
         // Back button
         document.querySelector('.back-btn').addEventListener('click', (e) => {
           e.preventDefault();
-          router.navigate('/lobby');
+          window.location.href = '/lobby/';
         });
         
         // Edit profile button
@@ -1087,11 +1451,7 @@
           }
         });
         
-        // Avatar upload
-        document.getElementById('profileAvatar').addEventListener('click', () => {
-          document.getElementById('avatarUpload').click();
-        });
-        
+        // Avatar upload - file input change handler only
         document.getElementById('avatarUpload').addEventListener('change', handleAvatarUpload);
         
         // Edit form submission
@@ -1119,17 +1479,74 @@
         const file = event.target.files[0];
         if (!file) return;
         
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          api.showError('File size too large. Maximum size is 5MB.');
+          return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+          api.showError('Invalid file type. Only JPEG, PNG and GIF files are allowed.');
+          return;
+        }
+        
         try {
           api.showToast('Uploading avatar...', 'info');
           
-          // Mock upload - replace with actual API call
-          setTimeout(() => {
-            api.showSuccess('Avatar updated successfully!');
-          }, 2000);
+          const response = await api.uploadAvatar(file);
+          
+          if (response.avatar_url) {
+            // Update avatar display
+            const avatarElement = document.getElementById('profileAvatar');
+            const avatarText = document.getElementById('avatarText');
+            const deleteBtn = document.getElementById('deleteAvatarBtn');
+            
+            if (avatarElement && avatarText) {
+              avatarElement.style.backgroundImage = `url(${response.avatar_url})`;
+              avatarElement.style.backgroundSize = 'cover';
+              avatarElement.style.backgroundPosition = 'center';
+              avatarText.style.display = 'none';
+              if (deleteBtn) deleteBtn.style.display = 'block';
+            }
+          }
+          
+          api.showSuccess('Avatar updated successfully!');
           
         } catch (error) {
           console.error('Avatar upload error:', error);
-          api.showError('Failed to upload avatar');
+          api.showError(error.error || 'Failed to upload avatar');
+        }
+      }
+
+      async function handleAvatarDelete() {
+        if (!confirm('Are you sure you want to delete your avatar?')) {
+          return;
+        }
+
+        try {
+          api.showToast('Deleting avatar...', 'info');
+          
+          await api.deleteAvatar();
+          
+          // Reset avatar display
+          const avatarElement = document.getElementById('profileAvatar');
+          const avatarText = document.getElementById('avatarText');
+          const deleteBtn = document.getElementById('deleteAvatarBtn');
+          
+          if (avatarElement && avatarText) {
+            avatarElement.style.backgroundImage = 'none';
+            avatarText.style.display = 'block';
+            avatarText.textContent = currentUser?.username?.charAt(0).toUpperCase() || '?';
+            if (deleteBtn) deleteBtn.style.display = 'none';
+          }
+          
+          api.showSuccess('Avatar deleted successfully!');
+          
+        } catch (error) {
+          console.error('Avatar delete error:', error);
+          api.showError(error.error || 'Failed to delete avatar');
         }
       }
       

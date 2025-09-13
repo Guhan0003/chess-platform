@@ -250,18 +250,159 @@
       50% { transform: translateY(-20px); }
     }
 
-    /* Responsive design */
-    @media (max-width: 480px) {
+    /* Mobile-First Responsive Design */
+    
+    /* Base mobile styles (up to 640px) */
+    .auth-container {
+      padding: var(--space-md);
+      min-height: 100vh;
+      min-height: 100dvh; /* Dynamic viewport height for mobile */
+    }
+    
+    .auth-card {
+      padding: var(--space-lg);
+      max-width: 100%;
+      width: 100%;
+      margin: 0;
+      border-radius: var(--radius-lg);
+    }
+
+    .auth-logo {
+      font-size: var(--font-size-xl);
+      margin-bottom: var(--space-md);
+    }
+
+    .auth-title {
+      font-size: var(--font-size-lg);
+      margin-bottom: var(--space-sm);
+    }
+
+    .auth-subtitle {
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-lg);
+    }
+
+    .form-group {
+      margin-bottom: var(--space-md);
+    }
+
+    .form-group label {
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-xs);
+    }
+
+    .form-group input {
+      padding: var(--space-md);
+      font-size: var(--font-size-sm);
+      min-height: var(--touch-target-min);
+      border-radius: var(--radius-md);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: var(--space-md);
+      font-size: var(--font-size-sm);
+      min-height: var(--touch-target-min);
+      border-radius: var(--radius-md);
+      margin: var(--space-lg) 0;
+    }
+
+    .auth-links {
+      text-align: center;
+      font-size: var(--font-size-sm);
+    }
+
+    .auth-links a {
+      color: var(--color-primary);
+      padding: var(--space-sm);
+      border-radius: var(--radius-sm);
+      min-height: var(--touch-target-min);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chess-decoration {
+      display: none; /* Hide decorations on mobile */
+    }
+
+    /* Small tablet styles (641px to 768px) */
+    @media (min-width: 641px) {
       .auth-container {
-        padding: var(--space-md);
+        padding: var(--space-lg);
       }
       
       .auth-card {
         padding: var(--space-xl);
+        max-width: 450px;
+      }
+
+      .auth-logo {
+        font-size: var(--font-size-2xl);
+      }
+
+      .auth-title {
+        font-size: var(--font-size-xl);
+      }
+
+      .auth-subtitle {
+        font-size: var(--font-size-md);
+      }
+
+      .chess-decoration {
+        display: block;
+        opacity: 0.3;
+      }
+    }
+
+    /* Large tablet styles (769px to 1024px) */
+    @media (min-width: 769px) {
+      .auth-container {
+        padding: var(--space-xl);
       }
       
+      .auth-card {
+        padding: var(--space-2xl);
+        max-width: 500px;
+      }
+
       .chess-decoration {
-        display: none;
+        opacity: 0.5;
+      }
+    }
+
+    /* Desktop styles (1025px and up) */
+    @media (min-width: 1025px) {
+      .auth-card {
+        max-width: 400px;
+      }
+
+      .chess-decoration {
+        opacity: 0.7;
+      }
+    }
+
+    /* Touch device optimizations */
+    @media (hover: none) and (pointer: coarse) {
+      .form-group input {
+        padding: var(--space-lg);
+        font-size: 16px; /* Prevent zoom on iOS */
+      }
+
+      .btn-primary {
+        padding: var(--space-lg);
+      }
+
+      .auth-links a {
+        padding: var(--space-md);
+        margin: var(--space-xs);
+      }
+
+      /* Enhanced focus states for touch */
+      .form-group input:focus {
+        border-width: 2px;
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
       }
     }
   </style>
@@ -328,7 +469,7 @@
         </div>
 
         <div class="auth-link">
-          <a href="../auth/register.html">Create an account</a>
+          <a href="/register/">Create an account</a>
         </div>
       </div>
     </div>
@@ -384,7 +525,7 @@
             
             // Redirect to lobby after short delay
             setTimeout(() => {
-              window.location.href = '../dashboard/lobby.html';
+              window.location.href = '/lobby/';
             }, 500);
           } else {
             // Login failed

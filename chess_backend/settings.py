@@ -27,7 +27,20 @@ SECRET_KEY = 'django-insecure-s@(spfstj&mns@8r-!wsr!nl%n8gnaz^o4+*$87_l9$may2ox8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Professional ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'testserver',  # For Django testing framework
+    '.chess-platform.com',  # Production domain (with subdomain support)
+]
+
+# Additional security settings for testing and development
+if DEBUG:
+    ALLOWED_HOSTS.extend([
+        '0.0.0.0',  # Docker development
+        '*',  # Allow all hosts in development (use cautiously)
+    ])
 
 
 # Application definition
@@ -66,7 +79,7 @@ ROOT_URLCONF = 'chess_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'frontend'],  # Add frontend directory for templates
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -85,34 +98,45 @@ WSGI_APPLICATION = 'chess_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Database Configuration
-# Using SQLite for development/testing, PostgreSQL for production
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Professional Database Configuration
+# Environment-based database selection for proper deployment practices
+import os
+
+# Database environment detection
+DB_ENGINE = os.getenv('DB_ENGINE', 'postgresql')  # Default to PostgreSQL for production
+
+if DB_ENGINE == 'sqlite' or os.getenv('TESTING', False):
+    # SQLite configuration for development and testing
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 20,
+            },
+        }
     }
-}
+else:
+    # PostgreSQL configuration for production
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'chess_platform'),
+            'USER': os.getenv('DB_USER', 'chess_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'secure_chess_password_2025'),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'connect_timeout': 60,
+                'options': '-c default_transaction_isolation=read_committed'
+            },
+        }
+    }
 
-# PostgreSQL configuration (for production)
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'game_db',
-#         'USER': 'games_user',
-#         'PASSWORD': 'chesspass',
-#         'HOST': '127.0.0.1',
-#         'PORT': '5432',
-#     }
-# }
-
-# SQLite backup configuration
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+# Database connection pooling for production
+if not DEBUG and DB_ENGINE == 'postgresql':
+    DATABASES['default']['CONN_MAX_AGE'] = 60
+    DATABASES['default']['OPTIONS']['MAX_CONNS'] = 20
 
 # SQLite configuration (for testing purposes)
 # DATABASES = {
@@ -165,6 +189,11 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "engine", "assets"),  # expose engine/assets
     os.path.join(BASE_DIR, "frontend", "assets"),  # frontend assets
 ]
+
+# Media files (user uploads like avatars)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -174,6 +203,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
+    ],
 }
 
 SIMPLE_JWT = {
@@ -186,10 +220,22 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 LOGGING = {
     'version': 1,

@@ -166,10 +166,281 @@
       color: var(--text-light);
     }
 
-    /* ==== Responsive ==== */
-    @media (max-width: 900px) {
-      .puzzle-layout { grid-template-columns: 1fr; }
-      .puzzle-sidebar { margin-top: 2rem; }
+    /* Mobile-First Responsive Design */
+    
+    /* Base mobile styles (up to 640px) */
+    .app-header {
+      height: var(--header-height-mobile);
+      padding: 0 var(--space-md);
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .logo {
+      font-size: var(--font-size-lg);
+    }
+
+    .nav-links {
+      display: none; /* Hide navigation on mobile, replace with hamburger menu */
+    }
+
+    .puzzle-layout {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+      padding: var(--space-md);
+    }
+
+    .puzzle-board {
+      order: 1;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+    }
+
+    .chessboard {
+      width: min(95vw, 95vh);
+      height: min(95vw, 95vh);
+      margin: 0 auto;
+      border-radius: var(--radius-sm);
+    }
+
+    .puzzle-sidebar {
+      order: 2;
+      margin-top: 0;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+    }
+
+    .puzzle-status {
+      padding: var(--space-md);
+      text-align: center;
+      border-radius: var(--radius-sm);
+      margin-top: var(--space-md);
+    }
+
+    .status-text {
+      font-size: var(--font-size-sm);
+    }
+
+    .puzzle-info h3 {
+      font-size: var(--font-size-md);
+      margin-bottom: var(--space-sm);
+    }
+
+    .puzzle-info p {
+      font-size: var(--font-size-sm);
+      line-height: 1.5;
+      margin-bottom: var(--space-sm);
+    }
+
+    .puzzle-controls {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+    }
+
+    .puzzle-controls button {
+      width: 100%;
+      padding: var(--space-md);
+      font-size: var(--font-size-sm);
+      min-height: var(--touch-target-min);
+      border-radius: var(--radius-md);
+    }
+
+    .puzzle-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      padding: var(--space-md);
+      border-radius: var(--radius-sm);
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: var(--space-sm);
+    }
+
+    .stat-value {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      margin-bottom: var(--space-xs);
+    }
+
+    .stat-label {
+      font-size: var(--font-size-xs);
+      opacity: 0.8;
+    }
+
+    /* Small tablet styles (641px to 768px) */
+    @media (min-width: 641px) {
+      .app-header {
+        height: var(--header-height);
+        padding: 0 var(--space-lg);
+      }
+
+      .logo {
+        font-size: var(--font-size-xl);
+      }
+
+      .nav-links {
+        display: flex;
+        gap: var(--space-lg);
+      }
+
+      .nav-links a {
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-sm);
+        min-height: var(--touch-target-min);
+        display: flex;
+        align-items: center;
+      }
+
+      .puzzle-layout {
+        gap: var(--space-lg);
+        padding: var(--space-lg);
+      }
+
+      .chessboard {
+        width: min(85vw, 85vh);
+        height: min(85vw, 85vh);
+      }
+
+      .puzzle-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .puzzle-controls button {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .puzzle-stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Large tablet styles (769px to 1024px) */
+    @media (min-width: 769px) {
+      .puzzle-layout {
+        grid-template-columns: 1fr 300px;
+        gap: var(--space-xl);
+        padding: var(--space-xl);
+      }
+
+      .puzzle-board {
+        order: 0;
+      }
+
+      .puzzle-sidebar {
+        order: 1;
+        margin-top: 0;
+      }
+
+      .chessboard {
+        width: min(75vw, 75vh);
+        height: min(75vw, 75vh);
+      }
+
+      .puzzle-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Desktop styles (1025px to 1280px) */
+    @media (min-width: 1025px) {
+      .puzzle-layout {
+        grid-template-columns: 1fr 350px;
+        gap: var(--space-2xl);
+        padding: var(--space-2xl);
+      }
+
+      .chessboard {
+        width: min(65vw, 65vh);
+        height: min(65vw, 65vh);
+      }
+    }
+
+    /* Large desktop styles (1281px and up) */
+    @media (min-width: 1281px) {
+      .puzzle-layout {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-2xl);
+      }
+
+      .chessboard {
+        width: min(60vw, 60vh);
+        height: min(60vw, 60vh);
+      }
+    }
+
+    /* Touch device optimizations */
+    @media (hover: none) and (pointer: coarse) {
+      .nav-links a {
+        min-height: var(--touch-target-min);
+        padding: var(--space-md);
+      }
+
+      .puzzle-controls button {
+        min-height: var(--touch-target-min);
+        padding: var(--space-lg);
+      }
+
+      .chessboard {
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+
+      /* Enhanced visual feedback for touch */
+      .puzzle-board {
+        border: 2px solid transparent;
+        transition: border-color 0.2s ease;
+      }
+
+      .puzzle-board:focus-within {
+        border-color: var(--color-primary);
+      }
+    }
+
+    /* Mobile navigation menu (if needed) */
+    @media (max-width: 640px) {
+      .nav-menu-toggle {
+        display: block;
+        background: none;
+        border: none;
+        color: var(--color-text-primary);
+        font-size: var(--font-size-lg);
+        padding: var(--space-sm);
+        cursor: pointer;
+        min-height: var(--touch-target-min);
+        min-width: var(--touch-target-min);
+      }
+
+      .nav-links.mobile-menu {
+        position: fixed;
+        top: var(--header-height-mobile);
+        left: 0;
+        right: 0;
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        border-top: 1px solid var(--glass-border);
+        padding: var(--space-md);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+      }
+
+      .nav-links.mobile-menu a {
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+        text-align: center;
+        min-height: var(--touch-target-min);
+      }
     }
   </style>
 </head>
@@ -178,10 +449,10 @@
   <header class="app-header glass">
     <div class="logo">♟ Chess Platform</div>
     <nav class="nav-links">
-      <a href="#/lobby">Lobby</a>
-      <a href="#/play">Play</a>
-      <a href="#/puzzle" class="active">Puzzles</a>
-      <a href="#/profile">Profile</a>
+      <a href="#" data-route="/lobby">Lobby</a>
+      <a href="#" data-route="/game/new">Play</a>
+      <a href="#" data-route="/puzzles" class="active">Puzzles</a>
+      <a href="#" data-route="/profile">Profile</a>
     </nav>
   </header>
 
@@ -221,8 +492,75 @@
   </footer>
 
   <!-- Script -->
+  <script src="../../utils/api.js"></script>
+  <script src="../../utils/router.js"></script>
   <script>
+    // Set up router routes for puzzles page
+    function setupRoutes() {
+      console.log('Setting up routes for puzzles page...');
+      
+      // Add route for lobby
+      router.addRoute('/lobby', {
+        title: 'Lobby - Chess Platform',
+        controller: () => {
+          window.location.href = '/lobby/';
+        },
+        requiresAuth: true
+      });
+      
+      // Add route for profile
+      router.addRoute('/profile', {
+        title: 'Profile - Chess Platform',
+        controller: () => {
+          window.location.href = '/profile/';
+        },
+        requiresAuth: true
+      });
+      
+      // Add route for puzzles (current page)
+      router.addRoute('/puzzles', {
+        title: 'Puzzles - Chess Platform',
+        controller: () => {
+          window.location.reload();
+        },
+        requiresAuth: true
+      });
+      
+      // Add route for new game
+      router.addRoute('/game/new', {
+        title: 'New Game - Chess Platform',
+        controller: () => {
+          window.location.href = '/play/';
+        },
+        requiresAuth: true
+      });
+      
+      console.log('Routes configured for puzzles page');
+    }
+    
+    // Set up navigation click handlers
+    function setupNavigation() {
+      console.log('Setting up navigation for puzzles page...');
+      
+      document.querySelectorAll('a[data-route]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const route = link.getAttribute('data-route');
+          console.log('Navigating to:', route);
+          
+          // Use direct navigation for reliability
+          window.location.href = route + '/';
+        });
+      });
+    }
+    
     document.addEventListener("DOMContentLoaded", () => {
+      // Set up router routes
+      setupRoutes();
+      
+      // Set up navigation click handlers
+      setupNavigation();
+      
       const titleEl = document.getElementById("puzzle-title");
       const goalEl = document.getElementById("puzzle-goal");
       const ratingEl = document.getElementById("puzzle-rating");

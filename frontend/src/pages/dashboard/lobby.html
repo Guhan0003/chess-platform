@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lobby - Chess Platform</title>
   <link rel="stylesheet" href="../../styles/global.css">
+  <script src="../../utils/api.js"></script>
+  <script src="../../utils/router.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -590,21 +592,107 @@
       100% { background-position: 200% 0; }
     }
 
-    /* Responsive Design */
-    @media (max-width: 1200px) {
+    /* ================================
+       Mobile Menu Button
+       ================================ */
+    .mobile-menu-btn {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 44px;
+      height: 44px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: var(--radius-md);
+      transition: all var(--transition-normal);
+    }
+
+    .hamburger-line {
+      width: 22px;
+      height: 2px;
+      background: var(--color-text-primary);
+      margin: 2px 0;
+      border-radius: 2px;
+      transition: all var(--transition-normal);
+    }
+
+    .mobile-menu-btn:hover {
+      background: var(--color-bg-hover);
+    }
+
+    .mobile-menu-btn.active .hamburger-line:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .mobile-menu-btn.active .hamburger-line:nth-child(2) {
+      opacity: 0;
+    }
+
+    .mobile-menu-btn.active .hamburger-line:nth-child(3) {
+      transform: rotate(-45deg) translate(7px, -6px);
+    }
+
+    /* Mobile Overlay */
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 99;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .mobile-overlay.active {
+      display: block;
+    }
+
+    /* ================================
+       Responsive Design - Mobile First
+       ================================ */
+
+    /* Large screens (desktops) */
+    @media (min-width: 1024px) {
+      .content {
+        grid-template-columns: 2fr 1fr;
+        gap: var(--space-2xl);
+      }
+    }
+
+    /* Medium screens (tablets) */
+    @media (max-width: 1023px) and (min-width: 768px) {
       .content {
         grid-template-columns: 1fr;
+        gap: var(--space-xl);
       }
       
       .content-sidebar {
         order: -1;
       }
+
+      .action-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
-    @media (max-width: 768px) {
+    /* Small screens (mobile) */
+    @media (max-width: 767px) {
+      .mobile-menu-btn {
+        display: flex;
+      }
+
       .sidebar {
         transform: translateX(-100%);
         transition: transform var(--transition-normal);
+        z-index: 100;
+        width: 100vw;
+        max-width: 320px;
       }
       
       .sidebar.open {
@@ -613,40 +701,159 @@
       
       .main-content {
         margin-left: 0;
+        width: 100%;
+      }
+
+      .header {
+        padding: var(--space-md) var(--space-lg);
+        align-items: center;
+        gap: var(--space-md);
+      }
+
+      .header-title {
+        font-size: var(--font-size-lg);
+      }
+
+      .header-subtitle {
+        font-size: var(--font-size-xs);
+      }
+
+      .content {
+        padding: var(--space-md);
+        gap: var(--space-lg);
+        grid-template-columns: 1fr;
       }
       
       .action-grid {
         grid-template-columns: 1fr;
+        gap: var(--space-md);
       }
       
       .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
       }
       
       .game-card {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--space-md);
+        padding: var(--space-lg);
+      }
+
+      .game-players {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .game-info {
+        width: 100%;
+        text-align: left;
+      }
+
+      .game-actions {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .quick-actions,
+      .games-section {
+        padding: var(--space-md);
+      }
+
+      .section-title {
+        font-size: var(--font-size-lg);
+        margin-bottom: var(--space-md);
+      }
+
+      /* Mobile-specific user profile adjustments */
+      .user-profile {
+        padding: var(--space-md);
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-md);
+      }
+
+      .user-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: var(--font-size-lg);
+      }
+
+      .user-info {
+        flex: 1;
+      }
+
+      .user-name {
+        font-size: var(--font-size-base);
+        margin-bottom: var(--space-xs);
+      }
+
+      .user-rating {
+        font-size: var(--font-size-sm);
       }
     }
 
+    /* Extra small screens */
     @media (max-width: 480px) {
       .header {
-        padding: 0 var(--space-lg);
+        padding: var(--space-sm) var(--space-md);
       }
       
       .content {
-        padding: var(--space-lg);
-        gap: var(--space-lg);
+        padding: var(--space-sm);
+        gap: var(--space-md);
       }
       
       .quick-actions,
       .games-section {
-        padding: var(--space-lg);
+        padding: var(--space-sm);
       }
       
       .stats-grid {
         grid-template-columns: 1fr;
+        gap: var(--space-sm);
+      }
+
+      .action-btn {
+        padding: var(--space-md);
+        font-size: var(--font-size-sm);
+      }
+
+      .stat-card {
+        padding: var(--space-md);
+      }
+
+      .stat-value {
+        font-size: var(--font-size-xl);
+      }
+
+      .sidebar {
+        max-width: 280px;
+      }
+
+      .sidebar-header {
+        padding: var(--space-lg) var(--space-md);
+      }
+
+      .sidebar-nav {
+        padding: var(--space-md);
+      }
+    }
+
+    /* Touch device optimizations */
+    @media (pointer: coarse) {
+      .nav-item {
+        min-height: 48px;
+        padding: var(--space-md) var(--space-lg);
+      }
+
+      .action-btn {
+        min-height: 48px;
+      }
+
+      .game-card {
+        padding: var(--space-lg);
       }
     }
   </style>
@@ -716,6 +923,13 @@
       <main class="main-content">
         <!-- Header -->
         <header class="header">
+          <!-- Mobile Menu Button -->
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+          </button>
+          
           <div>
             <div class="header-title">Chess Lobby</div>
             <div class="header-subtitle">Welcome back! Ready for your next game?</div>
@@ -749,6 +963,12 @@
                   <span class="action-icon">➕</span>
                   <h3 class="action-title">Create Game</h3>
                   <p class="action-description">Set up a custom game and wait for opponents</p>
+                </div>
+                
+                <div class="action-card play-computer" id="playComputerBtn">
+                  <span class="action-icon">🤖</span>
+                  <h3 class="action-title">Play vs Computer</h3>
+                  <p class="action-description">Challenge our AI opponent with adjustable difficulty</p>
                 </div>
                 
                 <div class="action-card join-game" id="joinGameBtn">
@@ -833,6 +1053,12 @@
   <script>
     // Lobby page controller - Matching our API system
     function initLobbyPage() {
+      // Check authentication first
+      if (!localStorage.getItem('access')) {
+        window.location.href = '/login/';
+        return;
+      }
+      
       let currentUser = null;
       let games = [];
       let onlinePlayers = [];
@@ -865,13 +1091,30 @@
       
       async function loadUserProfile() {
         try {
+          console.log('Loading user profile...');
           const response = await api.getUserProfile();
+          console.log('Profile response:', response);
+          
           if (response.ok) {
             currentUser = response.data;
+            console.log('User profile loaded:', currentUser);
             updateUserDisplay();
+          } else {
+            console.error('Profile API failed:', response);
+            // If unauthorized, redirect to login
+            if (response.status === 401) {
+              window.location.href = '/login/';
+              return;
+            }
+            throw new Error(`Profile API failed: ${response.status}`);
           }
         } catch (error) {
           console.error('Failed to load user profile:', error);
+          // Check if user is authenticated
+          if (!localStorage.getItem('access')) {
+            window.location.href = '/login/';
+            return;
+          }
           // Use fallback data
           currentUser = {
             username: 'Player',
@@ -891,7 +1134,17 @@
         if (currentUser) {
           userNameEl.textContent = currentUser.username;
           userRatingEl.textContent = currentUser.rating || 1200;
-          userAvatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+          
+          // Update avatar - show image if available, otherwise show first letter
+          if (currentUser.avatar && currentUser.avatar.trim() !== '') {
+            userAvatarEl.style.backgroundImage = `url(${currentUser.avatar})`;
+            userAvatarEl.style.backgroundSize = 'cover';
+            userAvatarEl.style.backgroundPosition = 'center';
+            userAvatarEl.textContent = '';
+          } else {
+            userAvatarEl.style.backgroundImage = '';
+            userAvatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+          }
           
           // Update stats
           document.getElementById('gamesPlayed').textContent = currentUser.games_played || 0;
@@ -958,7 +1211,7 @@
         document.querySelectorAll('.game-card').forEach(card => {
           card.addEventListener('click', () => {
             const gameId = card.dataset.gameId;
-            router.navigate(`/game/${gameId}`);
+            window.location.href = `/play/?game=${gameId}`;
           });
         });
       }
@@ -1026,7 +1279,7 @@
             if (response.ok) {
               api.showSuccess('Game created successfully!');
               setTimeout(() => {
-                router.navigate(`/game/${response.data.id}`);
+                window.location.href = `/play/?game=${response.data.id}`;
               }, 1000);
             } else {
               api.showError(api.formatError(response));
@@ -1046,9 +1299,17 @@
           api.showToast('Browse games below and click to join!', 'info');
         });
         
+        // Play vs Computer
+        document.getElementById('playComputerBtn').addEventListener('click', () => {
+          showComputerGameModal();
+        });
+        
+        // Computer game modal setup
+        setupComputerGameModal();
+        
         // Puzzles
         document.querySelector('.action-card.puzzles').addEventListener('click', () => {
-          api.showToast('Puzzle feature coming soon!', 'info');
+          window.location.href = '/puzzles/';
         });
         
         // Logout
@@ -1064,24 +1325,42 @@
           }
         });
         
-        // Navigation items
+        // Navigation items - Use direct navigation for reliability
         document.querySelectorAll('.nav-item[data-route]').forEach(item => {
           item.addEventListener('click', (e) => {
             e.preventDefault();
             const route = item.dataset.route;
+            console.log('Nav item clicked (router method):', route);
             
             // Update active state
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
             
-            // Navigate
-            router.navigate(route);
+            // Use direct navigation instead of router
+            console.log('Navigating to:', route + '/');
+            window.location.href = route + '/';
           });
         });
         
         // User profile click
         document.querySelector('.user-profile[data-route]').addEventListener('click', () => {
-          router.navigate('/profile');
+          console.log('User profile clicked, navigating to /profile/');
+          window.location.href = '/profile/';
+        });
+        
+        // Navigation items click handlers
+        document.querySelectorAll('.nav-item[data-route]').forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const route = item.getAttribute('data-route');
+            console.log('Nav item clicked:', route);
+            if (route) {
+              console.log('Navigating to:', route + '/');
+              window.location.href = route + '/';
+            } else {
+              console.log('No route found for nav item');
+            }
+          });
         });
       }
       
@@ -1140,6 +1419,466 @@
     } else {
       initLobbyPage();
     }
+
+    // ================================
+    // Mobile Menu Functionality
+    // ================================
+    function initMobileMenu() {
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const mobileOverlay = document.createElement('div');
+      
+      // Create mobile overlay
+      mobileOverlay.className = 'mobile-overlay';
+      mobileOverlay.id = 'mobileOverlay';
+      document.body.appendChild(mobileOverlay);
+
+      function toggleMobileMenu() {
+        const isOpen = sidebar.classList.contains('open');
+        
+        if (isOpen) {
+          closeMobileMenu();
+        } else {
+          openMobileMenu();
+        }
+      }
+
+      function openMobileMenu() {
+        sidebar.classList.add('open');
+        mobileOverlay.classList.add('active');
+        mobileMenuBtn.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scroll
+      }
+
+      function closeMobileMenu() {
+        sidebar.classList.remove('open');
+        mobileOverlay.classList.remove('active');
+        mobileMenuBtn.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scroll
+      }
+
+      // Event listeners
+      mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+      mobileOverlay.addEventListener('click', closeMobileMenu);
+
+      // Close menu on navigation item click (mobile)
+      const navItems = sidebar.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        item.addEventListener('click', () => {
+          if (window.innerWidth <= 767) {
+            closeMobileMenu();
+          }
+        });
+      });
+
+      // Close menu on escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+          closeMobileMenu();
+        }
+      });
+
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        if (window.innerWidth > 767 && sidebar.classList.contains('open')) {
+          closeMobileMenu();
+        }
+      });
+    }
+
+    // Initialize mobile menu
+    initMobileMenu();
+    
+    // Computer Game Modal Functions
+    function showComputerGameModal() {
+      const modal = document.getElementById('computerGameModal');
+      modal.classList.add('show');
+    }
+
+    function hideComputerGameModal() {
+      const modal = document.getElementById('computerGameModal');
+      modal.classList.remove('show');
+    }
+
+    function setupComputerGameModal() {
+      const modal = document.getElementById('computerGameModal');
+      const closeBtn = modal.querySelector('.modal-close');
+      const cancelBtn = document.getElementById('cancelComputerGame');
+      const startBtn = document.getElementById('startComputerGame');
+
+      // Close modal handlers
+      closeBtn.addEventListener('click', hideComputerGameModal);
+      cancelBtn.addEventListener('click', hideComputerGameModal);
+      
+      // Click outside to close
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          hideComputerGameModal();
+        }
+      });
+
+      // Start computer game
+      startBtn.addEventListener('click', async () => {
+        try {
+          const playerColor = modal.querySelector('input[name="playerColor"]:checked').value;
+          const difficulty = modal.querySelector('input[name="difficulty"]:checked').value;
+          
+          api.showToast('Creating computer game...', 'info');
+          
+          const response = await api.createComputerGame(playerColor, difficulty);
+          
+          if (response.ok) {
+            hideComputerGameModal();
+            api.showSuccess('Computer game created successfully!');
+            
+            // Navigate to game with difficulty parameter
+            setTimeout(() => {
+              window.location.href = `/play/?game=${response.data.id}&difficulty=${difficulty}`;
+            }, 1000);
+          } else {
+            api.showError(api.formatError(response));
+          }
+        } catch (error) {
+          console.error('Create computer game error:', error);
+          api.showError('Failed to create computer game. Please try again.');
+        }
+      });
+    }
   </script>
+
+  <!-- Computer Game Settings Modal -->
+  <div class="modal-overlay" id="computerGameModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🤖 Play vs Computer</h3>
+        <button class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="setting-group">
+          <label class="setting-label">Choose your color:</label>
+          <div class="color-options">
+            <label class="option-card">
+              <input type="radio" name="playerColor" value="white" checked>
+              <div class="option-content">
+                <span class="option-icon">♔</span>
+                <span class="option-text">Play as White</span>
+              </div>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="playerColor" value="black">
+              <div class="option-content">
+                <span class="option-icon">♚</span>
+                <span class="option-text">Play as Black</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <div class="setting-group">
+          <label class="setting-label">AI Difficulty:</label>
+          <div class="difficulty-options">
+            <label class="option-card">
+              <input type="radio" name="difficulty" value="easy">
+              <div class="option-content">
+                <span class="difficulty-indicator easy"></span>
+                <div class="difficulty-info">
+                  <span class="difficulty-name">Easy</span>
+                  <span class="difficulty-desc">Perfect for beginners</span>
+                </div>
+              </div>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="difficulty" value="medium" checked>
+              <div class="option-content">
+                <span class="difficulty-indicator medium"></span>
+                <div class="difficulty-info">
+                  <span class="difficulty-name">Medium</span>
+                  <span class="difficulty-desc">Balanced challenge</span>
+                </div>
+              </div>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="difficulty" value="hard">
+              <div class="option-content">
+                <span class="difficulty-indicator hard"></span>
+                <div class="difficulty-info">
+                  <span class="difficulty-name">Hard</span>
+                  <span class="difficulty-desc">For experienced players</span>
+                </div>
+              </div>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="difficulty" value="expert">
+              <div class="option-content">
+                <span class="difficulty-indicator expert"></span>
+                <div class="difficulty-info">
+                  <span class="difficulty-name">Expert</span>
+                  <span class="difficulty-desc">Maximum challenge</span>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelComputerGame">Cancel</button>
+        <button class="btn btn-primary" id="startComputerGame">
+          <span class="btn-icon">🚀</span>
+          Start Game
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Computer Game Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      max-width: 500px;
+      width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      transform: scale(0.95) translateY(20px);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.show .modal-content {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      padding: var(--space-lg);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: var(--font-size-xl);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: var(--space-xs);
+      line-height: 1;
+      transition: color var(--transition-fast);
+    }
+
+    .modal-close:hover {
+      color: var(--color-text-primary);
+    }
+
+    .modal-body {
+      padding: var(--space-lg);
+    }
+
+    .setting-group {
+      margin-bottom: var(--space-lg);
+    }
+
+    .setting-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .setting-label {
+      display: block;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-md);
+    }
+
+    .color-options,
+    .difficulty-options {
+      display: grid;
+      gap: var(--space-sm);
+    }
+
+    .color-options {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .difficulty-options {
+      grid-template-columns: 1fr;
+    }
+
+    .option-card {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .option-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .option-content {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      border: 2px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.02);
+      transition: all var(--transition-fast);
+    }
+
+    .option-card:hover .option-content {
+      border-color: rgba(118, 150, 86, 0.3);
+      background: rgba(118, 150, 86, 0.05);
+    }
+
+    .option-card input[type="radio"]:checked + .option-content {
+      border-color: var(--color-accent-primary);
+      background: rgba(118, 150, 86, 0.1);
+    }
+
+    .option-icon {
+      font-size: var(--font-size-lg);
+    }
+
+    .option-text {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-primary);
+    }
+
+    .difficulty-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .difficulty-indicator.easy { background: #22c55e; }
+    .difficulty-indicator.medium { background: #3b82f6; }
+    .difficulty-indicator.hard { background: #f59e0b; }
+    .difficulty-indicator.expert { background: #ef4444; }
+
+    .difficulty-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .difficulty-name {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .difficulty-desc {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .modal-footer {
+      padding: var(--space-lg);
+      border-top: 1px solid var(--glass-border);
+      display: flex;
+      gap: var(--space-md);
+      justify-content: flex-end;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-lg);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(118, 150, 86, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--glass-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--color-text-primary);
+    }
+
+    .btn-icon {
+      font-size: var(--font-size-sm);
+    }
+
+    /* Mobile responsiveness for modal */
+    @media (max-width: 768px) {
+      .modal-content {
+        width: 95vw;
+        margin: var(--space-md);
+      }
+      
+      .color-options {
+        grid-template-columns: 1fr;
+      }
+      
+      .modal-footer {
+        flex-direction: column;
+      }
+      
+      .btn {
+        justify-content: center;
+      }
+    }
+  </style>
 </body>
 </html>
