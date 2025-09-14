@@ -13,10 +13,10 @@ from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
 
 # Import chess engine
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'engine'))
 from engine import get_computer_move
+
+# Get the user model
+User = get_user_model()
 
 # Add logging
 logger = logging.getLogger(__name__)
@@ -145,13 +145,23 @@ def make_move(request, pk):
     game.save()
     logger.info(f"Game updated: status={game.status}, fen={game.fen}")
 
+    # Check game status for detailed information
+    game_status = {
+        'is_checkmate': board.is_checkmate(),
+        'is_stalemate': board.is_stalemate(),
+        'is_check': board.is_check(),
+        'is_game_over': board.is_game_over(),
+        'result': board.result() if board.is_game_over() else None
+    }
+
     # Return updated game info
     game_serializer = GameSerializer(game)
     move_serializer = MoveSerializer(move_obj)
     
     response_data = {
         "move": move_serializer.data,
-        "game": game_serializer.data
+        "game": game_serializer.data,
+        "game_status": game_status  # Add game status to response
     }
     
     logger.info(f"Returning response: {response_data}")
@@ -327,10 +337,15 @@ def make_computer_move(request, pk):
         return Response({"detail": "You are not a player in this game."},
                         status=status.HTTP_403_FORBIDDEN)
     
-    # Check if game allows computer moves (could add a field for this)
-    # For now, allow if one player is None (indicating computer opponent)
-    if game.white_player and game.black_player:
-        return Response({"detail": "This is a human vs human game."},
+    # Check if this is a computer game
+    # Computer games have players with usernames containing 'computer'
+    is_computer_game = False
+    if (game.white_player and 'computer' in game.white_player.username.lower()) or \
+       (game.black_player and 'computer' in game.black_player.username.lower()):
+        is_computer_game = True
+    
+    if not is_computer_game:
+        return Response({"detail": "This is not a computer game."},
                         status=status.HTTP_400_BAD_REQUEST)
     
     try:
@@ -343,8 +358,19 @@ def make_computer_move(request, pk):
         
         # Get difficulty from request or use default
         difficulty = request.data.get('difficulty', 'medium')
-        if difficulty not in ['easy', 'medium', 'hard', 'expert']:
-            difficulty = 'medium'
+        
+        # Support both old difficulty strings and new rating numbers
+        valid_difficulties = ['easy', 'medium', 'hard', 'expert']
+        valid_ratings = ['400', '800', '1200', '1600', '2000', '2400']
+        
+        if difficulty not in valid_difficulties and difficulty not in valid_ratings:
+            # Try to convert to string if it's a number
+            try:
+                difficulty = str(int(difficulty))
+                if difficulty not in valid_ratings:
+                    difficulty = 'medium'
+            except (ValueError, TypeError):
+                difficulty = 'medium'
         
         logger.info(f"Making computer move with difficulty: {difficulty}")
         
@@ -359,27 +385,21 @@ def make_computer_move(request, pk):
         move_info = result['move']
         new_fen = result['new_fen']
         
-        # Determine which player is the computer
+        # Determine which player is the computer based on username
         current_turn = board.turn
         computer_player = None
-        if current_turn == chess.WHITE and not game.white_player:
-            # White is computer, create a virtual computer user if needed
-            computer_player, created = User.objects.get_or_create(
-                username='computer_white',
-                defaults={'first_name': 'Computer', 'last_name': 'White'}
-            )
-            if not game.white_player:
-                game.white_player = computer_player
-        elif current_turn == chess.BLACK and not game.black_player:
-            # Black is computer
-            computer_player, created = User.objects.get_or_create(
-                username='computer_black', 
-                defaults={'first_name': 'Computer', 'last_name': 'Black'}
-            )
-            if not game.black_player:
-                game.black_player = computer_player
+        
+        if current_turn == chess.WHITE:
+            # Check if white player is computer
+            if game.white_player and 'computer' in game.white_player.username.lower():
+                computer_player = game.white_player
         else:
-            return Response({"detail": "It's not the computer's turn."},
+            # Check if black player is computer
+            if game.black_player and 'computer' in game.black_player.username.lower():
+                computer_player = game.black_player
+        
+        if not computer_player:
+            return Response({"detail": "It's not the computer's turn or no computer player found."},
                             status=status.HTTP_400_BAD_REQUEST)
         
         # Parse the move
@@ -463,14 +483,27 @@ def create_computer_game(request):
         if player_color not in ['white', 'black']:
             player_color = 'white'
         
-        if difficulty not in ['easy', 'medium', 'hard', 'expert']:
-            difficulty = 'medium'
+        # Support both old difficulty strings and new rating numbers
+        valid_difficulties = ['easy', 'medium', 'hard', 'expert']
+        valid_ratings = ['400', '800', '1200', '1600', '2000', '2400']
+        
+        if difficulty not in valid_difficulties and difficulty not in valid_ratings:
+            # Try to convert to string if it's a number
+            try:
+                difficulty = str(int(difficulty))
+                if difficulty not in valid_ratings:
+                    difficulty = 'medium'
+            except (ValueError, TypeError):
+                difficulty = 'medium'
+        
+        # Create computer username with difficulty/rating
+        computer_suffix = difficulty if difficulty in valid_ratings else difficulty
         
         # Create computer user if it doesn't exist
         if player_color == 'white':
             computer_user, created = User.objects.get_or_create(
-                username='computer_black',
-                defaults={'first_name': 'Computer', 'last_name': 'Black'}
+                username=f'computer_black_{computer_suffix}',
+                defaults={'first_name': 'Computer', 'last_name': f'Black ({computer_suffix})'}
             )
             game = Game.objects.create(
                 white_player=request.user,
@@ -480,8 +513,8 @@ def create_computer_game(request):
             )
         else:
             computer_user, created = User.objects.get_or_create(
-                username='computer_white',
-                defaults={'first_name': 'Computer', 'last_name': 'White'}
+                username=f'computer_white_{computer_suffix}',
+                defaults={'first_name': 'Computer', 'last_name': f'White ({computer_suffix})'}
             )
             game = Game.objects.create(
                 white_player=computer_user,

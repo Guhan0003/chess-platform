@@ -1588,6 +1588,11 @@
             // Start timer updates if game is active
             if (gameData.status === 'active') {
               startTimerUpdates();
+              
+              // Check if computer should move immediately after game load
+              setTimeout(() => {
+                handleComputerTurn();
+              }, 500);
             } else {
               stopTimerUpdates();
             }
@@ -2084,6 +2089,27 @@
             renderBoard();
             updateTimerDisplay();
             
+            // Check for game over after human move
+            if (response.data.game_status && response.data.game_status.is_game_over) {
+              // Stop timer updates since game is over
+              stopTimerUpdates();
+              
+              // Show game over message
+              if (response.data.game_status.is_checkmate) {
+                const winner = getCurrentTurn() === 'white' ? 'Black' : 'White';
+                api.showSuccess(`🎉 Checkmate! ${winner} wins!`, 10000);
+              } else if (response.data.game_status.is_stalemate) {
+                api.showSuccess('🤝 Stalemate! The game is a draw.', 10000);
+              } else if (response.data.game_status.is_insufficient_material) {
+                api.showSuccess('🤝 Draw by insufficient material.', 10000);
+              } else {
+                api.showSuccess('🎮 Game over!', 8000);
+              }
+              
+              // Don't trigger computer turn if game is over
+              return;
+            }
+            
             // Restart timer updates if game is still active
             if (gameData.status === 'active') {
               startTimerUpdates();
@@ -2109,30 +2135,52 @@
       // Computer Chess Functions
       async function handleComputerTurn() {
         try {
-          if (!isComputerGame() || !isComputerTurn()) {
+          console.log('🤖 Checking if computer turn should be triggered...');
+          
+          if (!gameData || gameData.status !== 'active') {
+            console.log('❌ Game not active, skipping computer turn');
             return;
           }
           
-          // Small delay for better UX
+          if (!isComputerGame()) {
+            console.log('❌ Not a computer game, skipping computer turn');
+            return;
+          }
+          
+          if (!isComputerTurn()) {
+            console.log('❌ Not computer\'s turn, skipping computer turn');
+            return;
+          }
+          
+          console.log('✅ Computer turn confirmed, making move in 1.5 seconds...');
+          
+          // Small delay for better UX - let player see their move first
           setTimeout(async () => {
+            console.log('🚀 Triggering computer move now...');
             await makeComputerMove();
-          }, 1000);
+          }, 1500);
           
         } catch (error) {
-          console.error('Error handling computer turn:', error);
+          console.error('💥 Error in handleComputerTurn:', error);
         }
       }
       
       function isComputerGame() {
         if (!gameData) return false;
         
-        // Check if either player is a computer
-        const isWhiteComputer = gameData.white_player && 
-          (gameData.white_player.username === 'computer_white' || 
-           gameData.white_player.first_name === 'Computer');
-        const isBlackComputer = gameData.black_player && 
-          (gameData.black_player.username === 'computer_black' || 
-           gameData.black_player.first_name === 'Computer');
+        // Check if either player is a computer - updated for correct field names
+        const isWhiteComputer = gameData.white_player_username && 
+          (gameData.white_player_username.includes('computer'));
+        const isBlackComputer = gameData.black_player_username && 
+          (gameData.black_player_username.includes('computer'));
+        
+        console.log('🤖 Computer game check:', {
+          whitePlayer: gameData.white_player_username,
+          blackPlayer: gameData.black_player_username,
+          isWhiteComputer,
+          isBlackComputer,
+          result: isWhiteComputer || isBlackComputer
+        });
         
         return isWhiteComputer || isBlackComputer;
       }
@@ -2142,32 +2190,39 @@
         
         const currentTurn = getCurrentTurn();
         
+        console.log('🤖 Computer turn check:', {
+          currentTurn,
+          currentUser: currentUser?.username,
+          whitePlayer: gameData.white_player_username,
+          blackPlayer: gameData.black_player_username
+        });
+        
         if (currentTurn === 'white') {
-          return gameData.white_player && 
-            gameData.white_player.username !== currentUser.username &&
-            (gameData.white_player.username === 'computer_white' || 
-             gameData.white_player.first_name === 'Computer');
+          return gameData.white_player_username && 
+            gameData.white_player_username !== currentUser.username &&
+            gameData.white_player_username.includes('computer');
         } else {
-          return gameData.black_player && 
-            gameData.black_player.username !== currentUser.username &&
-            (gameData.black_player.username === 'computer_black' || 
-             gameData.black_player.first_name === 'Computer');
+          return gameData.black_player_username && 
+            gameData.black_player_username !== currentUser.username &&
+            gameData.black_player_username.includes('computer');
         }
       }
       
       async function makeComputerMove() {
         try {
+          console.log('🤖 Starting computer move generation...');
           showBoardLoading(true);
           
           // Get difficulty from URL params or use default
           const urlParams = new URLSearchParams(window.location.search);
-          const difficulty = urlParams.get('difficulty') || 'medium';
+          const difficulty = urlParams.get('difficulty') || '1200';
           
-          console.log(`Making computer move with difficulty: ${difficulty}`);
+          console.log(`🎯 Making computer move with difficulty: ${difficulty}`);
           
           const response = await api.makeComputerMove(gameId, difficulty);
           
           if (response.ok) {
+            console.log('✅ Computer move successful:', response.data);
             gameData = response.data.game;
             
             // Update timer data if provided
@@ -2180,17 +2235,20 @@
             renderBoard();
             updateTimerDisplay();
             
-            // Show computer move info
+            // Show computer move info with engine details
             const moveInfo = response.data.computer_move;
             const engineInfo = response.data.engine_info;
             
-            console.log('Computer move:', moveInfo);
-            console.log('Engine info:', engineInfo);
+            console.log('🎯 Computer move details:', moveInfo);
+            console.log('🧠 Engine analysis:', engineInfo);
             
-            api.showSuccess(
-              `Computer moved: ${moveInfo.from_square} → ${moveInfo.to_square} (${moveInfo.notation})`,
-              3000
-            );
+            // Create detailed move notification
+            let moveMessage = `Computer (${engineInfo.rating}) moved: ${moveInfo.notation}`;
+            if (engineInfo.personality) {
+              moveMessage += ` [${engineInfo.personality}]`;
+            }
+            
+            api.showSuccess(moveMessage, 4000);
             
             // Continue timer updates if game is still active
             if (gameData.status === 'active') {
@@ -2202,19 +2260,22 @@
               if (response.data.game_status && response.data.game_status.is_game_over) {
                 if (response.data.game_status.is_checkmate) {
                   const winner = getCurrentTurn() === 'white' ? 'Black' : 'White';
-                  api.showSuccess(`Checkmate! ${winner} wins!`, 5000);
+                  api.showSuccess(`🎉 Checkmate! ${winner} wins!`, 8000);
                 } else if (response.data.game_status.is_stalemate) {
-                  api.showSuccess('Stalemate! The game is a draw.', 5000);
+                  api.showSuccess('🤝 Stalemate! The game is a draw.', 8000);
+                } else if (response.data.game_status.is_insufficient_material) {
+                  api.showSuccess('🤝 Draw by insufficient material.', 8000);
                 }
               }
             }
             
           } else {
+            console.error('❌ Computer move failed:', response);
             api.showError(`Computer move failed: ${api.formatError(response)}`);
           }
           
         } catch (error) {
-          console.error('Error making computer move:', error);
+          console.error('💥 Error making computer move:', error);
           api.showError('Failed to make computer move');
         } finally {
           showBoardLoading(false);
@@ -2222,8 +2283,17 @@
       }
       
       function getCurrentTurn() {
-        if (!gameTimerData) return 'white';
-        return gameTimerData.current_turn;
+        // Parse FEN to get current turn
+        if (!gameData || !gameData.fen) {
+          console.warn('No game data or FEN available for turn detection');
+          return 'white';
+        }
+        
+        const fenParts = gameData.fen.split(' ');
+        const turn = fenParts[1] === 'w' ? 'white' : 'black';
+        
+        console.log('🎯 Current turn from FEN:', turn, 'FEN:', gameData.fen);
+        return turn;
       }
       
       function showPromotionDialog() {

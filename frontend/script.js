@@ -198,6 +198,25 @@ async function getGameDetail(gameId) {
   return { ok: res.ok, data: await res.json() };
 }
 
+// Computer game functions  
+async function createComputerGame(playerColor = 'white', difficulty = 'medium') {
+  const res = await apiFetch(`${API_BASE}/games/create-computer/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ player_color: playerColor, difficulty: difficulty })
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
+async function makeComputerMove(gameId, difficulty = 'medium') {
+  const res = await apiFetch(`${API_BASE}/games/${gameId}/computer-move/`, {
+    method: "POST", 
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ difficulty: difficulty })
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
 // ================================
 // Chessboard Rendering
 // ================================
@@ -481,6 +500,38 @@ function initializeEventListeners() {
       updateGameDetails(gameId); // set activeGameId as well
     }
   });
+
+  // Computer game event listeners
+  elements.btnCreateComputer?.addEventListener("click", async () => {
+    const difficulty = elements.computerDifficulty?.value || 'medium';
+    const playerColor = elements.playerColor?.value || 'white';
+    
+    const { ok, data } = await createComputerGame(playerColor, difficulty);
+    if (ok) {
+      alert(`Computer game #${data.id} created! Difficulty: ${difficulty}, You play as: ${playerColor}`);
+      await updateGamesList();
+      await updateGameDetails(data.id);
+    } else {
+      alert(`Failed to create computer game: ${JSON.stringify(data)}`);
+    }
+  });
+
+  elements.btnComputerMove?.addEventListener("click", async () => {
+    if (!activeGameId) {
+      alert("No active game selected.");
+      return;
+    }
+    
+    const difficulty = elements.computerDifficulty?.value || 'medium';
+    
+    const { ok, data } = await makeComputerMove(activeGameId, difficulty);
+    if (ok) {
+      alert("Computer made its move!");
+      await updateGameDetails(activeGameId);
+    } else {
+      alert(`Computer move failed: ${JSON.stringify(data)}`);
+    }
+  });
 }
 
 // ================================
@@ -494,6 +545,10 @@ document.addEventListener("DOMContentLoaded", () => {
     btnLogout: document.getElementById("btn-logout"),
     btnRefresh: document.getElementById("btn-refresh"),
     btnCreate: document.getElementById("btn-create"),
+    btnCreateComputer: document.getElementById("btn-create-computer"),
+    btnComputerMove: document.getElementById("btn-computer-move"),
+    computerDifficulty: document.getElementById("computer-difficulty"),
+    playerColor: document.getElementById("player-color"),
     joinForm: document.getElementById("joinForm"),
     moveForm: document.getElementById("moveForm"),
     detailsForm: document.getElementById("detailsForm"),

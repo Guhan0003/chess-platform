@@ -1576,45 +1576,65 @@
         </div>
         
         <div class="setting-group">
-          <label class="setting-label">AI Difficulty:</label>
+          <label class="setting-label">AI Difficulty Level:</label>
           <div class="difficulty-options">
             <label class="option-card">
-              <input type="radio" name="difficulty" value="easy">
+              <input type="radio" name="difficulty" value="400">
               <div class="option-content">
-                <span class="difficulty-indicator easy"></span>
+                <span class="difficulty-indicator beginner"></span>
                 <div class="difficulty-info">
-                  <span class="difficulty-name">Easy</span>
-                  <span class="difficulty-desc">Perfect for beginners</span>
+                  <span class="difficulty-name">Beginner (400)</span>
+                  <span class="difficulty-desc">Learning fundamentals</span>
                 </div>
               </div>
             </label>
             <label class="option-card">
-              <input type="radio" name="difficulty" value="medium" checked>
+              <input type="radio" name="difficulty" value="800">
               <div class="option-content">
-                <span class="difficulty-indicator medium"></span>
+                <span class="difficulty-indicator novice"></span>
                 <div class="difficulty-info">
-                  <span class="difficulty-name">Medium</span>
-                  <span class="difficulty-desc">Balanced challenge</span>
+                  <span class="difficulty-name">Novice (800)</span>
+                  <span class="difficulty-desc">Basic tactics</span>
                 </div>
               </div>
             </label>
             <label class="option-card">
-              <input type="radio" name="difficulty" value="hard">
+              <input type="radio" name="difficulty" value="1200" checked>
               <div class="option-content">
-                <span class="difficulty-indicator hard"></span>
+                <span class="difficulty-indicator intermediate"></span>
                 <div class="difficulty-info">
-                  <span class="difficulty-name">Hard</span>
-                  <span class="difficulty-desc">For experienced players</span>
+                  <span class="difficulty-name">Intermediate (1200)</span>
+                  <span class="difficulty-desc">Solid fundamentals</span>
                 </div>
               </div>
             </label>
             <label class="option-card">
-              <input type="radio" name="difficulty" value="expert">
+              <input type="radio" name="difficulty" value="1600">
+              <div class="option-content">
+                <span class="difficulty-indicator advanced"></span>
+                <div class="difficulty-info">
+                  <span class="difficulty-name">Advanced (1600)</span>
+                  <span class="difficulty-desc">Strong tactical play</span>
+                </div>
+              </div>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="difficulty" value="2000">
               <div class="option-content">
                 <span class="difficulty-indicator expert"></span>
                 <div class="difficulty-info">
-                  <span class="difficulty-name">Expert</span>
-                  <span class="difficulty-desc">Maximum challenge</span>
+                  <span class="difficulty-name">Expert (2000)</span>
+                  <span class="difficulty-desc">Master-level strength</span>
+                </div>
+              </div>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="difficulty" value="2400">
+              <div class="option-content">
+                <span class="difficulty-indicator grandmaster"></span>
+                <div class="difficulty-info">
+                  <span class="difficulty-name">Grandmaster (2400+)</span>
+                  <span class="difficulty-desc">Maximum strength</span>
                 </div>
               </div>
             </label>
@@ -1791,10 +1811,12 @@
       flex-shrink: 0;
     }
 
-    .difficulty-indicator.easy { background: #22c55e; }
-    .difficulty-indicator.medium { background: #3b82f6; }
-    .difficulty-indicator.hard { background: #f59e0b; }
+    .difficulty-indicator.beginner { background: #10b981; }
+    .difficulty-indicator.novice { background: #3b82f6; }
+    .difficulty-indicator.intermediate { background: #8b5cf6; }
+    .difficulty-indicator.advanced { background: #f59e0b; }
     .difficulty-indicator.expert { background: #ef4444; }
+    .difficulty-indicator.grandmaster { background: #dc2626; }
 
     .difficulty-info {
       display: flex;
