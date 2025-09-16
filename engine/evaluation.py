@@ -3,10 +3,12 @@ Chess Position Evaluation Module
 
 Comprehensive position evaluation system that adapts to different rating levels.
 Includes material, positional, tactical, and strategic evaluation components.
+Enhanced with professional AdvancedEvaluator for master-level analysis.
 """
 
 import chess
 import random
+import math
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 
@@ -445,3 +447,398 @@ class PositionEvaluator:
     def _has_opposition(self, board: chess.Board, white_king: int, black_king: int) -> bool:
         """Check if the side to move has opposition."""
         return False  # TODO: Implement opposition detection
+
+
+class AdvancedEvaluator:
+    """
+    Advanced chess position evaluator with professional-level analysis.
+    """
+    
+    # Base piece values
+    PIECE_VALUES = {
+        chess.PAWN: 100,
+        chess.KNIGHT: 320,
+        chess.BISHOP: 330,
+        chess.ROOK: 500,
+        chess.QUEEN: 900,
+        chess.KING: 0  # King safety handled separately
+    }
+    
+    # Piece-square tables (from White's perspective)
+    PAWN_TABLE = [
+        [  0,   0,   0,   0,   0,   0,   0,   0],
+        [ 50,  50,  50,  50,  50,  50,  50,  50],
+        [ 10,  10,  20,  30,  30,  20,  10,  10],
+        [  5,   5,  10,  25,  25,  10,   5,   5],
+        [  0,   0,   0,  20,  20,   0,   0,   0],
+        [  5,  -5, -10,   0,   0, -10,  -5,   5],
+        [  5,  10,  10, -20, -20,  10,  10,   5],
+        [  0,   0,   0,   0,   0,   0,   0,   0]
+    ]
+    
+    KNIGHT_TABLE = [
+        [-50, -40, -30, -30, -30, -30, -40, -50],
+        [-40, -20,   0,   0,   0,   0, -20, -40],
+        [-30,   0,  10,  15,  15,  10,   0, -30],
+        [-30,   5,  15,  20,  20,  15,   5, -30],
+        [-30,   0,  15,  20,  20,  15,   0, -30],
+        [-30,   5,  10,  15,  15,  10,   5, -30],
+        [-40, -20,   0,   5,   5,   0, -20, -40],
+        [-50, -40, -30, -30, -30, -30, -40, -50]
+    ]
+    
+    BISHOP_TABLE = [
+        [-20, -10, -10, -10, -10, -10, -10, -20],
+        [-10,   0,   0,   0,   0,   0,   0, -10],
+        [-10,   0,   5,  10,  10,   5,   0, -10],
+        [-10,   5,   5,  10,  10,   5,   5, -10],
+        [-10,   0,  10,  10,  10,  10,   0, -10],
+        [-10,  10,  10,  10,  10,  10,  10, -10],
+        [-10,   5,   0,   0,   0,   0,   5, -10],
+        [-20, -10, -10, -10, -10, -10, -10, -20]
+    ]
+    
+    ROOK_TABLE = [
+        [  0,   0,   0,   0,   0,   0,   0,   0],
+        [  5,  10,  10,  10,  10,  10,  10,   5],
+        [ -5,   0,   0,   0,   0,   0,   0,  -5],
+        [ -5,   0,   0,   0,   0,   0,   0,  -5],
+        [ -5,   0,   0,   0,   0,   0,   0,  -5],
+        [ -5,   0,   0,   0,   0,   0,   0,  -5],
+        [ -5,   0,   0,   0,   0,   0,   0,  -5],
+        [  0,   0,   0,   5,   5,   0,   0,   0]
+    ]
+    
+    QUEEN_TABLE = [
+        [-20, -10, -10,  -5,  -5, -10, -10, -20],
+        [-10,   0,   0,   0,   0,   0,   0, -10],
+        [-10,   0,   5,   5,   5,   5,   0, -10],
+        [ -5,   0,   5,   5,   5,   5,   0,  -5],
+        [  0,   0,   5,   5,   5,   5,   0,  -5],
+        [-10,   5,   5,   5,   5,   5,   0, -10],
+        [-10,   0,   5,   0,   0,   0,   0, -10],
+        [-20, -10, -10,  -5,  -5, -10, -10, -20]
+    ]
+    
+    KING_MIDDLE_GAME = [
+        [-30, -40, -40, -50, -50, -40, -40, -30],
+        [-30, -40, -40, -50, -50, -40, -40, -30],
+        [-30, -40, -40, -50, -50, -40, -40, -30],
+        [-30, -40, -40, -50, -50, -40, -40, -30],
+        [-20, -30, -30, -40, -40, -30, -30, -20],
+        [-10, -20, -20, -20, -20, -20, -20, -10],
+        [ 20,  20,   0,   0,   0,   0,  20,  20],
+        [ 20,  30,  10,   0,   0,  10,  30,  20]
+    ]
+    
+    KING_END_GAME = [
+        [-50, -40, -30, -20, -20, -30, -40, -50],
+        [-30, -20, -10,   0,   0, -10, -20, -30],
+        [-30, -10,  20,  30,  30,  20, -10, -30],
+        [-30, -10,  30,  40,  40,  30, -10, -30],
+        [-30, -10,  30,  40,  40,  30, -10, -30],
+        [-30, -10,  20,  30,  30,  20, -10, -30],
+        [-30, -30,   0,   0,   0,   0, -30, -30],
+        [-50, -30, -30, -30, -30, -30, -30, -50]
+    ]
+    
+    def __init__(self, rating: int = 2000):
+        """Initialize evaluator with rating-specific parameters."""
+        self.rating = rating
+        self.evaluation_depth = self._get_evaluation_depth(rating)
+    
+    def _get_evaluation_depth(self, rating: int) -> int:
+        """Get evaluation depth based on rating."""
+        if rating < 1000:
+            return 1  # Basic evaluation only
+        elif rating < 1600:
+            return 2  # Add positional factors
+        else:
+            return 3  # Full evaluation
+    
+    def evaluate(self, board: chess.Board) -> float:
+        """
+        Evaluate chess position.
+        
+        Args:
+            board: Chess position to evaluate
+            
+        Returns:
+            Evaluation score (positive = good for current player)
+        """
+        if board.is_checkmate():
+            return -29999 + len(board.move_stack)
+        
+        if board.is_stalemate() or board.is_insufficient_material():
+            return 0.0
+        
+        # Determine game phase
+        is_endgame = self._is_endgame(board)
+        
+        # Calculate evaluation components
+        material_score = self._evaluate_material(board)
+        positional_score = self._evaluate_position(board, is_endgame)
+        
+        if self.evaluation_depth >= 2:
+            king_safety = self._evaluate_king_safety(board, is_endgame)
+            mobility = self._evaluate_mobility(board)
+        else:
+            king_safety = 0.0
+            mobility = 0.0
+        
+        if self.evaluation_depth >= 3:
+            pawn_structure = self._evaluate_pawn_structure(board)
+        else:
+            pawn_structure = 0.0
+        
+        # Combine scores
+        total_score = (
+            material_score + 
+            positional_score + 
+            king_safety * 0.3 + 
+            mobility * 0.2 + 
+            pawn_structure * 0.1
+        )
+        
+        # Apply rating-based evaluation noise for lower ratings
+        if self.rating < 1400:
+            noise_factor = (1400 - self.rating) / 1000.0
+            noise = random.uniform(-noise_factor, noise_factor)
+            total_score += noise
+        
+        return total_score
+    
+    def _evaluate_material(self, board: chess.Board) -> float:
+        """Evaluate material balance."""
+        material = 0.0
+        
+        for square in chess.SQUARES:
+            piece = board.piece_at(square)
+            if piece:
+                value = self.PIECE_VALUES.get(piece.piece_type, 0)
+                if piece.color == board.turn:
+                    material += value
+                else:
+                    material -= value
+        
+        return material / 100.0  # Convert to pawn units
+    
+    def _evaluate_position(self, board: chess.Board, is_endgame: bool) -> float:
+        """Evaluate positional factors using piece-square tables."""
+        position_score = 0.0
+        
+        for square in chess.SQUARES:
+            piece = board.piece_at(square)
+            if piece:
+                table_score = self._get_piece_square_value(piece, square, is_endgame)
+                
+                if piece.color == board.turn:
+                    position_score += table_score
+                else:
+                    position_score -= table_score
+        
+        return position_score / 100.0  # Convert to pawn units
+    
+    def _get_piece_square_value(self, piece: chess.Piece, square: int, is_endgame: bool) -> float:
+        """Get piece-square table value for piece on square."""
+        row = 7 - chess.square_rank(square) if piece.color == chess.WHITE else chess.square_rank(square)
+        col = chess.square_file(square)
+        
+        if piece.piece_type == chess.PAWN:
+            return self.PAWN_TABLE[row][col]
+        elif piece.piece_type == chess.KNIGHT:
+            return self.KNIGHT_TABLE[row][col]
+        elif piece.piece_type == chess.BISHOP:
+            return self.BISHOP_TABLE[row][col]
+        elif piece.piece_type == chess.ROOK:
+            return self.ROOK_TABLE[row][col]
+        elif piece.piece_type == chess.QUEEN:
+            return self.QUEEN_TABLE[row][col]
+        elif piece.piece_type == chess.KING:
+            if is_endgame:
+                return self.KING_END_GAME[row][col]
+            else:
+                return self.KING_MIDDLE_GAME[row][col]
+        
+        return 0.0
+    
+    def _evaluate_king_safety(self, board: chess.Board, is_endgame: bool) -> float:
+        """Evaluate king safety."""
+        if is_endgame:
+            return 0.0  # King safety less important in endgame
+        
+        safety_score = 0.0
+        
+        # Evaluate current player's king safety
+        king_square = board.king(board.turn)
+        if king_square:
+            safety_score += self._get_king_safety_score(board, king_square, board.turn)
+        
+        # Evaluate opponent's king safety
+        opponent_color = not board.turn
+        opponent_king = board.king(opponent_color)
+        if opponent_king:
+            safety_score -= self._get_king_safety_score(board, opponent_king, opponent_color)
+        
+        return safety_score
+    
+    def _get_king_safety_score(self, board: chess.Board, king_square: int, color: bool) -> float:
+        """Calculate king safety score for specific king."""
+        safety = 0.0
+        
+        # Pawn shield evaluation
+        king_file = chess.square_file(king_square)
+        king_rank = chess.square_rank(king_square)
+        
+        # Check pawn shield in front of king
+        direction = 1 if color == chess.WHITE else -1
+        
+        for file_offset in [-1, 0, 1]:
+            file = king_file + file_offset
+            if 0 <= file <= 7:
+                shield_rank = king_rank + direction
+                if 0 <= shield_rank <= 7:
+                    shield_square = chess.square(file, shield_rank)
+                    piece = board.piece_at(shield_square)
+                    
+                    if piece and piece.piece_type == chess.PAWN and piece.color == color:
+                        safety += 10  # Bonus for pawn shield
+                    else:
+                        safety -= 5   # Penalty for missing pawn
+        
+        # Check for attacks near king
+        king_zone = self._get_king_zone(king_square)
+        for square in king_zone:
+            if board.is_attacked_by(not color, square):
+                safety -= 8  # Penalty for attacks in king zone
+        
+        return safety
+    
+    def _get_king_zone(self, king_square: int) -> List[int]:
+        """Get squares in king's immediate vicinity."""
+        king_zone = []
+        king_file = chess.square_file(king_square)
+        king_rank = chess.square_rank(king_square)
+        
+        for rank_offset in [-1, 0, 1]:
+            for file_offset in [-1, 0, 1]:
+                if rank_offset == 0 and file_offset == 0:
+                    continue
+                
+                new_rank = king_rank + rank_offset
+                new_file = king_file + file_offset
+                
+                if 0 <= new_rank <= 7 and 0 <= new_file <= 7:
+                    king_zone.append(chess.square(new_file, new_rank))
+        
+        return king_zone
+    
+    def _evaluate_mobility(self, board: chess.Board) -> float:
+        """Evaluate piece mobility."""
+        current_player_moves = len(list(board.legal_moves))
+        
+        # Switch turns to count opponent moves
+        board.push(chess.Move.null())
+        opponent_moves = len(list(board.legal_moves))
+        board.pop()
+        
+        mobility_difference = current_player_moves - opponent_moves
+        return mobility_difference * 0.1
+    
+    def _evaluate_pawn_structure(self, board: chess.Board) -> float:
+        """Evaluate pawn structure."""
+        pawn_score = 0.0
+        
+        # Get pawn positions for both colors
+        white_pawns = board.pieces(chess.PAWN, chess.WHITE)
+        black_pawns = board.pieces(chess.PAWN, chess.BLACK)
+        
+        # Evaluate current player's pawns
+        my_pawns = white_pawns if board.turn == chess.WHITE else black_pawns
+        opponent_pawns = black_pawns if board.turn == chess.WHITE else white_pawns
+        
+        # Doubled pawns penalty
+        pawn_score -= self._count_doubled_pawns(my_pawns) * 5
+        pawn_score += self._count_doubled_pawns(opponent_pawns) * 5
+        
+        # Isolated pawns penalty
+        pawn_score -= self._count_isolated_pawns(my_pawns) * 8
+        pawn_score += self._count_isolated_pawns(opponent_pawns) * 8
+        
+        # Passed pawns bonus
+        pawn_score += self._count_passed_pawns(board, my_pawns, board.turn) * 15
+        pawn_score -= self._count_passed_pawns(board, opponent_pawns, not board.turn) * 15
+        
+        return pawn_score
+    
+    def _count_doubled_pawns(self, pawns: chess.SquareSet) -> int:
+        """Count doubled pawns."""
+        file_counts = [0] * 8
+        
+        for pawn_square in pawns:
+            file = chess.square_file(pawn_square)
+            file_counts[file] += 1
+        
+        return sum(max(0, count - 1) for count in file_counts)
+    
+    def _count_isolated_pawns(self, pawns: chess.SquareSet) -> int:
+        """Count isolated pawns."""
+        files_with_pawns = set()
+        
+        for pawn_square in pawns:
+            files_with_pawns.add(chess.square_file(pawn_square))
+        
+        isolated_count = 0
+        
+        for pawn_square in pawns:
+            file = chess.square_file(pawn_square)
+            adjacent_files = {file - 1, file + 1}
+            
+            if not adjacent_files.intersection(files_with_pawns):
+                isolated_count += 1
+        
+        return isolated_count
+    
+    def _count_passed_pawns(self, board: chess.Board, pawns: chess.SquareSet, color: bool) -> int:
+        """Count passed pawns."""
+        passed_count = 0
+        opponent_pawns = board.pieces(chess.PAWN, not color)
+        
+        for pawn_square in pawns:
+            if self._is_passed_pawn(pawn_square, opponent_pawns, color):
+                passed_count += 1
+        
+        return passed_count
+    
+    def _is_passed_pawn(self, pawn_square: int, opponent_pawns: chess.SquareSet, color: bool) -> bool:
+        """Check if pawn is passed."""
+        pawn_file = chess.square_file(pawn_square)
+        pawn_rank = chess.square_rank(pawn_square)
+        
+        # Check files that can block this pawn
+        files_to_check = [pawn_file - 1, pawn_file, pawn_file + 1]
+        files_to_check = [f for f in files_to_check if 0 <= f <= 7]
+        
+        # Direction of pawn advance
+        direction = 1 if color == chess.WHITE else -1
+        
+        # Check all squares in front of pawn
+        for rank in range(pawn_rank + direction, 8 if color == chess.WHITE else -1, direction):
+            for file in files_to_check:
+                check_square = chess.square(file, rank)
+                if check_square in opponent_pawns:
+                    return False
+        
+        return True
+    
+    def _is_endgame(self, board: chess.Board) -> bool:
+        """Determine if position is in endgame."""
+        # Count pieces (excluding pawns and kings)
+        piece_count = 0
+        
+        for piece_type in [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT]:
+            piece_count += len(board.pieces(piece_type, chess.WHITE))
+            piece_count += len(board.pieces(piece_type, chess.BLACK))
+        
+        # Endgame if few pieces remain
+        return piece_count <= 6

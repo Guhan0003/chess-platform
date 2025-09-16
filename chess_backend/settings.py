@@ -102,8 +102,8 @@ WSGI_APPLICATION = 'chess_backend.wsgi.application'
 # Environment-based database selection for proper deployment practices
 import os
 
-# Database environment detection
-DB_ENGINE = os.getenv('DB_ENGINE', 'postgresql')  # Default to PostgreSQL for production
+# Database environment detection - Force SQLite for development
+DB_ENGINE = 'sqlite'  # Force SQLite for development
 
 if DB_ENGINE == 'sqlite' or os.getenv('TESTING', False):
     # SQLite configuration for development and testing

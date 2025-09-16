@@ -60,11 +60,17 @@ urlpatterns = [
     path('src/utils/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/utils/{filename}')),
     path('src/assets/<path:path>', lambda request, path: serve_frontend_static(request, f'src/assets/{path}')),
     
+    # Game page specific files
+    path('play/play.css', lambda request: serve_frontend_static(request, 'src/pages/game/play.css')),
+    path('play/play.js', lambda request: serve_frontend_static(request, 'src/pages/game/play.js')),
+    path('src/pages/game/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/pages/game/{filename}')),
+    
     # Professional frontend pages
     path('login/', serve_professional_frontend, {'page_path': 'login'}, name='login'),
     path('register/', serve_professional_frontend, {'page_path': 'register'}, name='register'),
     path('lobby/', serve_professional_frontend, {'page_path': 'lobby'}, name='lobby'),
     path('play/', serve_professional_frontend, {'page_path': 'play'}, name='play'),
+    path('game/<int:game_id>/', serve_professional_frontend, {'page_path': 'play'}, name='game_detail'),
     path('forgot-password/', serve_professional_frontend, {'page_path': 'forgot-password'}, name='forgot-password'),
     path('profile/', serve_professional_frontend, {'page_path': 'profile'}, name='profile'),
     path('puzzles/', serve_professional_frontend, {'page_path': 'puzzles'}, name='puzzles'),

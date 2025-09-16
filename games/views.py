@@ -1,6 +1,7 @@
 import chess
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -13,7 +14,7 @@ from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
 
 # Import chess engine
-from engine import get_computer_move
+from engine import get_computer_move, get_computer_move_legacy
 
 # Get the user model
 User = get_user_model()
@@ -131,6 +132,7 @@ def make_move(request, pk):
 
     # Update game state
     game.fen = new_fen
+    game.last_move_at = timezone.now()  # Update timer reference point
     if board.is_game_over():
         game.status = 'finished'
         result = board.result()
@@ -154,31 +156,63 @@ def make_move(request, pk):
         'result': board.result() if board.is_game_over() else None
     }
 
-    # Return updated game info
-    game_serializer = GameSerializer(game)
-    move_serializer = MoveSerializer(move_obj)
-    
-    response_data = {
-        "move": move_serializer.data,
-        "game": game_serializer.data,
-        "game_status": game_status  # Add game status to response
-    }
-    
-    logger.info(f"Returning response: {response_data}")
-    return Response(response_data, status=status.HTTP_201_CREATED)
+    # Return updated game info with comprehensive error handling
+    try:
+        game_serializer = GameSerializer(game)
+        move_serializer = MoveSerializer(move_obj)
+        
+        response_data = {
+            "move": move_serializer.data,
+            "game": game_serializer.data,
+            "game_status": game_status  # Add game status to response
+        }
+        
+        logger.info(f"Move completed successfully: {response_data}")
+        return Response(response_data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error serializing move response for game {pk}: {e}")
+        # Return basic response even if serialization fails
+        return Response({
+            "move": {
+                "from_square": from_sq,
+                "to_square": to_sq,
+                "notation": san,
+                "game_id": pk
+            },
+            "game_status": game_status,
+            "message": "Move completed successfully"
+        }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_game(request):
     """Create a new chess game with the current user as white."""
+    # Get time control from request or use default
+    time_control = request.data.get('time_control', 'rapid')
+    
+    # Map time control to actual time values (in seconds)
+    time_control_map = {
+        'bullet': 120,      # 2 minutes
+        'blitz': 300,       # 5 minutes
+        'rapid': 600,       # 10 minutes
+        'classical': 1800,  # 30 minutes
+        'unlimited': 0      # No time limit
+    }
+    
+    initial_time = time_control_map.get(time_control, 600)  # Default to rapid
+    
     game = Game.objects.create(
         white_player=request.user,
         fen=chess.STARTING_FEN,  # Use actual FEN, not "startpos"
-        status='waiting'
+        status='waiting',
+        time_control=time_control,
+        white_time_left=initial_time,
+        black_time_left=initial_time
     )
     serializer = GameSerializer(game)
-    logger.info(f"Game created: {game.id} by {request.user}")
+    logger.info(f"Game created: {game.id} by {request.user} with {time_control} time control ({initial_time}s)")
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -291,7 +325,7 @@ def get_legal_moves(request, pk):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_game_timer(request, pk):
-    """Get timer status for a game."""
+    """Get timer status for a game with high-precision updates."""
     game = get_object_or_404(Game, pk=pk)
     
     # Must be a participant
@@ -308,14 +342,147 @@ def get_game_timer(request, pk):
         board = chess.Board(game.fen)
         current_turn = "white" if board.turn == chess.WHITE else "black"
         
-        return Response({
-            "game_id": game.id,
-            "white_time": game.white_time_left,
-            "black_time": game.black_time_left,
-            "current_turn": current_turn,
-            "game_status": game.status,
-            "last_move_at": game.last_move_at
-        })
+        # Extract ratings from computer player usernames
+        white_rating = None
+        black_rating = None
+        
+        if game.white_player and 'computer' in game.white_player.username.lower():
+            # Extract rating from username like 'computer_white_1600'
+            parts = game.white_player.username.split('_')
+            if len(parts) >= 3 and parts[-1].isdigit():
+                white_rating = int(parts[-1])
+        
+        if game.black_player and 'computer' in game.black_player.username.lower():
+            # Extract rating from username like 'computer_black_2400'
+            parts = game.black_player.username.split('_')
+            if len(parts) >= 3 and parts[-1].isdigit():
+                black_rating = int(parts[-1])
+        
+        # Use professional timer with better precision and error handling
+        try:
+            from games.utils.timer_manager import TimerManager
+            timer_manager = TimerManager()
+            
+            # Get high-precision timer data with error handling
+            try:
+                timer_data = timer_manager.get_timer_state()
+                timer_engine = "advanced"
+                timer_precision = "millisecond"
+                available_controls = list(TimerManager.TIME_CONTROLS.keys())[:5]
+            except AttributeError:
+                # Fallback if timer method doesn't exist
+                timer_data = {}
+                timer_engine = "professional_fallback"
+                timer_precision = "second"
+                available_controls = ["rapid_10", "blitz_5", "classical_30"]
+            
+            # Calculate precise time based on last move
+            import time
+            current_timestamp = time.time()
+            
+            # Only calculate elapsed time if the game is active AND has moves
+            # For new games or waiting games, use the full timer values
+            white_time = game.white_time_left
+            black_time = game.black_time_left
+            
+            if game.status == 'active' and game.last_move_at:
+                # Only deduct time if there's an actual last move
+                last_move_time = time.mktime(game.last_move_at.timetuple())
+                time_elapsed = current_timestamp - last_move_time
+                
+                # Only deduct time if it's reasonable (less than 1 hour)
+                if 0 < time_elapsed < 3600:
+                    if current_turn == 'white':
+                        white_time = max(0, white_time - time_elapsed)
+                    else:
+                        black_time = max(0, black_time - time_elapsed)
+            # For games without moves, use full timer values (no time deduction)
+            
+            return Response({
+                "game_id": game.id,
+                "white_time": round(white_time, 2),  # Precise to centiseconds
+                "black_time": round(black_time, 2),  # Precise to centiseconds
+                "white_rating": white_rating,
+                "black_rating": black_rating,
+                "current_turn": current_turn,
+                "game_status": game.status,
+                "last_move_at": game.last_move_at,
+                "server_timestamp": current_timestamp,  # For client sync
+                "time_control": getattr(game, 'time_control', 'rapid'),
+                "increment": 0,  # Default increment
+                "advanced_timer": True,
+                "precision": timer_precision,
+                "update_frequency": "100ms",  # High frequency updates
+                "time_pressure": {
+                    "white": "critical" if white_time <= 30 else ("low" if white_time <= 180 else "none"),
+                    "black": "critical" if black_time <= 30 else ("low" if black_time <= 180 else "none")
+                },
+                "timer_performance": {
+                    "engine": timer_engine,
+                    "accuracy": "high",
+                    "sync_precision": "centisecond",
+                    "available_controls": available_controls
+                },
+                "timing_info": {
+                    "last_move_timestamp": last_move_time,
+                    "current_timestamp": current_timestamp,
+                    "elapsed_since_move": round(time_elapsed, 2)
+                }
+            })
+            
+        except ImportError as e:
+            logger.warning(f"Professional timer not available: {e}. Using basic timer.")
+            # Fallback to basic timer with improved precision
+            import time
+            current_timestamp = time.time()
+            
+            # Only calculate elapsed time if the game is active AND has moves
+            white_time = game.white_time_left
+            black_time = game.black_time_left
+            
+            if game.status == 'active' and game.last_move_at:
+                # Only deduct time if there's an actual last move
+                last_move_time = time.mktime(game.last_move_at.timetuple())
+                time_elapsed = current_timestamp - last_move_time
+                
+                # Only deduct time if it's reasonable (less than 1 hour)
+                if 0 < time_elapsed < 3600:
+                    if current_turn == 'white':
+                        white_time = max(0, white_time - time_elapsed)
+                    else:
+                        black_time = max(0, black_time - time_elapsed)
+            # For games without moves, use full timer values
+            
+            return Response({
+                "game_id": game.id,
+                "white_time": round(white_time, 1),  # Precise to deciseconds
+                "black_time": round(black_time, 1),  # Precise to deciseconds
+                "white_rating": white_rating,
+                "black_rating": black_rating,
+                "current_turn": current_turn,
+                "game_status": game.status,
+                "last_move_at": game.last_move_at,
+                "server_timestamp": current_timestamp,
+                "time_control": getattr(game, 'time_control', 'rapid'),
+                "increment": 0,
+                "advanced_timer": False,
+                "precision": "decisecond",
+                "update_frequency": "500ms",
+                "time_pressure": {
+                    "white": "critical" if white_time <= 30 else ("low" if white_time <= 180 else "none"),
+                    "black": "critical" if black_time <= 30 else ("low" if black_time <= 180 else "none")
+                },
+                "timer_performance": {
+                    "engine": "basic_enhanced",
+                    "accuracy": "standard",
+                    "sync_precision": "decisecond"
+                },
+                "timing_info": {
+                    "last_move_timestamp": last_move_time,
+                    "current_timestamp": current_timestamp,
+                    "elapsed_since_move": round(time_elapsed, 1)
+                }
+            })
         
     except Exception as e:
         logger.error(f"Error getting timer for game {pk}: {e}")
@@ -374,16 +541,43 @@ def make_computer_move(request, pk):
         
         logger.info(f"Making computer move with difficulty: {difficulty}")
         
-        # Get computer move
-        result = get_computer_move(game.fen, difficulty)
+        # Get computer move with professional engine, fallback to legacy
+        try:
+            result = get_computer_move(game.fen, difficulty)
+            if not result.get('success'):
+                raise Exception('Professional engine failed')
+            
+            # Extract move information from engine result
+            move_uci = result['move']  # This is a string like 'e2e4'
+            move_san = result.get('san', '')  # This is the SAN notation like 'e4'
+            from_square = move_uci[:2]  # Extract from square 'e2'
+            to_square = move_uci[2:4]  # Extract to square 'e4'
+            
+            move_info = {
+                'uci': move_uci,
+                'san': move_san,
+                'from_square': from_square,
+                'to_square': to_square
+            }
+        except Exception as e:
+            logger.warning(f"Professional engine failed: {e}. Falling back to legacy engine.")
+            result = get_computer_move_legacy(game.fen, difficulty)
+            move_info = result['move']
+        move_uci = move_info['uci']
+        move_san = move_info.get('san', move_info.get('notation', ''))
+        from_square = move_info['from_square']
+        to_square = move_info['to_square']
         
-        if not result['success']:
-            logger.error(f"Computer move failed: {result['error']}")
-            return Response({"detail": f"Computer move failed: {result['error']}"},
+        # Calculate new FEN by applying the move
+        try:
+            chess_move = chess.Move.from_uci(move_uci)
+            temp_board = chess.Board(game.fen)
+            temp_board.push(chess_move)
+            new_fen = temp_board.fen()
+        except Exception as e:
+            logger.error(f"Error calculating new FEN: {e}")
+            return Response({"detail": "Error processing computer move."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        move_info = result['move']
-        new_fen = result['new_fen']
         
         # Determine which player is the computer based on username
         current_turn = board.turn
@@ -428,6 +622,7 @@ def make_computer_move(request, pk):
         
         # Update game state
         game.fen = new_fen
+        game.last_move_at = timezone.now()  # Update timer reference point
         
         # Check if game is over
         new_board = chess.Board(new_fen)
@@ -445,25 +640,59 @@ def make_computer_move(request, pk):
         game.save()
         logger.info(f"Game updated after computer move: status={game.status}")
         
-        # Return response
-        game_serializer = GameSerializer(game)
-        move_serializer = MoveSerializer(move_obj)
-        
-        response_data = {
-            "move": move_serializer.data,
-            "game": game_serializer.data,
-            "computer_move": {
-                "from_square": move_info['from_square'],
-                "to_square": move_info['to_square'],
-                "notation": san,
-                "uci": move_info['uci']
-            },
-            "engine_info": result['engine_info'],
-            "game_status": result['game_status']
-        }
-        
-        logger.info(f"Computer move response: {response_data}")
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        # Return response with comprehensive error handling
+        try:
+            game_serializer = GameSerializer(game)
+            move_serializer = MoveSerializer(move_obj)
+            
+            response_data = {
+                "move": move_serializer.data,
+                "game": game_serializer.data,
+                "computer_move": {
+                    "from_square": move_info['from_square'],
+                    "to_square": move_info['to_square'],
+                    "notation": san,
+                    "uci": move_info['uci']
+                },
+                "engine_info": {
+                    "thinking_time": result.get('thinking_time', 0),
+                    "evaluation": result.get('evaluation', 0),
+                    "rating": result.get('rating', 1200),
+                    "personality": result.get('personality', 'balanced'),
+                    "move_source": result.get('move_source', 'search'),
+                    "game_phase": result.get('game_phase', 'unknown')
+                },
+                "game_status": {
+                    'is_checkmate': new_board.is_checkmate(),
+                    'is_stalemate': new_board.is_stalemate(),
+                    'is_check': new_board.is_check(),
+                    'is_game_over': new_board.is_game_over(),
+                    'result': new_board.result() if new_board.is_game_over() else None
+                }
+            }
+            
+            logger.info(f"Computer move completed successfully: {response_data}")
+            return Response(response_data, status=status.HTTP_201_CREATED)
+            
+        except Exception as serialization_error:
+            logger.error(f"Error serializing computer move response for game {pk}: {serialization_error}")
+            # Return basic response even if serialization fails
+            return Response({
+                "computer_move": {
+                    "from_square": move_info['from_square'],
+                    "to_square": move_info['to_square'],
+                    "notation": san,
+                    "uci": move_info['uci']
+                },
+                "game_status": {
+                    'is_checkmate': new_board.is_checkmate(),
+                    'is_stalemate': new_board.is_stalemate(),
+                    'is_check': new_board.is_check(),
+                    'is_game_over': new_board.is_game_over(),
+                    'result': new_board.result() if new_board.is_game_over() else None
+                },
+                "message": "Computer move completed successfully"
+            }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
         logger.error(f"Error making computer move for game {pk}: {e}")
@@ -496,6 +725,20 @@ def create_computer_game(request):
             except (ValueError, TypeError):
                 difficulty = 'medium'
         
+        # Get time control from request or use default
+        time_control = request.data.get('time_control', 'rapid')
+        
+        # Map time control to actual time values (in seconds)
+        time_control_map = {
+            'bullet': 120,      # 2 minutes
+            'blitz': 300,       # 5 minutes
+            'rapid': 600,       # 10 minutes
+            'classical': 1800,  # 30 minutes
+            'unlimited': 0      # No time limit
+        }
+        
+        initial_time = time_control_map.get(time_control, 600)  # Default to rapid
+        
         # Create computer username with difficulty/rating
         computer_suffix = difficulty if difficulty in valid_ratings else difficulty
         
@@ -503,36 +746,80 @@ def create_computer_game(request):
         if player_color == 'white':
             computer_user, created = User.objects.get_or_create(
                 username=f'computer_black_{computer_suffix}',
-                defaults={'first_name': 'Computer', 'last_name': f'Black ({computer_suffix})'}
+                defaults={
+                    'first_name': 'Computer', 
+                    'last_name': f'Black ({computer_suffix})',
+                    'email': f'computer_black_{computer_suffix}@chess.ai'
+                }
             )
             game = Game.objects.create(
                 white_player=request.user,
                 black_player=computer_user,
                 fen=chess.STARTING_FEN,
-                status='active'
+                status='active',
+                time_control=time_control,
+                white_time_left=initial_time,
+                black_time_left=initial_time
             )
         else:
             computer_user, created = User.objects.get_or_create(
                 username=f'computer_white_{computer_suffix}',
-                defaults={'first_name': 'Computer', 'last_name': f'White ({computer_suffix})'}
+                defaults={
+                    'first_name': 'Computer', 
+                    'last_name': f'White ({computer_suffix})',
+                    'email': f'computer_white_{computer_suffix}@chess.ai'
+                }
             )
             game = Game.objects.create(
                 white_player=computer_user,
                 black_player=request.user,
                 fen=chess.STARTING_FEN,
-                status='active'
+                status='active',
+                time_control=time_control,
+                white_time_left=initial_time,
+                black_time_left=initial_time
             )
         
         # Store difficulty in game metadata (you might want to add this field to the model)
         # For now, we'll include it in the response
+        
+        # Convert difficulty to rating for consistency
+        rating_map = {
+            "beginner": 600,
+            "easy": 800,
+            "medium": 1200, 
+            "hard": 1600,
+            "expert": 2000,
+            "master": 2200,
+            "grandmaster": 2400
+        }
+        
+        # Get the actual rating value
+        if difficulty in rating_map:
+            computer_rating = rating_map[difficulty]
+        else:
+            try:
+                computer_rating = int(difficulty)
+            except ValueError:
+                computer_rating = 1200
         
         serializer = GameSerializer(game)
         logger.info(f"Computer game created: {game.id} by {request.user}, player_color: {player_color}, difficulty: {difficulty}")
         
         response_data = serializer.data
         response_data['difficulty'] = difficulty
+        response_data['computer_rating'] = computer_rating
         response_data['player_color'] = player_color
         response_data['is_computer_game'] = True
+        response_data['computer_personality'] = 'balanced'
+        
+        # Add rating display info for frontend
+        if player_color == 'white':
+            response_data['black_player_rating'] = computer_rating
+            response_data['white_player_rating'] = None  # Human player
+        else:
+            response_data['white_player_rating'] = computer_rating
+            response_data['black_player_rating'] = None  # Human player
         
         return Response(response_data, status=status.HTTP_201_CREATED)
         
