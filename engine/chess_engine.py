@@ -17,11 +17,11 @@ import random
 import math
 from typing import Dict, List, Optional, Tuple, Union, Any
 from enum import Enum
+from dataclasses import dataclass
 import logging
 
 # Import engine components
 from .opening_database import create_opening_book, PlayingStyle
-from .advanced_search import AdvancedSearchEngine, SearchResult, NodeType
 from games.utils.time_control import create_time_manager, MoveType
 from games.utils.timer_manager import TimerManager
 from games.utils.rating_system import RatingIntegration
@@ -29,6 +29,109 @@ from .rating_configs import get_rating_config
 from .evaluation import AdvancedEvaluator
 
 logger = logging.getLogger(__name__)
+
+
+# Simple replacement classes for removed advanced_search module
+@dataclass
+class SearchResult:
+    """Search result container."""
+    best_move: chess.Move
+    evaluation: float
+    depth: int = 0
+    nodes_searched: int = 0
+    time_taken: float = 0.0
+    principal_variation: List[chess.Move] = None
+    search_info: Dict[str, Any] = None
+    
+    def __post_init__(self):
+        if self.principal_variation is None:
+            self.principal_variation = []
+        if self.search_info is None:
+            self.search_info = {}
+
+
+class AdvancedSearchEngine:
+    """Basic search engine replacement."""
+    def __init__(self, rating: int):
+        self.rating = rating
+        self.max_depth = min(6, max(2, rating // 400))
+    
+    def search(self, board: chess.Board, max_time: float = 1.0) -> SearchResult:
+        """Basic minimax search."""
+        best_move = None
+        best_eval = float('-inf')
+        
+        for move in board.legal_moves:
+            board.push(move)
+            eval_score = -self._minimax(board, self.max_depth - 1, float('-inf'), float('inf'), False)
+            board.pop()
+            
+            if eval_score > best_eval:
+                best_eval = eval_score
+                best_move = move
+        
+        return SearchResult(
+            best_move=best_move or list(board.legal_moves)[0],
+            evaluation=best_eval,
+            depth=self.max_depth
+        )
+    
+    def search_best_move(self, board: chess.Board, max_time: float = 1.0, max_depth: int = None) -> SearchResult:
+        """Search for best move - compatibility method."""
+        if max_depth:
+            old_depth = self.max_depth
+            self.max_depth = min(max_depth, self.max_depth)
+            result = self.search(board, max_time)
+            self.max_depth = old_depth
+            return result
+        else:
+            return self.search(board, max_time)
+    
+    def _minimax(self, board: chess.Board, depth: int, alpha: float, beta: float, maximizing: bool) -> float:
+        """Basic minimax with alpha-beta pruning."""
+        if depth == 0 or board.is_game_over():
+            return self._evaluate_position(board)
+        
+        if maximizing:
+            max_eval = float('-inf')
+            for move in board.legal_moves:
+                board.push(move)
+                eval_score = self._minimax(board, depth - 1, alpha, beta, False)
+                board.pop()
+                max_eval = max(max_eval, eval_score)
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break
+            return max_eval
+        else:
+            min_eval = float('inf')
+            for move in board.legal_moves:
+                board.push(move)
+                eval_score = self._minimax(board, depth - 1, alpha, beta, True)
+                board.pop()
+                min_eval = min(min_eval, eval_score)
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    break
+            return min_eval
+    
+    def _evaluate_position(self, board: chess.Board) -> float:
+        """Basic position evaluation."""
+        if board.is_checkmate():
+            return -9999 if board.turn else 9999
+        if board.is_stalemate():
+            return 0
+        
+        # Simple material count
+        piece_values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, 
+                       chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0}
+        
+        white_material = sum(piece_values[piece.piece_type] 
+                           for piece in board.piece_map().values() if piece.color == chess.WHITE)
+        black_material = sum(piece_values[piece.piece_type] 
+                           for piece in board.piece_map().values() if piece.color == chess.BLACK)
+        
+        return white_material - black_material if board.turn else black_material - white_material
 
 
 class GamePhase(Enum):

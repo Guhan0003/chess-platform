@@ -2,7 +2,8 @@
 Chess Game Analysis and Coaching System
 
 Provides post-game analysis with move evaluation, mistake detection,
-and personalized coaching suggestions based on player rating level.
+and pers        self.analysis_engine = ChessEngine(rating=2400, personality="balanced")
+        self.player_engine = ChessEngine(rating=player_rating, personality="balanced")alized coaching suggestions based on player rating level.
 
 Features:
 - Move-by-move analysis
@@ -20,9 +21,9 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 
-from .unified_engine import UnifiedChessEngine
+from .chess_engine import ChessEngine
 from .evaluation import PositionEvaluator
-from .opening_book import OpeningBook
+from .opening_database import OpeningDatabase
 
 
 class MistakeType(Enum):
@@ -124,14 +125,14 @@ class GameAnalyzer:
         self.opponent_rating = opponent_rating or player_rating
         
         # Create analysis engines
-        self.analysis_engine = UnifiedChessEngine(rating=2400, personality="balanced")
-        self.player_engine = UnifiedChessEngine(rating=player_rating, personality="balanced")
+        self.analysis_engine = ChessEngine(rating=2400, personality="balanced")
+        self.player_engine = ChessEngine(rating=player_rating, personality="balanced")
         
         # Position evaluator
         self.evaluator = PositionEvaluator(rating=2400)
         
         # Opening book
-        self.opening_book = OpeningBook(rating=2400)
+        self.opening_book = OpeningDatabase(rating=2400)
         
         # Analysis settings based on player rating
         self.analysis_depth = self._get_analysis_depth()

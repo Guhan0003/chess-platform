@@ -651,13 +651,18 @@
         </div>
 
         <div class="auth-link">
-          <a href="../auth/login.html">Sign in here</a>
+          <a href="/login/">Sign in here</a>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Import API utilities -->
+  <script src="../../utils/api.js"></script>
   <script>
+    // Initialize API instance
+    const api = new ChessAPI();
+    
     // Registration page controller
     function initRegisterPage() {
       const form = document.getElementById('registerForm');
@@ -855,7 +860,8 @@
         const userData = {
           username: formData.get('username').trim(),
           email: formData.get('email').trim(),
-          password: formData.get('password')
+          password: formData.get('password'),
+          password_confirm: formData.get('confirmPassword')
         };
 
         // Show loading state

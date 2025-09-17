@@ -425,16 +425,6 @@ class ChessAPI {
     });
   }
 
-  /**
-   * Get game timer data
-   * @param {number} gameId - Game ID
-   */
-  async getGameTimer(gameId) {
-    return this.request(`/games/${gameId}/timer/`, {
-      method: 'GET'
-    });
-  }
-
   // =================================
   // Profile API Methods
   // =================================

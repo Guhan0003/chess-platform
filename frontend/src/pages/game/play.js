@@ -102,6 +102,7 @@ function initGamePage() {
   
   // Timer management
   let timerInterval = null;
+  let timerFetchInterval = null;
   let gameTimerData = null;
   let lastTimerUpdate = null;
   
@@ -191,9 +192,8 @@ function initGamePage() {
   }
   
   function startTimerUpdates() {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-    }
+    // Clear any existing intervals first
+    stopTimerUpdates();
     
     // Update timer display every second
     timerInterval = setInterval(() => {
@@ -201,15 +201,22 @@ function initGamePage() {
     }, 1000);
     
     // Fetch fresh timer data every 10 seconds
-    setInterval(() => {
+    timerFetchInterval = setInterval(() => {
       fetchTimerData();
     }, 10000);
+    
+    // Initial fetch
+    fetchTimerData();
   }
   
   function stopTimerUpdates() {
     if (timerInterval) {
       clearInterval(timerInterval);
       timerInterval = null;
+    }
+    if (timerFetchInterval) {
+      clearInterval(timerFetchInterval);
+      timerFetchInterval = null;
     }
   }
   
@@ -512,6 +519,7 @@ function initGamePage() {
       statusMessageEl.textContent = 'Game in progress';
       statusDetailsEl.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} to move`;
     } else if (gameData.status === 'finished') {
+      // Check if we have detailed game ending information
       if (gameData.winner) {
         const winnerColor = gameData.winner === gameData.white_player ? 'White' : 'Black';
         statusMessageEl.textContent = `${winnerColor} wins!`;
@@ -879,6 +887,11 @@ function initGamePage() {
         renderBoard();
         updateTimerDisplay();
         
+        // Check for game over conditions (checkmate, stalemate, etc.)
+        if (response.data.game_status) {
+          handleGameOverStatus(response.data.game_status);
+        }
+        
         // Restart timer updates if game is still active
         if (gameData.status === 'active') {
           startTimerUpdates();
@@ -901,20 +914,131 @@ function initGamePage() {
     }
   }
   
+  // Game Over Status Handler
+  function handleGameOverStatus(gameStatus) {
+    if (!gameStatus || !gameStatus.is_game_over) {
+      return; // Game is still active
+    }
+    
+    let message = '';
+    let details = '';
+    
+    if (gameStatus.is_checkmate) {
+      // Determine winner based on current turn (the player who just got checkmated)
+      const currentTurn = getCurrentTurn();
+      const winner = currentTurn === 'white' ? 'Black' : 'White';
+      message = `Checkmate! ${winner} Wins!`;
+      details = `${currentTurn === 'white' ? 'White' : 'Black'} is in checkmate`;
+      
+      // Show prominent notification
+      api.showSuccess(message, 8000);
+      
+      // Update status display
+      const statusMessageEl = document.getElementById('statusMessage');
+      const statusDetailsEl = document.getElementById('statusDetails');
+      if (statusMessageEl) statusMessageEl.textContent = message;
+      if (statusDetailsEl) statusDetailsEl.textContent = details;
+      
+    } else if (gameStatus.is_stalemate) {
+      message = 'Stalemate! Game Drawn';
+      details = 'No legal moves available, but king is not in check';
+      
+      // Show prominent notification
+      api.showSuccess(message, 8000);
+      
+      // Update status display
+      const statusMessageEl = document.getElementById('statusMessage');
+      const statusDetailsEl = document.getElementById('statusDetails');
+      if (statusMessageEl) statusMessageEl.textContent = message;
+      if (statusDetailsEl) statusDetailsEl.textContent = details;
+      
+    } else if (gameStatus.result) {
+      // Handle other game endings (draw by repetition, insufficient material, etc.)
+      if (gameStatus.result === '1/2-1/2') {
+        message = 'Game Drawn';
+        details = 'Draw by rule';
+      } else if (gameStatus.result === '1-0') {
+        message = 'White Wins!';
+        details = 'Game completed';
+      } else if (gameStatus.result === '0-1') {
+        message = 'Black Wins!';
+        details = 'Game completed';
+      }
+      
+      if (message) {
+        api.showSuccess(message, 6000);
+        
+        const statusMessageEl = document.getElementById('statusMessage');
+        const statusDetailsEl = document.getElementById('statusDetails');
+        if (statusMessageEl) statusMessageEl.textContent = message;
+        if (statusDetailsEl) statusDetailsEl.textContent = details;
+      }
+    }
+    
+    console.log('Game Over:', { message, details, gameStatus });
+  }
+  
   // Computer Chess Functions
+  // Computer move state tracking
+  let computerMoveInProgress = false;
+  let computerMoveRetryCount = 0;
+  const MAX_COMPUTER_MOVE_RETRIES = 3;
+  
   async function handleComputerTurn() {
     try {
-      if (!isComputerGame() || !isComputerTurn()) {
+      // Prevent multiple simultaneous computer moves
+      if (computerMoveInProgress) {
+        console.log('Computer move already in progress, skipping');
         return;
       }
       
-      // Small delay for better UX
+      if (!isComputerGame() || !isComputerTurn()) {
+        console.log('Not computer\'s turn or not a computer game');
+        return;
+      }
+      
+      console.log('Initiating computer move...');
+      
+      // Small delay for better UX, then make the move
       setTimeout(async () => {
-        await makeComputerMove();
-      }, 1000);
+        await makeComputerMoveWithRetry();
+      }, 800);
       
     } catch (error) {
       console.error('Error handling computer turn:', error);
+      computerMoveInProgress = false; // Reset flag on error
+    }
+  }
+  
+  async function makeComputerMoveWithRetry() {
+    if (computerMoveInProgress) {
+      console.log('Computer move already in progress');
+      return;
+    }
+    
+    computerMoveInProgress = true;
+    
+    try {
+      await makeComputerMove();
+      computerMoveRetryCount = 0; // Reset retry count on success
+    } catch (error) {
+      console.error(`Computer move failed (attempt ${computerMoveRetryCount + 1}):`, error);
+      
+      if (computerMoveRetryCount < MAX_COMPUTER_MOVE_RETRIES) {
+        computerMoveRetryCount++;
+        console.log(`Retrying computer move in 2 seconds... (${computerMoveRetryCount}/${MAX_COMPUTER_MOVE_RETRIES})`);
+        
+        // Retry after delay
+        setTimeout(async () => {
+          computerMoveInProgress = false; // Reset flag before retry
+          await makeComputerMoveWithRetry();
+        }, 2000);
+      } else {
+        console.error('Max computer move retries exceeded');
+        api.showError('Computer failed to move after multiple attempts. Please refresh the page.');
+        computerMoveInProgress = false;
+        computerMoveRetryCount = 0;
+      }
     }
   }
   
@@ -956,7 +1080,15 @@ function initGamePage() {
   
   async function makeComputerMove() {
     try {
+      console.log('Starting computer move execution...');
       showBoardLoading(true);
+      
+      // Verify it's still the computer's turn (double-check)
+      if (!isComputerGame() || !isComputerTurn()) {
+        console.log('Computer move cancelled - not computer\'s turn anymore');
+        computerMoveInProgress = false;
+        return;
+      }
       
       // Get difficulty from URL params or use default
       const urlParams = new URLSearchParams(window.location.search);
@@ -967,6 +1099,7 @@ function initGamePage() {
       const response = await api.makeComputerMove(gameId, difficulty);
       
       if (response.ok) {
+        console.log('Computer move successful');
         gameData = response.data.game;
         
         // Update timer data if provided
@@ -991,30 +1124,31 @@ function initGamePage() {
           3000
         );
         
+        // Check for game over conditions (checkmate, stalemate, etc.)
+        if (response.data.game_status) {
+          handleGameOverStatus(response.data.game_status);
+        }
+        
         // Continue timer updates if game is still active
         if (gameData.status === 'active') {
           startTimerUpdates();
         } else {
           stopTimerUpdates();
-          
-          // Show game over message
-          if (response.data.game_status && response.data.game_status.is_game_over) {
-            if (response.data.game_status.is_checkmate) {
-              const winner = getCurrentTurn() === 'white' ? 'Black' : 'White';
-              api.showSuccess(`Checkmate! ${winner} wins!`, 5000);
-            } else if (response.data.game_status.is_stalemate) {
-              api.showSuccess('Stalemate! The game is a draw.', 5000);
-            }
-          }
         }
         
+        // Success - clear progress flag
+        computerMoveInProgress = false;
+        
       } else {
+        console.error('Computer move API failed:', response);
         api.showError(`Computer move failed: ${api.formatError(response)}`);
+        throw new Error(`Computer move API failed: ${api.formatError(response)}`);
       }
       
     } catch (error) {
       console.error('Error making computer move:', error);
       api.showError('Failed to make computer move');
+      throw error; // Re-throw to trigger retry mechanism
     } finally {
       showBoardLoading(false);
     }
@@ -1097,6 +1231,15 @@ function initGamePage() {
     const loadingEl = document.getElementById('boardLoading');
     if (!loadingEl) {
       console.warn('boardLoading element not found');
+      // Create a fallback loading indicator if element is missing
+      const chessBoard = document.getElementById('chessBoard');
+      if (chessBoard && show) {
+        chessBoard.style.opacity = '0.5';
+        chessBoard.style.pointerEvents = 'none';
+      } else if (chessBoard && !show) {
+        chessBoard.style.opacity = '1';
+        chessBoard.style.pointerEvents = 'auto';
+      }
       return;
     }
     if (show) {

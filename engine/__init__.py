@@ -18,7 +18,6 @@ Main Components:
 """
 
 from .chess_engine import ChessEngine, create_chess_engine
-from .unified_engine import UnifiedChessEngine, ChessAI  # Legacy support
 from .rating_configs import RatingConfig, get_rating_config
 from .game_analyzer import GameAnalyzer
 
@@ -89,7 +88,7 @@ def get_position_analysis(fen: str, rating: int = 2000) -> dict:
 
 # Legacy compatibility function
 def get_computer_move_legacy(fen: str, difficulty: str = "medium") -> dict:
-    """Legacy interface using original unified engine."""
+    """Legacy interface - now uses modern engine for compatibility."""
     rating_map = {
         "easy": 400,
         "medium": 1200, 
@@ -105,8 +104,16 @@ def get_computer_move_legacy(fen: str, difficulty: str = "medium") -> dict:
         except ValueError:
             rating = 1200
     
-    engine = UnifiedChessEngine(rating)
-    return engine.get_computer_move(fen)
+    # Use modern engine but format output for legacy compatibility
+    result = get_computer_move(fen, str(rating))
+    return {
+        'move': {
+            'notation': result.get('san', ''),
+            'uci': result.get('move', '')
+        },
+        'evaluation': result.get('evaluation', 0),
+        'thinking_time': result.get('thinking_time', 0)
+    }
 
 # Version info
 __version__ = "3.0.0"
@@ -115,7 +122,7 @@ __author__ = "Chess Platform Team"
 # Export main classes for advanced usage
 __all__ = [
     'ChessEngine',
-    'UnifiedChessEngine',
+    'ChessEngine',
     'get_computer_move',
     'create_engine',
     'get_position_analysis',

@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
         "./games/utils"
-    ]
+    ],
+    "github.copilot.nextEditSuggestions.enabled": true
 }
