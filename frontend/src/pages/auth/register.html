@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register - Chess Platform</title>
-  <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="stylesheet" href="/src/styles/global.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -355,6 +355,86 @@
       text-decoration: underline;
     }
 
+    /* Skill Level Selector Styles */
+    .skill-level-selector {
+      display: grid;
+      gap: var(--space-sm);
+      margin-top: var(--space-xs);
+    }
+
+    .skill-option {
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .skill-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .skill-label {
+      display: block;
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      position: relative;
+    }
+
+    .skill-label:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(118, 150, 86, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .skill-option input[type="radio"]:checked + .skill-label {
+      background: rgba(118, 150, 86, 0.1);
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 2px rgba(118, 150, 86, 0.2);
+    }
+
+    .skill-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-xs);
+    }
+
+    .skill-title {
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+    }
+
+    .skill-rating {
+      font-size: var(--font-size-xs);
+      color: var(--color-accent-primary);
+      font-weight: var(--font-weight-medium);
+      background: rgba(118, 150, 86, 0.1);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+    }
+
+    .skill-description {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      line-height: 1.4;
+    }
+
+    .skill-option input[type="radio"]:checked + .skill-label .skill-title {
+      color: var(--color-accent-primary);
+    }
+
+    .skill-option input[type="radio"]:checked + .skill-label .skill-rating {
+      background: var(--color-accent-primary);
+      color: white;
+    }
+
     /* Mobile-First Responsive Design */
     
     /* Base mobile styles (up to 640px) */
@@ -450,6 +530,27 @@
       margin-top: var(--space-xs);
       padding: var(--space-sm);
       border-radius: var(--radius-sm);
+    }
+
+    .skill-level-selector {
+      gap: var(--space-xs);
+    }
+
+    .skill-label {
+      padding: var(--space-sm);
+    }
+
+    .skill-title {
+      font-size: var(--font-size-sm);
+    }
+
+    .skill-rating {
+      font-size: var(--font-size-xs);
+      padding: calc(var(--space-xs) / 2) var(--space-xs);
+    }
+
+    .skill-description {
+      font-size: var(--font-size-xs);
     }
 
     /* Small tablet styles (641px to 768px) */
@@ -632,6 +733,58 @@
             <div class="field-error" id="confirm-password-error"></div>
           </div>
 
+          <div class="form-group">
+            <label for="skillLevel" style="display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-primary); margin-bottom: var(--space-sm);">
+              Chess Skill Level
+            </label>
+            <div class="skill-level-selector">
+              <div class="skill-option" data-level="beginner" data-rating="400">
+                <input type="radio" id="beginner" name="skillLevel" value="beginner" required>
+                <label for="beginner" class="skill-label">
+                  <div class="skill-header">
+                    <span class="skill-title">Beginner</span>
+                    <span class="skill-rating">Rating: ~400</span>
+                  </div>
+                  <div class="skill-description">New to chess or learning basic rules</div>
+                </label>
+              </div>
+
+              <div class="skill-option" data-level="intermediate" data-rating="800">
+                <input type="radio" id="intermediate" name="skillLevel" value="intermediate">
+                <label for="intermediate" class="skill-label">
+                  <div class="skill-header">
+                    <span class="skill-title">Intermediate</span>
+                    <span class="skill-rating">Rating: ~800</span>
+                  </div>
+                  <div class="skill-description">Know basic tactics and openings</div>
+                </label>
+              </div>
+
+              <div class="skill-option" data-level="advanced" data-rating="1200">
+                <input type="radio" id="advanced" name="skillLevel" value="advanced">
+                <label for="advanced" class="skill-label">
+                  <div class="skill-header">
+                    <span class="skill-title">Advanced</span>
+                    <span class="skill-rating">Rating: ~1200</span>
+                  </div>
+                  <div class="skill-description">Understand strategy and complex tactics</div>
+                </label>
+              </div>
+
+              <div class="skill-option" data-level="expert" data-rating="1600">
+                <input type="radio" id="expert" name="skillLevel" value="expert">
+                <label for="expert" class="skill-label">
+                  <div class="skill-header">
+                    <span class="skill-title">Expert</span>
+                    <span class="skill-rating">Rating: ~1600</span>
+                  </div>
+                  <div class="skill-description">Strong player with deep understanding</div>
+                </label>
+              </div>
+            </div>
+            <div class="field-error" id="skill-level-error"></div>
+          </div>
+
           <div class="auth-actions">
             <button type="submit" class="btn btn-primary btn-full register-btn">
               <span class="btn-text">Create Account</span>
@@ -658,10 +811,21 @@
   </div>
 
   <!-- Import API utilities -->
-  <script src="../../utils/api.js"></script>
+  <script src="/src/utils/api.js"></script>
   <script>
-    // Initialize API instance
-    const api = new ChessAPI();
+    // Test API loading immediately
+    console.log('=== REGISTRATION PAGE DEBUG ===');
+    console.log('Window location:', window.location.href);
+    console.log('ChessAPI available?', typeof ChessAPI !== 'undefined');
+    
+    // Check if global API instance is available (declared in api.js)
+    if (typeof api !== 'undefined') {
+      console.log('✅ Global API instance found');
+      console.log('API base URL:', api.baseURL);
+    } else {
+      console.error('❌ Global API instance not found');
+      alert('Critical Error: API not loaded. Please refresh the page.');
+    }
     
     // Registration page controller
     function initRegisterPage() {
@@ -677,12 +841,14 @@
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
       const confirmPasswordInput = document.getElementById('confirmPassword');
+      const skillLevelInputs = document.querySelectorAll('input[name="skillLevel"]');
       
       // Error elements
       const usernameError = document.getElementById('username-error');
       const emailError = document.getElementById('email-error');
       const passwordError = document.getElementById('password-error');
       const confirmPasswordError = document.getElementById('confirm-password-error');
+      const skillLevelError = document.getElementById('skill-level-error');
       
       // Password strength elements
       const strengthMeter = document.querySelector('.strength-meter');
@@ -718,8 +884,13 @@
         confirmPasswordInput.addEventListener('input', validateConfirmPassword);
         confirmPasswordInput.addEventListener('blur', validateConfirmPassword);
         
+        // Skill level validation
+        skillLevelInputs.forEach(input => {
+          input.addEventListener('change', validateSkillLevel);
+        });
+        
         // Clear global errors on input
-        const inputs = [usernameInput, emailInput, passwordInput, confirmPasswordInput];
+        const inputs = [usernameInput, emailInput, passwordInput, confirmPasswordInput, ...skillLevelInputs];
         inputs.forEach(input => {
           input.addEventListener('input', () => {
             hideError();
@@ -791,6 +962,18 @@
         }
       }
 
+      function validateSkillLevel() {
+        const selectedLevel = document.querySelector('input[name="skillLevel"]:checked');
+        
+        if (!selectedLevel) {
+          showFieldError(null, skillLevelError, 'Please select your chess skill level');
+          return false;
+        } else {
+          skillLevelError.classList.remove('show');
+          return true;
+        }
+      }
+
       function checkPasswordStrength() {
         const password = passwordInput.value;
         let score = 0;
@@ -850,19 +1033,26 @@
         const isEmailValid = validateEmail();
         const isPasswordValid = validatePassword();
         const isConfirmPasswordValid = validateConfirmPassword();
+        const isSkillLevelValid = validateSkillLevel();
         
-        if (!isUsernameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
+        if (!isUsernameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid || !isSkillLevelValid) {
           showError('Please fix the errors above');
           return;
         }
 
         const formData = new FormData(form);
+        const selectedSkillLevel = document.querySelector('input[name="skillLevel"]:checked');
+        
         const userData = {
           username: formData.get('username').trim(),
           email: formData.get('email').trim(),
           password: formData.get('password'),
-          password_confirm: formData.get('confirmPassword')
+          password_confirm: formData.get('confirmPassword'),
+          skill_level: selectedSkillLevel.value,
+          initial_rating: parseInt(selectedSkillLevel.closest('.skill-option').dataset.rating)
         };
+
+        console.log('Registering user with data:', userData);
 
         // Show loading state
         setLoading(true);
@@ -883,13 +1073,18 @@
               input.classList.remove('success', 'error');
             });
             
+            // Clear skill level selection
+            skillLevelInputs.forEach(input => {
+              input.checked = false;
+            });
+            
             // Reset password strength meter
             strengthMeter.className = 'strength-meter';
             strengthLabel.textContent = 'Enter password';
             
             // Redirect to login after delay
             setTimeout(() => {
-              window.location.href = '../auth/login.html';
+              window.location.href = '/login.html/';
             }, 2000);
           } else {
             // Registration failed

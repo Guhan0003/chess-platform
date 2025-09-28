@@ -120,8 +120,128 @@ async function joinGame(gameId) {
 }
 // Add this debug version to your script.js or replace the makeMove function
 
+// Timer management variables
+let gameTimer = { white_time: 600, black_time: 600, current_turn: 'white' };
+let currentTurn = 'white';
+let lastTimerUpdate = Date.now();
+let timerInterval = null;
+
+// Start timer management
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  
+  timerInterval = setInterval(() => {
+    updateTimerDisplay();
+    saveTimerState();
+  }, 1000);
+  
+  updateTimerDisplay();
+}
+
+// Update timer display
+function updateTimerDisplay() {
+  if (gameTimer && lastTimerUpdate) {
+    const elapsed = Math.floor((Date.now() - lastTimerUpdate) / 1000);
+    
+    let whiteTime = gameTimer.white_time;
+    let blackTime = gameTimer.black_time;
+    
+    if (elapsed >= 0 && elapsed < 60) {
+      if (currentTurn === 'white') {
+        whiteTime = Math.max(0, whiteTime - elapsed);
+      } else {
+        blackTime = Math.max(0, blackTime - elapsed);
+      }
+    }
+    
+    const whiteMinutes = Math.floor(whiteTime / 60);
+    const whiteSeconds = whiteTime % 60;
+    const blackMinutes = Math.floor(blackTime / 60);
+    const blackSeconds = blackTime % 60;
+    
+    console.log(`⏱️ Timer updated - White: ${whiteMinutes}:${whiteSeconds.toString().padStart(2, '0')}, Black: ${blackMinutes}:${blackSeconds.toString().padStart(2, '0')}, Turn: ${currentTurn}`);
+  }
+}
+
+// Switch turns after moves
+function switchTurn(reason = 'move') {
+  console.log(`🚨🚨🚨 SWITCHING TURN! Reason: ${reason} 🚨🚨🚨`);
+  console.log(`🔍 Before: currentTurn=${currentTurn}`);
+  
+  // Save current player's time
+  if (lastTimerUpdate) {
+    const elapsed = Math.floor((Date.now() - lastTimerUpdate) / 1000);
+    if (elapsed > 0 && elapsed < 60) {
+      if (currentTurn === 'white') {
+        gameTimer.white_time = Math.max(0, gameTimer.white_time - elapsed);
+        console.log(`⏰ White timer updated: ${gameTimer.white_time}s`);
+      } else {
+        gameTimer.black_time = Math.max(0, gameTimer.black_time - elapsed);
+        console.log(`⏰ Black timer updated: ${gameTimer.black_time}s`);
+      }
+    }
+  }
+  
+  // Switch to other player
+  currentTurn = currentTurn === 'white' ? 'black' : 'white';
+  gameTimer.current_turn = currentTurn;
+  lastTimerUpdate = Date.now();
+  
+  console.log(`✅✅✅ TURN SWITCHED TO: ${currentTurn} ✅✅✅`);
+  console.log(`⏰ Timer values: White=${gameTimer.white_time}s, Black=${gameTimer.black_time}s`);
+  
+  updateTimerDisplay();
+}
+
+// Save timer state to localStorage
+function saveTimerState() {
+  if (activeGameId) {
+    const timerState = {
+      white_time: gameTimer.white_time,
+      black_time: gameTimer.black_time,
+      current_turn: currentTurn,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(`timer_${activeGameId}`, JSON.stringify(timerState));
+  }
+}
+
+// Load timer state from localStorage
+function loadTimerState() {
+  if (activeGameId) {
+    const saved = localStorage.getItem(`timer_${activeGameId}`);
+    if (saved) {
+      try {
+        const timerState = JSON.parse(saved);
+        const age = Date.now() - timerState.timestamp;
+        if (age < 300000) { // 5 minutes
+          console.log('📂 Loading saved timer state:', timerState);
+          
+          // Apply elapsed time since save
+          const timeSinceSave = Math.floor(age / 1000);
+          if (timeSinceSave > 0 && timeSinceSave < 60) {
+            if (timerState.current_turn === 'white') {
+              timerState.white_time = Math.max(0, timerState.white_time - timeSinceSave);
+            } else {
+              timerState.black_time = Math.max(0, timerState.black_time - timeSinceSave);
+            }
+          }
+          
+          gameTimer = timerState;
+          currentTurn = timerState.current_turn;
+          lastTimerUpdate = Date.now();
+          return true;
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved timer state');
+      }
+    }
+  }
+  return false;
+}
+
 async function makeMove(gameId, from, to, promotion = null) {
-  console.log("=== MAKING MOVE ===");
+  console.log("🚨🚨🚨 MAKEMOVE CALLED IN SCRIPT.JS 🚨🚨🚨");
   console.log("Game ID:", gameId);
   console.log("From:", from, "To:", to);
   console.log("Promotion:", promotion);
@@ -169,7 +289,11 @@ async function makeMove(gameId, from, to, promotion = null) {
       return { ok: false, data };
     }
 
-    console.log("Move successful!");
+    console.log("✅ Move successful! Switching turn...");
+    
+    // Switch turn after successful move
+    switchTurn('player_move');
+    
     return { ok: true, data };
   } catch (err) {
     console.error("Network/move error:", err);
@@ -209,12 +333,22 @@ async function createComputerGame(playerColor = 'white', difficulty = 'medium') 
 }
 
 async function makeComputerMove(gameId, difficulty = 'medium') {
+  console.log("🤖 Making computer move...");
+  
   const res = await apiFetch(`${API_BASE}/games/${gameId}/computer-move/`, {
     method: "POST", 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ difficulty: difficulty })
   });
-  return { ok: res.ok, data: await res.json() };
+  
+  const result = { ok: res.ok, data: await res.json() };
+  
+  if (result.ok) {
+    console.log("✅ Computer move successful! Switching turn...");
+    switchTurn('computer_move');
+  }
+  
+  return result;
 }
 
 // ================================
@@ -395,6 +529,18 @@ async function updateGameDetails(gameId) {
 
   if (elements.currentGameStatus) elements.currentGameStatus.textContent = game.status;
   if (elements.currentTurn) elements.currentTurn.textContent = game.fen.split(" ")[1] === 'w' ? 'White' : 'Black';
+
+  // Initialize timer for this game
+  if (!loadTimerState()) {
+    // If no saved state, initialize with default values
+    console.log('🎮 Initializing new game timer');
+    gameTimer = { white_time: 600, black_time: 600, current_turn: 'white' };
+    currentTurn = 'white';
+    lastTimerUpdate = Date.now();
+  }
+  
+  // Start the timer
+  startTimer();
 
   if (elements.moveList) {
     elements.moveList.innerHTML = "";

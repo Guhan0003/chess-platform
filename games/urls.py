@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from games import views
 
 urlpatterns = [
     path("", views.GameListView.as_view(), name="game-list"),                  # GET list
@@ -10,5 +10,12 @@ urlpatterns = [
     path("<int:pk>/move/", views.make_move, name="game-move"),                 # POST make move
     path("<int:pk>/computer-move/", views.make_computer_move, name="game-computer-move"), # POST computer move
     path("<int:pk>/legal-moves/", views.get_legal_moves, name="game-legal-moves"),  # GET legal moves
-    path("<int:pk>/timer/", views.get_game_timer, name="game-timer"),          # GET timer status
+    path("<int:pk>/timer/", views.get_game_timer, name="game-timer"),          # GET timer status (OLD - to be deprecated)
+    
+    # ================== PROFESSIONAL TIMER ENDPOINTS ==================
+    path("<int:game_id>/professional-timer/", views.get_professional_timer, name="professional-timer"),
+    path("<int:game_id>/start-timer/", views.start_professional_timer, name="start-professional-timer"),
+    path("<int:game_id>/timer-move/", views.make_professional_timer_move, name="professional-timer-move"),
+    path("<int:game_id>/bot-thinking-time/", views.get_bot_thinking_time, name="bot-thinking-time"),
+    # ================== END PROFESSIONAL TIMER ENDPOINTS ==================
 ]

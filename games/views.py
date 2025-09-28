@@ -769,3 +769,161 @@ def create_computer_game(request):
         logger.error(f"Error creating computer game: {e}")
         return Response({"detail": f"Error creating computer game: {str(e)}"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ================== PROFESSIONAL TIMER API ENDPOINTS ==================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_professional_timer(request, game_id):
+    """
+    Get professional timer state - REPLACES frontend timer logic
+    
+    Returns accurate, thread-safe timer data with no conflicts
+    """
+    try:
+        game = get_object_or_404(Game, id=game_id)
+        
+        # Get professional timer state
+        timer_state = game.get_professional_timer_state()
+        
+        # Add game context
+        timer_state.update({
+            'game_id': game.id,
+            'game_status': game.status,
+            'move_count': game.moves.count(),
+            'current_player_color': game.get_current_player_color(),
+            'white_player': game.white_player.username if game.white_player else 'Computer',
+            'black_player': game.black_player.username if game.black_player else 'Computer',
+        })
+        
+        logger.info(f"Professional timer state for game {game_id}: {timer_state}")
+        return Response(timer_state, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting professional timer for game {game_id}: {e}")
+        return Response(
+            {"detail": f"Timer error: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_professional_timer(request, game_id):
+    """
+    Start professional timer system - REPLACES frontend timer initialization
+    
+    Initializes thread-safe, accurate timer with no conflicts
+    """
+    try:
+        game = get_object_or_404(Game, id=game_id)
+        
+        if game.status != 'waiting':
+            return Response(
+                {"detail": "Timer already started"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Start professional timer
+        timer_state = game.start_professional_timer()
+        
+        logger.info(f"Professional timer started for game {game_id}")
+        return Response({
+            'message': 'Professional timer started',
+            'timer_state': timer_state,
+            'game_status': game.status
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error starting professional timer for game {game_id}: {e}")
+        return Response(
+            {"detail": f"Timer start error: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def make_professional_timer_move(request, game_id):
+    """
+    Update timer after move - REPLACES frontend timer switching logic
+    
+    Handles turn switching, time deduction, and timeout detection professionally
+    """
+    try:
+        game = get_object_or_404(Game, id=game_id)
+        player_color = request.data.get('player_color')
+        
+        if not player_color:
+            return Response(
+                {"detail": "player_color required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Make professional timer move
+        timer_state = game.make_timer_move(player_color)
+        
+        # Check for timeout
+        if game.status == 'finished' and game.termination == 'timeout':
+            return Response({
+                'message': f'{player_color} ran out of time',
+                'timer_state': timer_state,
+                'game_finished': True,
+                'winner': game.winner.username if game.winner else None,
+                'termination': 'timeout'
+            }, status=status.HTTP_200_OK)
+        
+        return Response({
+            'message': 'Timer updated professionally',
+            'timer_state': timer_state,
+            'game_status': game.status,
+            'current_turn': timer_state['current_turn']
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in professional timer move for game {game_id}: {e}")
+        return Response(
+            {"detail": f"Timer move error: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_bot_thinking_time(request, game_id):
+    """
+    Get realistic bot thinking time based on rating and position complexity
+    
+    REPLACES hardcoded bot delays with human-like timing patterns
+    """
+    try:
+        game = get_object_or_404(Game, id=game_id)
+        
+        # Get bot rating from request or use default
+        bot_rating = int(request.GET.get('bot_rating', 1500))
+        complexity = float(request.GET.get('complexity', 5.0))
+        
+        # Create board from current FEN
+        board = chess.Board(game.fen)
+        
+        # Calculate professional thinking time
+        thinking_time = game.calculate_bot_thinking_time(bot_rating, board, complexity)
+        
+        return Response({
+            'thinking_time': thinking_time,
+            'bot_rating': bot_rating,
+            'position_complexity': complexity,
+            'move_count': game.moves.count(),
+            'game_phase': 'opening' if game.moves.count() < 10 else 'middlegame'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error calculating bot thinking time for game {game_id}: {e}")
+        return Response(
+            {"detail": f"Bot thinking time error: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# ================== END PROFESSIONAL TIMER API ENDPOINTS ==================

@@ -313,6 +313,24 @@ class ChessAPI {
     return this.request('/auth/profile/');
   }
 
+  /**
+   * Get available skill levels for registration
+   */
+  async getSkillLevels() {
+    return this.request('/auth/skill-levels/');
+  }
+
+  /**
+   * Send forgot password request
+   * @param {string} email - User's email address
+   */
+  async forgotPassword(email) {
+    return this.request('/auth/forgot-password/', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  }
+
   // =================================
   // Game API Methods
   // =================================

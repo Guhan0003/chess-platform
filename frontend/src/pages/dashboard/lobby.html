@@ -1118,9 +1118,15 @@
           // Use fallback data
           currentUser = {
             username: 'Player',
-            rating: 1200,
-            games_played: 0,
-            games_won: 0
+            rapid_rating: 1200,
+            blitz_rating: 1200,
+            classical_rating: 1200,
+            rapid_peak: 1200,
+            blitz_peak: 1200,
+            classical_peak: 1200,
+            total_games: 0,
+            games_won: 0,
+            current_win_streak: 0
           };
           updateUserDisplay();
         }
@@ -1133,27 +1139,63 @@
         
         if (currentUser) {
           userNameEl.textContent = currentUser.username;
-          userRatingEl.textContent = currentUser.rating || 1200;
+          
+          // Use rapid_rating as the default rating display (most common time control)
+          const displayRating = currentUser.rapid_rating || currentUser.blitz_rating || currentUser.classical_rating || 1200;
+          userRatingEl.textContent = displayRating;
           
           // Update avatar - show image if available, otherwise show first letter
-          if (currentUser.avatar && currentUser.avatar.trim() !== '') {
-            userAvatarEl.style.backgroundImage = `url(${currentUser.avatar})`;
+          const avatarUrl = currentUser.avatar_url || (currentUser.avatar ? `http://127.0.0.1:8000${currentUser.avatar}` : null);
+          
+          console.log('Avatar debug:', {
+            avatar_url: currentUser.avatar_url,
+            avatar: currentUser.avatar,
+            computed_url: avatarUrl,
+            username: currentUser.username
+          });
+          
+          if (avatarUrl && avatarUrl.trim() !== '') {
+            console.log('Setting avatar background image:', avatarUrl);
+            userAvatarEl.style.backgroundImage = `url(${avatarUrl})`;
             userAvatarEl.style.backgroundSize = 'cover';
             userAvatarEl.style.backgroundPosition = 'center';
             userAvatarEl.textContent = '';
+            
+            // Add error handling for broken images
+            const testImage = new Image();
+            testImage.onload = function() {
+              console.log('Avatar image loaded successfully');
+            };
+            testImage.onerror = function() {
+              // Image failed to load, fall back to letter
+              console.warn('Avatar image failed to load:', avatarUrl);
+              userAvatarEl.style.backgroundImage = '';
+              userAvatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+            };
+            testImage.src = avatarUrl;
+            
           } else {
+            console.log('No avatar found, showing letter:', currentUser.username.charAt(0).toUpperCase());
             userAvatarEl.style.backgroundImage = '';
             userAvatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
           }
           
           // Update stats
-          document.getElementById('gamesPlayed').textContent = currentUser.games_played || 0;
-          const winRate = currentUser.games_played > 0 
-            ? Math.round((currentUser.games_won / currentUser.games_played) * 100)
+          document.getElementById('gamesPlayed').textContent = currentUser.total_games || 0;
+          const winRate = currentUser.total_games > 0 
+            ? Math.round((currentUser.games_won / currentUser.total_games) * 100)
             : 0;
           document.getElementById('winRate').textContent = winRate + '%';
-          document.getElementById('currentStreak').textContent = currentUser.current_streak || 0;
-          document.getElementById('bestRating').textContent = currentUser.best_rating || currentUser.rating || 1200;
+          document.getElementById('currentStreak').textContent = currentUser.current_win_streak || 0;
+          
+          // Use the highest peak rating as the "best rating"
+          const bestRating = Math.max(
+            currentUser.rapid_peak || 0,
+            currentUser.blitz_peak || 0, 
+            currentUser.classical_peak || 0,
+            displayRating
+          );
+          document.getElementById('bestRating').textContent = bestRating;
         }
       }
       

@@ -10,6 +10,7 @@ urlpatterns = [
     path('register/', views.RegisterView.as_view(), name='register'),  # Enhanced registration
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
+    path('forgot-password/', views.ForgotPasswordView.as_view(), name='forgot-password'),  # Forgot password
     path('protected/', views.ProtectedView.as_view(), name='protected'),
     
     # Enhanced profile endpoints
@@ -32,6 +33,9 @@ urlpatterns = [
     path('toggle-online/', views.toggle_online_status, name='toggle-online'),  # Online status
     path('game-history/', views.user_game_history, name='user-game-history'),  # Own game history
     path('game-history/<int:pk>/', views.user_game_history, name='user-game-history-detail'),  # Other user history
+    
+    # Skill level endpoints
+    path('skill-levels/', views.get_skill_levels, name='skill-levels'),  # Get available skill levels
 ]
 
 # URL Pattern Examples for Frontend Integration:

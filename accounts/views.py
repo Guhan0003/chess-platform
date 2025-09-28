@@ -10,6 +10,47 @@ from django.db.models import Q
 from django.core.files.storage import default_storage
 from django.conf import settings
 from PIL import Image
+
+
+class ForgotPasswordView(APIView):
+    """
+    Forgot password endpoint for sending password reset emails.
+    This is a basic implementation - in production, you'd want to integrate
+    with Django's built-in password reset system and email backend.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({
+                'error': 'Email address is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Check if user exists with this email
+            user = User.objects.filter(email=email).first()
+            
+            if user:
+                # In a real implementation, you would:
+                # 1. Generate a password reset token
+                # 2. Send an email with reset link
+                # 3. Store the token with expiration
+                
+                # For now, we'll just return success
+                # You can integrate Django's built-in password reset system here
+                pass
+            
+            # Always return success to prevent email enumeration attacks
+            return Response({
+                'message': 'If an account with this email exists, you will receive a password reset link shortly.'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': 'An error occurred while processing your request'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 import os
 import uuid
 from .serializers import (
@@ -572,3 +613,66 @@ def delete_avatar(request):
         return Response({
             'error': f'Failed to delete avatar: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_skill_levels(request):
+    """
+    Get available skill levels for registration
+    """
+    try:
+        from games.utils.rating_calculator import SkillLevelManager
+        
+        skill_levels = SkillLevelManager.get_all_skill_levels()
+        
+        return Response({
+            'skill_levels': skill_levels,
+            'message': 'Skill levels retrieved successfully'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': f'Failed to retrieve skill levels: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ForgotPasswordView(APIView):
+    """
+    Forgot password endpoint for sending password reset emails.
+    This is a basic implementation - in production, you'd want to integrate
+    with Django's built-in password reset system and email backend.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({
+                'error': 'Email address is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Check if user exists with this email
+            user = User.objects.filter(email=email).first()
+            
+            if user:
+                # In a real implementation, you would:
+                # 1. Generate a password reset token
+                # 2. Send an email with reset link
+                # 3. Store the token with expiration
+                
+                # For now, we'll just return success
+                # You can integrate Django's built-in password reset system here
+                pass
+            
+            # Always return success to prevent email enumeration attacks
+            return Response({
+                'message': 'If an account with this email exists, you will receive a password reset link shortly.'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': 'An error occurred while processing your request'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

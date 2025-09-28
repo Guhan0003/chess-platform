@@ -5,6 +5,8 @@ from django.utils import timezone
 from datetime import timedelta
 import chess
 import json
+from .utils.timer_manager import TimerManager
+from .utils.time_control import TimeManager, create_time_manager
 
 
 class ChessManager:
@@ -267,6 +269,103 @@ class Game(models.Model):
         if self.black_time_remaining <= 0:
             return 'black'
         return None
+
+    # ================== PROFESSIONAL TIMER INTEGRATION ==================
+
+    def get_timer_manager(self):
+        """Get professional TimerManager instance for this game"""
+        if not hasattr(self, '_timer_manager'):
+            # Map time control string to TimerManager format
+            time_control_map = {
+                'bullet': 'bullet_1',
+                'blitz': 'blitz_5',
+                'rapid': 'rapid_10',
+                'classical': 'classical_60'
+            }
+            
+            timer_control = time_control_map.get(self.time_control, 'rapid_10')
+            self._timer_manager = TimerManager(timer_control)
+            
+            # Initialize with current game state
+            if self.status == 'active':
+                self._timer_manager.white_time = self.white_time_left
+                self._timer_manager.black_time = self.black_time_left
+                self._timer_manager.current_turn = self.get_current_player_color()
+                self._timer_manager.game_started = True
+                
+        return self._timer_manager
+
+    def get_bot_time_manager(self, bot_rating=1500):
+        """Get professional TimeManager for bot thinking time"""
+        if not hasattr(self, '_bot_time_manager'):
+            self._bot_time_manager = create_time_manager(bot_rating)
+        return self._bot_time_manager
+
+    def start_professional_timer(self):
+        """Start the professional timer system"""
+        timer = self.get_timer_manager()
+        timer_state = timer.start_game()
+        
+        # Update game model with timer state
+        self.white_time_left = timer_state['white_time'] or 600
+        self.black_time_left = timer_state['black_time'] or 600
+        self.status = 'active'
+        self.last_move_at = timezone.now()
+        self.save()
+        
+        return timer_state
+
+    def make_timer_move(self, player_color):
+        """Professional move timing with TimerManager"""
+        timer = self.get_timer_manager()
+        timer_state = timer.make_move(player_color)
+        
+        # Update model with new timer state
+        self.white_time_left = timer_state['white_time'] or 0
+        self.black_time_left = timer_state['black_time'] or 0
+        self.last_move_at = timezone.now()
+        
+        # Check for timeout
+        timeout_player = timer.check_timeout()
+        if timeout_player:
+            self.status = 'finished'
+            self.result = '0-1' if timeout_player == 'white' else '1-0'
+            self.termination = 'timeout'
+            self.winner = self.black_player if timeout_player == 'white' else self.white_player
+        
+        self.save()
+        return timer_state
+
+    def get_professional_timer_state(self):
+        """Get current professional timer state"""
+        timer = self.get_timer_manager()
+        return timer.get_timer_state()
+
+    def calculate_bot_thinking_time(self, bot_rating, board, move_complexity=5.0):
+        """Calculate realistic bot thinking time"""
+        from .utils.time_control import MoveType
+        
+        bot_timer = self.get_bot_time_manager(bot_rating)
+        
+        # Determine move type based on position
+        move_type = MoveType.ROUTINE  # Default
+        if board.is_check():
+            move_type = MoveType.TACTICAL
+        elif len(list(board.legal_moves)) > 20:
+            move_type = MoveType.COMPLEX
+        elif len(list(board.legal_moves)) < 5:
+            move_type = MoveType.FORCED
+            
+        return bot_timer.calculate_thinking_time(
+            board, move_type, move_complexity
+        )
+
+    def get_current_player_color(self):
+        """Get current player color based on move count"""
+        move_count = self.moves.count()
+        return 'white' if move_count % 2 == 0 else 'black'
+
+    # ================== END PROFESSIONAL TIMER INTEGRATION ==================
 
 
 class Move(models.Model):

@@ -265,6 +265,146 @@ class ELORatingCalculator:
         return progression
 
 
+# Skill Level Management
+class SkillLevelManager:
+    """
+    Professional skill level management for new players
+    Maps user-selected skill levels to appropriate initial ratings
+    """
+    
+    SKILL_LEVELS = {
+        'beginner': {
+            'name': 'Beginner',
+            'rating': 400,
+            'description': 'New to chess or learning basic rules',
+            'characteristics': [
+                'Learning piece movements',
+                'Understanding basic rules',
+                'Occasional blunders'
+            ]
+        },
+        'intermediate': {
+            'name': 'Intermediate', 
+            'rating': 800,
+            'description': 'Know basic tactics and openings',
+            'characteristics': [
+                'Knows common tactics',
+                'Basic opening principles',
+                'Understands piece values'
+            ]
+        },
+        'advanced': {
+            'name': 'Advanced',
+            'rating': 1200, 
+            'description': 'Understand strategy and complex tactics',
+            'characteristics': [
+                'Strategic thinking',
+                'Complex tactical patterns',
+                'Good endgame knowledge'
+            ]
+        },
+        'expert': {
+            'name': 'Expert',
+            'rating': 1600,
+            'description': 'Strong player with deep understanding', 
+            'characteristics': [
+                'Advanced strategy',
+                'Deep opening knowledge', 
+                'Strong endgame technique'
+            ]
+        }
+    }
+    
+    @classmethod
+    def get_initial_ratings(cls, skill_level: str) -> dict:
+        """
+        Get initial ratings for all time controls based on skill level
+        
+        Args:
+            skill_level: Selected skill level ('beginner', 'intermediate', 'advanced', 'expert')
+            
+        Returns:
+            Dictionary with ratings for all time controls
+        """
+        if skill_level not in cls.SKILL_LEVELS:
+            raise ValueError(f"Invalid skill level: {skill_level}")
+        
+        base_rating = cls.SKILL_LEVELS[skill_level]['rating']
+        
+        # Slight variations for different time controls
+        # Faster time controls tend to be slightly lower for beginners
+        rating_adjustments = {
+            'beginner': {'blitz': -50, 'rapid': 0, 'classical': +25},
+            'intermediate': {'blitz': -25, 'rapid': 0, 'classical': +25},
+            'advanced': {'blitz': -25, 'rapid': 0, 'classical': +50},
+            'expert': {'blitz': -50, 'rapid': 0, 'classical': +75}
+        }
+        
+        adjustments = rating_adjustments[skill_level]
+        
+        return {
+            'blitz_rating': max(100, base_rating + adjustments['blitz']),
+            'rapid_rating': base_rating + adjustments['rapid'],
+            'classical_rating': base_rating + adjustments['classical'],
+            'blitz_peak': max(100, base_rating + adjustments['blitz']),
+            'rapid_peak': base_rating + adjustments['rapid'],
+            'classical_peak': base_rating + adjustments['classical']
+        }
+    
+    @classmethod
+    def validate_skill_level(cls, skill_level: str) -> bool:
+        """Validate if skill level is valid"""
+        return skill_level in cls.SKILL_LEVELS
+    
+    @classmethod
+    def get_skill_level_info(cls, skill_level: str) -> dict:
+        """Get detailed information about a skill level"""
+        if skill_level not in cls.SKILL_LEVELS:
+            return None
+        return cls.SKILL_LEVELS[skill_level].copy()
+    
+    @classmethod
+    def get_all_skill_levels(cls) -> list:
+        """Get all available skill levels"""
+        return [
+            {
+                'key': key,
+                **info
+            }
+            for key, info in cls.SKILL_LEVELS.items()
+        ]
+
+
+def initialize_user_ratings(user, skill_level: str):
+    """
+    Initialize a new user's ratings based on their selected skill level
+    
+    Args:
+        user: CustomUser instance
+        skill_level: Selected skill level string
+        
+    Returns:
+        Dictionary with applied ratings
+    """
+    if not SkillLevelManager.validate_skill_level(skill_level):
+        raise ValueError(f"Invalid skill level: {skill_level}")
+    
+    # Get initial ratings for all time controls
+    ratings = SkillLevelManager.get_initial_ratings(skill_level)
+    
+    # Apply ratings to user
+    for field, value in ratings.items():
+        setattr(user, field, value)
+    
+    # Store the initial skill level for reference
+    user.initial_skill_level = skill_level
+    
+    # Save the user
+    user.save()
+    
+    return ratings
+
+
 # Convenience functions for common calculations
 def calculate_game_rating_changes(white_user, black_user, game_result, time_control='rapid'):
     """

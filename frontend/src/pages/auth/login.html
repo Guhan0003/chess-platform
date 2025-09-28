@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Chess Platform</title>
-  <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="stylesheet" href="/src/styles/global.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -161,6 +161,11 @@
 
     .auth-link a:hover {
       color: var(--color-accent-light);
+      text-decoration: underline;
+    }
+
+    .forgot-password-link a:hover {
+      color: var(--color-accent-primary) !important;
       text-decoration: underline;
     }
 
@@ -464,6 +469,12 @@
           </div>
         </form>
 
+        <div class="forgot-password-link" style="text-align: center; margin-top: var(--space-md);">
+          <a href="/forgot-password/" style="color: var(--color-text-muted); text-decoration: none; font-size: var(--font-size-sm); transition: color var(--transition-fast);">
+            Forgot your password?
+          </a>
+        </div>
+
         <div class="auth-divider">
           <span>New to Chess Platform?</span>
         </div>
@@ -476,8 +487,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="../../utils/router.js"></script>
-  <script src="../../utils/api.js"></script>
+  <script src="/src/utils/router.js"></script>
+  <script src="/src/utils/api.js"></script>
   
   <script>
     // Login page controller

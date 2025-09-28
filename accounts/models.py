@@ -49,6 +49,18 @@ class CustomUser(AbstractUser):
         choices=[('blitz', 'Blitz'), ('rapid', 'Rapid'), ('classical', 'Classical')],
         default='rapid'
     )
+    initial_skill_level = models.CharField(
+        max_length=15,
+        choices=[
+            ('beginner', 'Beginner'),
+            ('intermediate', 'Intermediate'), 
+            ('advanced', 'Advanced'),
+            ('expert', 'Expert')
+        ],
+        null=True,
+        blank=True,
+        help_text="Initial skill level selected during registration"
+    )
     
     # Privacy settings
     profile_public = models.BooleanField(default=True)

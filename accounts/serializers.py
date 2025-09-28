@@ -6,14 +6,23 @@ from datetime import timedelta
 User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """Enhanced registration serializer with validation"""
+    """Enhanced registration serializer with skill level and rating initialization"""
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
     email = serializers.EmailField(required=True)
+    skill_level = serializers.ChoiceField(
+        choices=['beginner', 'intermediate', 'advanced', 'expert'],
+        required=True,
+        write_only=True
+    )
+    initial_rating = serializers.IntegerField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password_confirm', 'first_name', 'last_name')
+        fields = (
+            'username', 'email', 'password', 'password_confirm', 
+            'first_name', 'last_name', 'skill_level', 'initial_rating'
+        )
         extra_kwargs = {
             'first_name': {'required': False},
             'last_name': {'required': False},
@@ -33,22 +42,68 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("An account with this email already exists.")
         return value
 
+    def validate_skill_level(self, value):
+        """Validate skill level choice"""
+        from games.utils.rating_calculator import SkillLevelManager
+        
+        if not SkillLevelManager.validate_skill_level(value):
+            raise serializers.ValidationError("Invalid skill level selected.")
+        return value
+
     def validate(self, data):
-        """Validate password confirmation"""
+        """Validate password confirmation and skill level consistency"""
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError("Passwords do not match.")
+        
+        # Validate skill level and initial rating consistency
+        skill_level = data.get('skill_level')
+        initial_rating = data.get('initial_rating')
+        
+        if skill_level and initial_rating:
+            from games.utils.rating_calculator import SkillLevelManager
+            expected_rating = SkillLevelManager.SKILL_LEVELS[skill_level]['rating']
+            
+            if abs(initial_rating - expected_rating) > 50:  # Allow some tolerance
+                raise serializers.ValidationError(
+                    f"Initial rating {initial_rating} doesn't match skill level {skill_level}"
+                )
+        
         return data
 
     def create(self, validated_data):
-        """Create user with enhanced validation"""
+        """Create user with skill level and initial ratings"""
+        from games.utils.rating_calculator import initialize_user_ratings
+        
+        # Extract skill level data
+        skill_level = validated_data.pop('skill_level')
+        validated_data.pop('initial_rating', None)  # Remove as it's calculated
         validated_data.pop('password_confirm')  # Remove password_confirm
+        
+        # Create user
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', '')
+            last_name=validated_data.get('last_name', ''),
+            initial_skill_level=skill_level
         )
+        
+        # Initialize ratings based on skill level
+        try:
+            applied_ratings = initialize_user_ratings(user, skill_level)
+            
+            # Log the successful rating initialization
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"User {user.username} registered with skill level {skill_level} "
+                       f"and ratings: {applied_ratings}")
+                       
+        except Exception as e:
+            # If rating initialization fails, delete user and re-raise
+            user.delete()
+            raise serializers.ValidationError(f"Failed to initialize user ratings: {str(e)}")
+        
         return user
 
 
@@ -159,10 +214,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'email', 'first_name', 'last_name', 'avatar_url',
+            'id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'avatar_url',
             'bio', 'country', 'is_online', 'member_since',
             
-            # Ratings
+            # Skill level and ratings
+            'initial_skill_level',
             'blitz_rating', 'rapid_rating', 'classical_rating',
             'blitz_peak', 'rapid_peak', 'classical_peak', 'peak_ratings',
             
@@ -183,10 +239,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_avatar_url(self, obj):
         """Get full avatar URL"""
-        if obj.avatar:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.avatar.url)
+        if obj.avatar and hasattr(obj.avatar, 'url'):
+            try:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.avatar.url)
+                else:
+                    # Fallback: construct URL without request context
+                    # obj.avatar.url already includes the MEDIA_URL prefix
+                    return f"http://127.0.0.1:8000{obj.avatar.url}"
+            except Exception:
+                # If there's any issue with the avatar URL, return the path
+                return f"http://127.0.0.1:8000{obj.avatar.url}" if obj.avatar else None
         return None
 
     def get_win_rate(self, obj):
