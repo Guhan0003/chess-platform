@@ -481,14 +481,63 @@ def make_computer_move(request, pk):
         
         logger.info(f"Making computer move with difficulty: {difficulty}")
         
-        # Simple computer move - get a random legal move for now to fix the 500 error
+        # Extract rating from computer player username or use difficulty
+        rating = difficulty
+        computer_player_name = ""
+        
+        # Check which player is the computer and extract rating from username
+        current_turn = board.turn
+        if current_turn == chess.WHITE and game.white_player:
+            if 'computer' in game.white_player.username.lower():
+                computer_player_name = game.white_player.username
+        elif current_turn == chess.BLACK and game.black_player:
+            if 'computer' in game.black_player.username.lower():
+                computer_player_name = game.black_player.username
+        
+        # Try to extract rating from username (e.g., "Computer_1600" -> "1600")
+        if computer_player_name:
+            import re
+            rating_match = re.search(r'(\d{3,4})', computer_player_name)
+            if rating_match:
+                rating = rating_match.group(1)
+                logger.info(f"Extracted rating {rating} from computer player: {computer_player_name}")
+        
+        # Use the unified chess engine
         try:
+            logger.info(f"Calling engine with FEN: {game.fen}, Rating: {rating}")
+            engine_result = get_computer_move(game.fen, str(rating), "balanced")
+            
+            if not engine_result.get('success', False):
+                raise Exception(f"Engine returned error: {engine_result.get('error', 'Unknown error')}")
+            
+            # Extract move information from engine response
+            move_uci = engine_result.get('move', '')
+            move_san = engine_result.get('san', '')
+            
+            if not move_uci or not move_san:
+                raise Exception("Engine did not return valid move information")
+            
+            from_square = move_uci[:2]
+            to_square = move_uci[2:4]
+            
+            move_info = {
+                'uci': move_uci,
+                'san': move_san,
+                'from_square': from_square,
+                'to_square': to_square,
+                'notation': move_san
+            }
+            
+            logger.info(f"Engine selected move: {move_san} ({move_uci}) with rating {rating}")
+            
+        except Exception as e:
+            logger.error(f"Error with engine move: {e}")
+            # Fallback to random legal move if engine fails
             legal_moves = list(board.legal_moves)
             if not legal_moves:
                 return Response({"detail": "No legal moves available for computer."},
                                status=status.HTTP_400_BAD_REQUEST)
             
-            # Pick a random legal move for now
             move = random.choice(legal_moves)
             move_uci = move.uci()
             move_san = board.san(move)
@@ -503,12 +552,7 @@ def make_computer_move(request, pk):
                 'notation': move_san
             }
             
-            logger.info(f"Computer selected move: {move_san} ({move_uci})")
-            
-        except Exception as e:
-            logger.error(f"Error selecting computer move: {e}")
-            return Response({"detail": "Failed to calculate computer move."},
-                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.info(f"Using fallback random move: {move_san} ({move_uci})")
         
         # Calculate new FEN by applying the move
         try:
@@ -597,11 +641,11 @@ def make_computer_move(request, pk):
                     "uci": move_info['uci']
                 },
                 "engine_info": {
-                    "thinking_time": 0.5,
-                    "evaluation": 0.0,
-                    "rating": int(difficulty) if difficulty.isdigit() else 1200,
+                    "thinking_time": engine_result.get('thinking_time', 0.5) if 'engine_result' in locals() else 0.5,
+                    "evaluation": engine_result.get('evaluation', 0.0) if 'engine_result' in locals() else 0.0,
+                    "rating": int(rating) if str(rating).isdigit() else 1200,
                     "personality": "balanced",
-                    "move_source": "random_legal",
+                    "move_source": "unified_engine" if 'engine_result' in locals() and engine_result.get('success') else "fallback_random",
                     "game_phase": "unknown"
                 },
                 "game_status": {

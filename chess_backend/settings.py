@@ -33,6 +33,9 @@ ALLOWED_HOSTS = [
     'localhost',
     'testserver',  # For Django testing framework
     '.chess-platform.com',  # Production domain (with subdomain support)
+    '10.182.125.108',  # Your current local network IP
+    '192.168.1.108',   # Previous IP (keeping for compatibility)
+    '*',  # Allow all hosts for development
 ]
 
 # Additional security settings for testing and development
@@ -222,6 +225,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8080",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://10.182.125.108:8000",  # Your current local network IP
+    "http://192.168.1.50:8000",   # Previous IP (keeping for compatibility)
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True

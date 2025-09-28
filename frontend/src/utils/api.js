@@ -5,7 +5,14 @@
 
 class ChessAPI {
   constructor() {
-    this.baseURL = 'http://localhost:8000/api';
+    // Auto-detect the appropriate base URL
+    const currentHost = window.location.hostname;
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+      this.baseURL = 'http://localhost:8000/api';
+    } else {
+      // Use the current host (works for mobile access via IP)
+      this.baseURL = `http://${currentHost}:8000/api`;
+    }
     this.accessToken = localStorage.getItem('access');
     this.refreshToken = localStorage.getItem('refresh');
     this.isRefreshing = false;

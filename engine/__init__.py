@@ -17,7 +17,7 @@ Main Components:
 - Rating-based configurations and personalities
 """
 
-from .chess_engine import ChessEngine, create_chess_engine
+from .unified_engine import UnifiedChessEngine
 from .rating_configs import RatingConfig, get_rating_config
 from .game_analyzer import GameAnalyzer
 
@@ -55,11 +55,25 @@ def get_computer_move(fen: str, difficulty: str = "medium", personality: str = "
         except ValueError:
             rating = 1200  # Default fallback
     
-    # Create chess engine
-    engine = create_chess_engine(rating, personality)
-    return engine.get_computer_move(fen)
+    # Create unified chess engine
+    engine = UnifiedChessEngine(rating, personality)
+    result = engine.get_computer_move(fen)
+    
+    # Format response for compatibility
+    if result['success']:
+        return {
+            'success': True,
+            'move': result['move']['uci'],
+            'san': result['move']['san'],
+            'evaluation': result['engine_info']['evaluation'],
+            'thinking_time': result['engine_info']['search_time'],
+            'new_fen': result['new_fen'],
+            'game_status': result['game_status']
+        }
+    else:
+        return result
 
-def create_engine(rating: int, personality: str = "balanced") -> ChessEngine:
+def create_engine(rating: int, personality: str = "balanced") -> UnifiedChessEngine:
     """
     Create a chess engine instance.
     
@@ -68,9 +82,9 @@ def create_engine(rating: int, personality: str = "balanced") -> ChessEngine:
         personality: Playing style personality
         
     Returns:
-        ChessEngine instance
+        UnifiedChessEngine instance
     """
-    return create_chess_engine(rating, personality)
+    return UnifiedChessEngine(rating, personality)
 
 def get_position_analysis(fen: str, rating: int = 2000) -> dict:
     """
@@ -83,8 +97,19 @@ def get_position_analysis(fen: str, rating: int = 2000) -> dict:
     Returns:
         Comprehensive position analysis
     """
-    engine = create_chess_engine(rating)
-    return engine.get_position_analysis(fen)
+    engine = UnifiedChessEngine(rating)
+    result = engine.get_computer_move(fen)
+    
+    # Format response for compatibility
+    if result['success']:
+        return {
+            'success': True,
+            'move': result['move']['uci'],
+            'evaluation': result['engine_info']['evaluation'],
+            'thinking_time': result['engine_info']['search_time']
+        }
+    else:
+        return result
 
 # Legacy compatibility function
 def get_computer_move_legacy(fen: str, difficulty: str = "medium") -> dict:
@@ -104,16 +129,20 @@ def get_computer_move_legacy(fen: str, difficulty: str = "medium") -> dict:
         except ValueError:
             rating = 1200
     
-    # Use modern engine but format output for legacy compatibility
+    # Use unified engine but format output for legacy compatibility
     result = get_computer_move(fen, str(rating))
-    return {
-        'move': {
-            'notation': result.get('san', ''),
-            'uci': result.get('move', '')
-        },
-        'evaluation': result.get('evaluation', 0),
-        'thinking_time': result.get('thinking_time', 0)
-    }
+    
+    if result['success']:
+        return {
+            'move': {
+                'notation': result.get('san', ''),
+                'uci': result.get('move', '')
+            },
+            'evaluation': result.get('evaluation', 0),
+            'thinking_time': result.get('thinking_time', 0)
+        }
+    else:
+        return {'error': result.get('error', 'Unknown error')}
 
 # Version info
 __version__ = "3.0.0"
@@ -121,8 +150,7 @@ __author__ = "Chess Platform Team"
 
 # Export main classes for advanced usage
 __all__ = [
-    'ChessEngine',
-    'ChessEngine',
+    'UnifiedChessEngine',
     'get_computer_move',
     'create_engine',
     'get_position_analysis',
