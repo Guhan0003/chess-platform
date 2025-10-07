@@ -387,7 +387,6 @@
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.05);
       transition: all var(--transition-normal);
-      cursor: pointer;
     }
 
     .game-card:hover {
@@ -474,6 +473,54 @@
     .game-time {
       font-size: var(--font-size-xs);
       color: var(--color-text-muted);
+    }
+
+    /* Game Actions */
+    .game-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .join-btn, .spectate-btn {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-md);
+      border: none;
+      font-weight: var(--font-weight-medium);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      white-space: nowrap;
+    }
+
+    .join-btn {
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      color: var(--color-text-inverse);
+    }
+
+    .join-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .join-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spectate-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .spectate-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--color-text-primary);
+      transform: translateY(-1px);
     }
 
     /* Statistics Panel */
@@ -1246,16 +1293,78 @@
               <div class="status-badge status-${game.status}">${getStatusText(game.status)}</div>
               <div class="game-time">${getTimeAgo(game.created_at)}</div>
             </div>
+            
+            <div class="game-actions">
+              ${game.status === 'waiting' && !game.black_player_username ? 
+                `<button class="btn btn-primary join-btn" data-game-id="${game.id}">
+                  <span>⚡</span> Join Game
+                </button>` : 
+                `<button class="btn btn-secondary spectate-btn" data-game-id="${game.id}">
+                  <span>👁️</span> Spectate
+                </button>`
+              }
+            </div>
           </div>
         `).join('');
         
-        // Add click handlers to game cards
+        // Add click handlers to game cards and action buttons
         document.querySelectorAll('.game-card').forEach(card => {
-          card.addEventListener('click', () => {
-            const gameId = card.dataset.gameId;
+          // Remove the default click handler for the entire card
+          // Instead, only specific buttons should trigger actions
+        });
+        
+        // Add handlers for join buttons
+        document.querySelectorAll('.join-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const gameId = btn.dataset.gameId;
+            await joinGame(gameId);
+          });
+        });
+        
+        // Add handlers for spectate buttons
+        document.querySelectorAll('.spectate-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const gameId = btn.dataset.gameId;
             window.location.href = `/play/?game=${gameId}`;
           });
         });
+      }
+      
+      async function joinGame(gameId) {
+        try {
+          // Show loading state on the button
+          const joinBtn = document.querySelector(`[data-game-id="${gameId}"].join-btn`);
+          if (joinBtn) {
+            joinBtn.disabled = true;
+            joinBtn.innerHTML = '<span>⏳</span> Joining...';
+          }
+          
+          const response = await api.request(`/games/${gameId}/join/`, {
+            method: 'POST'
+          });
+          
+          if (response.ok) {
+            api.showToast('Successfully joined the game!', 'success');
+            // Redirect to the game
+            setTimeout(() => {
+              window.location.href = `/play/?game=${gameId}`;
+            }, 1000);
+          } else {
+            throw new Error(response.message || 'Failed to join game');
+          }
+        } catch (error) {
+          console.error('Failed to join game:', error);
+          api.showToast(error.message || 'Failed to join game. Please try again.', 'error');
+          
+          // Reset button state
+          const joinBtn = document.querySelector(`[data-game-id="${gameId}"].join-btn`);
+          if (joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '<span>⚡</span> Join Game';
+          }
+        }
       }
       
       function showEmptyGames() {

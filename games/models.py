@@ -293,6 +293,16 @@ class Game(models.Model):
                 self._timer_manager.current_turn = self.get_current_player_color()
                 self._timer_manager.game_started = True
                 
+                # CRITICAL FIX: Set last_move_time for existing active games
+                # Use the most recent move time or current time if no moves
+                if self.moves.exists():
+                    latest_move = self.moves.latest('created_at')
+                    self._timer_manager.last_move_time = latest_move.created_at.timestamp()
+                else:
+                    # No moves yet, use current time to start countdown
+                    import time
+                    self._timer_manager.last_move_time = time.time()
+                
         return self._timer_manager
 
     def get_bot_time_manager(self, bot_rating=1500):
@@ -366,6 +376,95 @@ class Game(models.Model):
         return 'white' if move_count % 2 == 0 else 'black'
 
     # ================== END PROFESSIONAL TIMER INTEGRATION ==================
+
+    # ================== WEBSOCKET INTEGRATION ==================
+    
+    def notify_move(self, move_data):
+        """Notify all players about a move via WebSocket - OPTIMIZED for speed."""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        group_name = f'game_{self.id}'
+        
+        if channel_layer:
+            # Send immediate lightweight notification
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'move_made',
+                    'move': move_data,
+                    'game_state': {
+                        'id': self.id,
+                        'fen': self.fen,
+                        'status': self.status,
+                        'white_time_left': self.white_time_left,
+                        'black_time_left': self.black_time_left,
+                    }
+                }
+            )
+    
+    def notify_timer_update(self):
+        """Notify all players about timer updates via WebSocket."""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        timer_group = f'timer_{self.id}'
+        
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                timer_group,
+                {
+                    'type': 'timer_update',
+                    'data': {
+                        'white_time': self.white_time_left,
+                        'black_time': self.black_time_left,
+                        'current_turn': self.get_current_player_color()
+                    }
+                }
+            )
+    
+    def notify_game_finished(self, reason):
+        """Notify all players that the game has finished."""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        group_name = f'game_{self.id}'
+        
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'game_finished',
+                    'result': self.result,
+                    'termination': self.termination,
+                    'winner': self.winner.username if self.winner else None,
+                    'reason': reason
+                }
+            )
+    
+    def get_websocket_state(self):
+        """Get game state data optimized for WebSocket transmission."""
+        board = chess.Board(self.fen)
+        
+        return {
+            'id': self.id,
+            'fen': self.fen,
+            'status': self.status,
+            'result': self.result,
+            'white_player': self.white_player.username if self.white_player else None,
+            'black_player': self.black_player.username if self.black_player else None,
+            'current_turn': 'white' if board.turn else 'black',
+            'is_check': board.is_check(),
+            'is_checkmate': board.is_checkmate(),
+            'is_stalemate': board.is_stalemate(),
+            'white_time_left': self.white_time_left,
+            'black_time_left': self.black_time_left,
+        }
+    
+    # ================== END WEBSOCKET INTEGRATION ==================
 
 
 class Move(models.Model):

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'accounts',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -96,6 +97,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chess_backend.wsgi.application'
+
+# ASGI Application for WebSocket support
+ASGI_APPLICATION = 'chess_backend.asgi.application'
+
+# Channel layers configuration for WebSocket
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 # Database

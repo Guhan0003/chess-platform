@@ -223,6 +223,7 @@
   </script>
   <script src="../../utils/api.js"></script>
   <script src="../../utils/router.js"></script>
+  <script src="../../utils/websocket.js"></script>
   <script src="play.js"></script>
   
   <!-- Initialize page after all scripts load -->
@@ -231,14 +232,14 @@
       console.log('Game page DOM loaded, initializing...');
       
       // Ensure all dependencies are loaded
-      if (typeof ChessAPI !== 'undefined' && typeof ChessRouter !== 'undefined') {
+      if (typeof ChessAPI !== 'undefined') {
         // Initialize the game page
-        if (typeof initGamePage === 'function') {
-          initGamePage();
+        if (typeof initializeGamePage === 'function') {
+          initializeGamePage();
           window.gamePageReady = true;
           console.log('Game page initialized successfully');
         } else {
-          console.error('initGamePage function not found');
+          console.error('initializeGamePage function not found');
         }
       } else {
         console.error('Required dependencies not loaded');

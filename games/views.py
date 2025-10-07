@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 import json
 import logging
 import random
+import traceback
 
 from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
@@ -131,6 +132,19 @@ def make_move(request, pk):
     
     logger.info(f"Move saved: {move_obj}")
 
+    # TODO: Re-enable timer logic after fixing the integration issue
+    # Temporarily disabled to allow moves to work
+    # player_color = 'white' if request.user == game.white_player else 'black'
+    # try:
+    #     logger.info(f"Attempting to update timer for {player_color}")
+    #     timer_state = game.make_timer_move(player_color)
+    #     logger.info(f"Timer updated for {player_color}: white={timer_state.get('white_time'):.1f}s, black={timer_state.get('black_time'):.1f}s")
+    # except Exception as e:
+    #     logger.error(f"Timer update failed: {e}")
+    #     # Continue with move processing even if timer fails
+    #     import traceback
+    #     logger.error(f"Timer error details: {traceback.format_exc()}")
+
     # Update game state
     game.fen = new_fen
     game.last_move_at = timezone.now()  # Update timer reference point
@@ -142,11 +156,46 @@ def make_move(request, pk):
         elif result == '0-1':
             game.winner = game.black_player
         logger.info(f"Game finished with result: {result}")
+        
+        # Notify players via WebSocket that game has finished
+        termination_reason = 'checkmate' if board.is_checkmate() else 'stalemate'
+        game.notify_game_finished(termination_reason)
     else:
         game.status = 'active'
     
     game.save()
     logger.info(f"Game updated: status={game.status}, fen={game.fen}")
+
+    # TIMER LOGIC TEMPORARILY DISABLED - CAUSING 500 ERRORS
+    # Update timer after successful move with comprehensive error handling
+    # try:
+    #     timer_manager = game.get_timer_manager()
+    #     if timer_manager:
+    #         logger.info(f"Updating timer for game {pk} after move by {request.user.username}")
+    #         timer_manager.make_move(request.user.username)
+    #         
+    #         # Persist timer state to database
+    #         game.make_timer_move()
+    #         logger.info(f"Timer updated successfully for game {pk}")
+    #     else:
+    #         logger.warning(f"No timer manager found for game {pk}")
+    # except Exception as timer_error:
+    #     # Log the error but don't fail the move
+    #     logger.error(f"Timer update failed for game {pk}: {timer_error}")
+    #     logger.error(f"Timer error traceback: {traceback.format_exc()}")
+    #     # Move continues successfully even if timer fails
+
+    # Notify players via WebSocket about the move
+    move_data = {
+        'from_square': from_sq,
+        'to_square': to_sq,
+        'promotion': promotion,
+        'notation': san,
+        'player': request.user.username,
+        'move_number': move_number,
+        'timestamp': timezone.now().isoformat()
+    }
+    game.notify_move(move_data)
 
     # Check game status for detailed information
     game_status = {
@@ -234,6 +283,13 @@ def join_game(request, pk):
     game.black_player = request.user
     game.status = 'active'
     game.save()
+    
+    # Automatically start the professional timer when game becomes active
+    try:
+        game.start_professional_timer()
+        logger.info(f"Professional timer started for game {game.id}")
+    except Exception as e:
+        logger.error(f"Failed to start timer for game {game.id}: {e}")
 
     serializer = GameSerializer(game)
     logger.info(f"User {request.user} joined game {game.id}")

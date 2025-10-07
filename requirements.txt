@@ -6,3 +6,7 @@ python-chess==1.999
 psycopg2-binary==2.9.7
 python-dotenv==1.0.0
 setuptools>=75.0.0
+channels==4.0.0
+channels-redis==4.2.0
+redis==5.0.1
+daphne==4.2.1
