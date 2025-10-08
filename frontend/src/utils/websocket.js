@@ -1,6 +1,13 @@
 /**
  * WebSocket Manager for Real-time Chess Communication
- * Handles game state synchronization, move updates, and timer management
+ *       this.gameSocket.onclose = (event) => {
+        this.isConnected = false;
+        this._triggerEvent('disconnected', { type: 'game', code: event.code, reason: event.reason });
+        
+        if (this.reconnectAttempts < this.maxReconnectAttempts && event.code !== 1000) {
+          this._scheduleReconnect();
+        }
+      };ate synchronization, move updates, and timer management
  */
 
 class GameWebSocket {
@@ -40,16 +47,20 @@ class GameWebSocket {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
       
-      // Connect to game WebSocket
-      console.log('Constructing WebSocket URL with token:', typeof this.accessToken, this.accessToken);
+      // Connect to game WebSocket  
       const gameWsUrl = `${protocol}//${host}/ws/game/${this.gameId}/?token=${this.accessToken}`;
-      console.log('Game WebSocket URL:', gameWsUrl);
       
+      // Create WebSocket with error suppression
       this.gameSocket = new WebSocket(gameWsUrl);
+      
+      // Suppress browser's native connection error messages
+      this.gameSocket.addEventListener('error', () => {
+        // Silent handling - we'll show our own clean message
+      });
       
       // Setup game socket event handlers
       this.gameSocket.onopen = (event) => {
-        console.log('Game WebSocket connected');
+        console.log('✅ WebSocket connected - Real-time moves enabled');
         this.isConnected = true;
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
@@ -66,13 +77,6 @@ class GameWebSocket {
       };
 
       this.gameSocket.onclose = (event) => {
-        console.log('Game WebSocket disconnected:', event.code, event.reason);
-        console.log('WebSocket close details:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-          url: gameWsUrl
-        });
         this.isConnected = false;
         this._triggerEvent('disconnected', { type: 'game', code: event.code });
         
@@ -82,32 +86,46 @@ class GameWebSocket {
       };
 
       this.gameSocket.onerror = (error) => {
-        console.error('Game WebSocket error:', error);
-        console.error('WebSocket error details:', {
-          url: gameWsUrl,
-          readyState: this.gameSocket?.readyState,
-          protocol: this.gameSocket?.protocol,
-          extensions: this.gameSocket?.extensions
-        });
+        // WebSocket connection failed - but we have polling fallback
+        if (this.reconnectAttempts === 0) {
+          console.warn('⚠️ WebSocket connection failed - using fast polling fallback');
+        }
         this._triggerEvent('error', { type: 'game', error });
       };
 
       // Connect to timer WebSocket (optional)
       try {
         const timerWsUrl = `${protocol}//${host}/ws/timer/${this.gameId}/?token=${this.accessToken}`;
-        console.log('Timer WebSocket URL:', timerWsUrl);
         this.timerSocket = new WebSocket(timerWsUrl);
+        
+        // Suppress browser's native timer connection error messages
+        this.timerSocket.addEventListener('error', () => {
+          // Silent handling - timer is optional
+        });
+        
+        this.timerSocket.onopen = () => {
+          // Timer WebSocket connected - silent success
+        };
         
         this.timerSocket.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             this._handleTimerMessage(data);
           } catch (error) {
-            console.error('Error parsing timer message:', error);
+            console.warn('Timer message parsing failed');
           }
         };
+        
+        this.timerSocket.onerror = () => {
+          // Silent fallback for timer WebSocket - not critical
+        };
+        
+        this.timerSocket.onclose = () => {
+          // Silent fallback for timer WebSocket - polling handles timing
+        };
+        
       } catch (error) {
-        console.warn('Timer WebSocket connection failed:', error);
+        // Timer WebSocket is optional - silent fallback to polling
       }
 
       // Wait for connection to be established
@@ -130,7 +148,7 @@ class GameWebSocket {
       return true;
       
     } catch (error) {
-      console.error('WebSocket connection error:', error);
+      console.warn('WebSocket connection failed - falling back to polling');
       this.connectionPromise = null;
       throw error;
     }
@@ -244,7 +262,7 @@ class GameWebSocket {
    * Handle game WebSocket messages
    */
   _handleGameMessage(data) {
-    console.log('Received game message:', data);
+    // Process game message silently
 
     switch (data.type) {
       case 'game_state':
@@ -296,10 +314,9 @@ class GameWebSocket {
     this.reconnectAttempts++;
     
     setTimeout(() => {
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       this.connectionPromise = null;
       this.connect().catch(error => {
-        console.error('Reconnection failed:', error);
+        console.warn('WebSocket reconnection failed - using polling mode');
       });
     }, this.reconnectDelay);
 

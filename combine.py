@@ -14,7 +14,7 @@ include_extensions = [
 
 # Optional folders to exclude (e.g., static/media/migrations/venv)
 exclude_dirs = {'__pycache__', 'static', 'media', 'migrations', 'venv', '.venv', '.git', 'node_modules'}
-
+print("Combining files...")
 with open(output_file_path, 'w', encoding='utf-8') as output_file:
     for root, dirs, files in os.walk(base_directory):
         # Exclude unwanted folders
@@ -32,3 +32,4 @@ with open(output_file_path, 'w', encoding='utf-8') as output_file:
                         output_file.write(f.read())
                 except Exception as e:
                     output_file.write(f"[Error reading file: {e}]\n")
+print(f"All files combined into {output_file_path}")

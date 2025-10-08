@@ -75,6 +75,9 @@ urlpatterns = [
     path('profile/', serve_professional_frontend, {'page_path': 'profile'}, name='profile'),
     path('puzzles/', serve_professional_frontend, {'page_path': 'puzzles'}, name='puzzles'),
     
+    # Test WebSocket connection
+    path('test_websocket_connection.html', lambda request: serve_frontend_static(request, '../test_websocket_connection.html')),
+    
     # Root serves login page
     path('', serve_professional_frontend, name='home'),
 ]

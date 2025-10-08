@@ -13,6 +13,7 @@ Create a production-ready chess platform that supports:
 - Scalable architecture for future enhancements
 
 ---
+.venv\Scripts\Activate.ps1
 
 ## 🏗️ **Technical Architecture**
 

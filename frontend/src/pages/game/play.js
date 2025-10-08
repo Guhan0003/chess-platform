@@ -81,7 +81,9 @@ class ChessGameController {
       this.setupEventListeners();
       this.setupPeriodicUpdates();
       
-      console.log('Chess game controller initialized successfully');
+      // Show connection mode info
+      const mode = this.wsConnected ? '🚀 WebSocket (instant)' : '⚡ Fast polling (1.5s)';
+      console.log(`🎯 Game ready - Move updates: ${mode}`);
     } catch (error) {
       console.error('Failed to initialize game:', error);
       this.api.showError('Failed to load game');
@@ -94,23 +96,10 @@ class ChessGameController {
 
   async initializeWebSocket() {
     // WebSocket enabled for fast 1-2 second move updates
-    console.log('Initializing WebSocket connection for fast game updates');
     
     try {
-      console.log('Initializing WebSocket connection for game:', this.gameId);
-      
       // Check if WebSocket utilities are available
       if (typeof WebSocketManager === 'undefined') {
-        console.warn('WebSocket utilities not available, using fallback polling');
-        this.useWebSocketTimer = false;
-        return;
-      }
-      
-      this.webSocketManager = new WebSocketManager();
-      
-      // Check if WebSocket utilities are available
-      if (typeof WebSocketManager === 'undefined') {
-        console.warn('WebSocket utilities not available, using fallback polling');
         this.useWebSocketTimer = false;
         return;
       }
@@ -119,9 +108,7 @@ class ChessGameController {
       
       // Get access token for WebSocket authentication
       const accessToken = localStorage.getItem('access');
-      console.log('Access token from localStorage:', typeof accessToken, accessToken);
       if (!accessToken) {
-        console.warn('No access token available for WebSocket');
         this.useWebSocketTimer = false;
         return;
       }
@@ -135,22 +122,19 @@ class ChessGameController {
       gameWs.on('connected', () => this.handleWebSocketConnection(true));
       gameWs.on('disconnected', () => this.handleWebSocketConnection(false));
       gameWs.on('error', (error) => {
-        console.error('WebSocket error:', error);
+        // WebSocket connection failed - using polling fallback
         this.updateConnectionStatus(false);
       });
       
-      console.log('WebSocket connection established');
       this.updateConnectionStatus(true);
     } catch (error) {
-      console.error('Failed to initialize WebSocket:', error);
+      // WebSocket unavailable - using optimized polling mode
       this.useWebSocketTimer = false;
       this.updateConnectionStatus(false);
     }
   }
 
   handleWebSocketMove(data) {
-    console.log('Received WebSocket move:', data);
-    
     if (data.type === 'move_made' && data.game_state) {
       // Update game state from WebSocket
       this.gameData = {
@@ -177,8 +161,6 @@ class ChessGameController {
   }
 
   handleWebSocketTimer(data) {
-    console.log('Received WebSocket timer:', data);
-    
     if (data.type === 'timer_update' || data.type === 'timer_tick') {
       this.useWebSocketTimer = true;
       
@@ -944,25 +926,18 @@ class ChessGameController {
   }
 
   updateTimerDisplay() {
-    console.log('Timer update started - WebSocket connected:', this.wsConnected, 'Use WebSocket timer:', this.useWebSocketTimer); // Debug log
-    
     // Use professional timer API for accurate timer display
     if (!this.gameId) {
-      console.log('No gameId available for timer update'); // Debug log
       return;
     }
     
-    console.log('Fetching timer data for game:', this.gameId); // Debug log
     this.api.request(`/games/${this.gameId}/professional-timer/`)
       .then(response => {
         if (response.ok && response.data) {
           const data = response.data;
-          console.log('Timer data received:', data); // Debug log
           if (data.white_time !== undefined && data.black_time !== undefined) {
             const whiteTime = this.formatTime(data.white_time);
             const blackTime = this.formatTime(data.black_time);
-            
-            console.log('Formatted times - White:', whiteTime, 'Black:', blackTime); // Debug log
             
             const whiteTimer = document.getElementById('whiteTimer');
             const blackTimer = document.getElementById('blackTimer');
@@ -1054,10 +1029,8 @@ class ChessGameController {
     // Stop any existing timer
     if (this.timerInterval) clearInterval(this.timerInterval);
     
-    // Always use polling timer for reliable updates
-    console.log('Starting polling timer updates'); // Debug log
+    // Fast polling timer for reliable updates
     this.timerInterval = setInterval(() => {
-      console.log('Timer interval tick'); // Debug log
       this.updateTimerDisplay();
     }, 1000);
     this.updateTimerDisplay();
@@ -1067,7 +1040,6 @@ class ChessGameController {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
-      console.log('Timer stopped');
     }
   }
 
