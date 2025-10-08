@@ -93,18 +93,8 @@ class ChessGameController {
   // ===========================================
 
   async initializeWebSocket() {
-    // WebSocket disabled - Django runserver doesn't support WebSockets well
-    // Using reliable polling-based updates instead
-    console.log('WebSocket disabled - using reliable polling system');
-    this.useWebSocketTimer = false;
-    return;
-    
-    // Re-enabling WebSocket after timer integration fixes
-    console.log('Initializing WebSocket connection - timer integration stable');
-    // Temporarily disable WebSocket for debugging timer issues
-    // console.log('WebSocket disabled for debugging - using polling only');
-    // this.useWebSocketTimer = false;
-    // return;
+    // WebSocket enabled for fast 1-2 second move updates
+    console.log('Initializing WebSocket connection for fast game updates');
     
     try {
       console.log('Initializing WebSocket connection for game:', this.gameId);
@@ -1363,11 +1353,10 @@ class ChessGameController {
   }
 
   setupPeriodicUpdates() {
-    // Reduced frequency game state refresh - only when WebSocket is unavailable
+    // Fast game state refresh for 1-2 second move updates  
     const gameInterval = setInterval(async () => {
       if (document.visibilityState === 'visible' && 
-          this.gameData?.status === 'active' && 
-          !this.wsConnected) {
+          this.gameData?.status === 'active') {
         try {
           const response = await this.api.getGameDetail(this.gameId);
           if (response.ok && response.data.moves.length !== this.gameData.moves.length) {
@@ -1380,7 +1369,7 @@ class ChessGameController {
           console.error('Failed to refresh game:', error);
         }
       }
-    }, 10000); // Increased interval since WebSocket handles real-time updates
+    }, 1500); // Optimized to 1.5 seconds for fast move detection
     
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {

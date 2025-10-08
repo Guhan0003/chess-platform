@@ -383,26 +383,38 @@ class Game(models.Model):
         """Notify all players about a move via WebSocket - OPTIMIZED for speed."""
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
+        import threading
         
         channel_layer = get_channel_layer()
         group_name = f'game_{self.id}'
         
         if channel_layer:
-            # Send immediate lightweight notification
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                {
-                    'type': 'move_made',
-                    'move': move_data,
-                    'game_state': {
-                        'id': self.id,
-                        'fen': self.fen,
-                        'status': self.status,
-                        'white_time_left': self.white_time_left,
-                        'black_time_left': self.black_time_left,
-                    }
-                }
-            )
+            # Send notification in a separate thread for instant response
+            def send_notification():
+                try:
+                    async_to_sync(channel_layer.group_send)(
+                        group_name,
+                        {
+                            'type': 'move_made',
+                            'move': move_data,
+                            'game_state': {
+                                'id': self.id,
+                                'fen': self.fen,
+                                'status': self.status,
+                                'white_time_left': self.white_time_left,
+                                'black_time_left': self.black_time_left,
+                            }
+                        }
+                    )
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"WebSocket notification failed: {e}")
+            
+            # Execute notification asynchronously
+            thread = threading.Thread(target=send_notification)
+            thread.daemon = True
+            thread.start()
     
     def notify_timer_update(self):
         """Notify all players about timer updates via WebSocket."""

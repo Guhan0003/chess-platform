@@ -35,7 +35,11 @@ def make_move(request, pk):
     logger.info(f"Move request received for game {pk} by user {request.user}")
     logger.info(f"Request data: {request.data}")
     
-    game = get_object_or_404(Game, pk=pk)
+    # Optimize database query with select_related to avoid additional queries
+    game = get_object_or_404(
+        Game.objects.select_related('white_player', 'black_player'), 
+        pk=pk
+    )
 
     # Must be a participant
     if request.user not in [game.white_player, game.black_player]:
@@ -185,7 +189,7 @@ def make_move(request, pk):
     #     logger.error(f"Timer error traceback: {traceback.format_exc()}")
     #     # Move continues successfully even if timer fails
 
-    # Notify players via WebSocket about the move
+    # Notify players via WebSocket about the move - IMMEDIATE notification
     move_data = {
         'from_square': from_sq,
         'to_square': to_sq,
@@ -195,7 +199,13 @@ def make_move(request, pk):
         'move_number': move_number,
         'timestamp': timezone.now().isoformat()
     }
-    game.notify_move(move_data)
+    
+    # Send immediate WebSocket notification (async operation, don't wait)
+    try:
+        game.notify_move(move_data)
+    except Exception as ws_error:
+        logger.warning(f"WebSocket notification failed: {ws_error}")
+        # Continue without failing the move
 
     # Check game status for detailed information
     game_status = {
@@ -303,8 +313,9 @@ class GameListView(generics.ListAPIView):
 
 
 class GameDetailView(generics.RetrieveAPIView):
-    """Get details of a single game."""
-    queryset = Game.objects.all()
+    """Get details of a single game with optimized database queries."""
+    # Optimize queryset to include related data and prefetch moves in one query
+    queryset = Game.objects.select_related('white_player', 'black_player', 'winner').prefetch_related('moves__player')
     serializer_class = GameSerializer
 
 

@@ -167,13 +167,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                     await self.send_error("Illegal move")
                     return
                     
+                # Calculate SAN notation before applying move
+                san = board.san(move)
+                
                 # Apply move to board
                 board.push(move)
                 
                 # Update game in database
                 game = await self.update_game_state(game, board, move, from_square, to_square, promotion)
                 
-                # Broadcast move to all players in game
+                # Broadcast move to all players in game IMMEDIATELY
                 await self.channel_layer.group_send(
                     self.game_group_name,
                     {
@@ -182,7 +185,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                             'from_square': from_square,
                             'to_square': to_square,
                             'promotion': promotion,
-                            'notation': board.san(move),
+                            'notation': san,
                             'player': self.user.username,
                             'color': self.player_color
                         },

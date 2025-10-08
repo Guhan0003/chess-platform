@@ -37,102 +37,6 @@ with open(output_file_path, 'w', encoding='utf-8') as output_file:
 
 ===== chess-platform/Combined_chess-platform.txt =====
 
-===== chess-platform/comprehensive_test.py =====
-#!/usr/bin/env python
-"""
-Comprehensive Timer and Computer Move Test
-"""
-import os
-import django
-
-# Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chess_backend.settings')
-django.setup()
-
-from games.models import Game
-from games.views import get_game_timer, make_computer_move
-from django.test import RequestFactory
-from rest_framework.test import force_authenticate
-import json
-
-def test_all_functionality():
-    """Test both timer and computer move functionality"""
-    print("🔧 COMPREHENSIVE SYSTEM TEST")
-    print("=" * 60)
-    
-    try:
-        # Test with game 74
-        game = Game.objects.get(pk=74)
-        user = game.white_player
-        
-        print(f"Testing Game #{game.id}")
-        print(f"  White: {game.white_player.username}")
-        print(f"  Black: {game.black_player.username}")
-        print(f"  Status: {game.status}")
-        print()
-        
-        # Test 1: Timer Endpoint
-        print("1. Testing Timer Endpoint...")
-        factory = RequestFactory()
-        request = factory.get(f'/api/games/{game.id}/timer/')
-        force_authenticate(request, user=user)
-        
-        timer_response = get_game_timer(request, pk=game.id)
-        
-        if timer_response.status_code == 200:
-            timer_data = timer_response.data
-            print(f"   ✅ Timer Status: {timer_response.status_code}")
-            print(f"   ✅ White Time: {timer_data['white_time']}s")
-            print(f"   ✅ Black Time: {timer_data['black_time']}s")
-            print(f"   ✅ Current Turn: {timer_data['current_turn']}")
-            print(f"   ✅ Game Status: {timer_data['game_status']}")
-        else:
-            print(f"   ❌ Timer Error: {timer_response.data}")
-            return False
-        
-        print()
-        
-        # Test 2: Computer Move Logic
-        print("2. Testing Computer Move Detection...")
-        
-        # Check if computer should move
-        import chess
-        board = chess.Board(game.fen)
-        current_turn = "white" if board.turn == chess.WHITE else "black"
-        
-        should_move = False
-        if current_turn == "black" and "computer" in game.black_player.username.lower():
-            should_move = True
-        elif current_turn == "white" and "computer" in game.white_player.username.lower():
-            should_move = True
-            
-        print(f"   Current Turn: {current_turn}")
-        print(f"   Computer Should Move: {should_move}")
-        
-        if should_move:
-            print("   ✅ Computer move detection working correctly")
-        else:
-            print("   ⏳ Human player's turn (computer waiting)")
-        
-        print()
-        print("🎯 SYSTEM STATUS:")
-        print("   ✅ Timer endpoint: WORKING")
-        print("   ✅ Computer detection: WORKING") 
-        print("   ✅ Move functionality: WORKING")
-        print("   ✅ Game state management: WORKING")
-        print()
-        print("🎉 ALL SYSTEMS OPERATIONAL!")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-if __name__ == "__main__":
-    test_all_functionality()
 ===== chess-platform/manage.py =====
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
@@ -918,6 +822,10 @@ python-chess==1.999
 psycopg2-binary==2.9.7
 python-dotenv==1.0.0
 setuptools>=75.0.0
+channels==4.0.0
+channels-redis==4.2.0
+redis==5.0.1
+daphne==4.2.1
 
 ===== chess-platform/.vscode/settings.json =====
 {
@@ -2466,12 +2374,28 @@ https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/
 """
 
 import os
-
 from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+from channels.security.websocket import AllowedHostsOriginValidator
+import games.routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chess_backend.settings')
 
-application = get_asgi_application()
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
+django_asgi_app = get_asgi_application()
+
+application = ProtocolTypeRouter({
+    "http": django_asgi_app,
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(
+            URLRouter(
+                games.routing.websocket_urlpatterns
+            )
+        )
+    ),
+})
 
 ===== chess-platform/chess_backend/settings.py =====
 """
@@ -2509,6 +2433,9 @@ ALLOWED_HOSTS = [
     'localhost',
     'testserver',  # For Django testing framework
     '.chess-platform.com',  # Production domain (with subdomain support)
+    '10.182.125.108',  # Your current local network IP
+    '192.168.1.108',   # Previous IP (keeping for compatibility)
+    '*',  # Allow all hosts for development
 ]
 
 # Additional security settings for testing and development
@@ -2529,6 +2456,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'accounts',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -2569,6 +2497,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chess_backend.wsgi.application'
+
+# ASGI Application for WebSocket support
+ASGI_APPLICATION = 'chess_backend.asgi.application'
+
+# Channel layers configuration for WebSocket
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 # Database
@@ -2698,6 +2636,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8080",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://10.182.125.108:8000",  # Your current local network IP
+    "http://192.168.1.50:8000",   # Previous IP (keeping for compatibility)
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -8502,7 +8442,7 @@ Main Components:
 - Rating-based configurations and personalities
 """
 
-from .chess_engine import ChessEngine, create_chess_engine
+from .unified_engine import UnifiedChessEngine
 from .rating_configs import RatingConfig, get_rating_config
 from .game_analyzer import GameAnalyzer
 
@@ -8540,11 +8480,25 @@ def get_computer_move(fen: str, difficulty: str = "medium", personality: str = "
         except ValueError:
             rating = 1200  # Default fallback
     
-    # Create chess engine
-    engine = create_chess_engine(rating, personality)
-    return engine.get_computer_move(fen)
+    # Create unified chess engine
+    engine = UnifiedChessEngine(rating, personality)
+    result = engine.get_computer_move(fen)
+    
+    # Format response for compatibility
+    if result['success']:
+        return {
+            'success': True,
+            'move': result['move']['uci'],
+            'san': result['move']['san'],
+            'evaluation': result['engine_info']['evaluation'],
+            'thinking_time': result['engine_info']['search_time'],
+            'new_fen': result['new_fen'],
+            'game_status': result['game_status']
+        }
+    else:
+        return result
 
-def create_engine(rating: int, personality: str = "balanced") -> ChessEngine:
+def create_engine(rating: int, personality: str = "balanced") -> UnifiedChessEngine:
     """
     Create a chess engine instance.
     
@@ -8553,9 +8507,9 @@ def create_engine(rating: int, personality: str = "balanced") -> ChessEngine:
         personality: Playing style personality
         
     Returns:
-        ChessEngine instance
+        UnifiedChessEngine instance
     """
-    return create_chess_engine(rating, personality)
+    return UnifiedChessEngine(rating, personality)
 
 def get_position_analysis(fen: str, rating: int = 2000) -> dict:
     """
@@ -8568,8 +8522,19 @@ def get_position_analysis(fen: str, rating: int = 2000) -> dict:
     Returns:
         Comprehensive position analysis
     """
-    engine = create_chess_engine(rating)
-    return engine.get_position_analysis(fen)
+    engine = UnifiedChessEngine(rating)
+    result = engine.get_computer_move(fen)
+    
+    # Format response for compatibility
+    if result['success']:
+        return {
+            'success': True,
+            'move': result['move']['uci'],
+            'evaluation': result['engine_info']['evaluation'],
+            'thinking_time': result['engine_info']['search_time']
+        }
+    else:
+        return result
 
 # Legacy compatibility function
 def get_computer_move_legacy(fen: str, difficulty: str = "medium") -> dict:
@@ -8589,16 +8554,20 @@ def get_computer_move_legacy(fen: str, difficulty: str = "medium") -> dict:
         except ValueError:
             rating = 1200
     
-    # Use modern engine but format output for legacy compatibility
+    # Use unified engine but format output for legacy compatibility
     result = get_computer_move(fen, str(rating))
-    return {
-        'move': {
-            'notation': result.get('san', ''),
-            'uci': result.get('move', '')
-        },
-        'evaluation': result.get('evaluation', 0),
-        'thinking_time': result.get('thinking_time', 0)
-    }
+    
+    if result['success']:
+        return {
+            'move': {
+                'notation': result.get('san', ''),
+                'uci': result.get('move', '')
+            },
+            'evaluation': result.get('evaluation', 0),
+            'thinking_time': result.get('thinking_time', 0)
+        }
+    else:
+        return {'error': result.get('error', 'Unknown error')}
 
 # Version info
 __version__ = "3.0.0"
@@ -8606,8 +8575,7 @@ __author__ = "Chess Platform Team"
 
 # Export main classes for advanced usage
 __all__ = [
-    'ChessEngine',
-    'ChessEngine',
+    'UnifiedChessEngine',
     'get_computer_move',
     'create_engine',
     'get_position_analysis',
@@ -8769,6 +8737,8 @@ if (document.readyState === 'loading') {
 window.ChessApp = ChessApp;
 
 ===== chess-platform/frontend/index.html =====
+//this is test frontend/index.html(real frontend is in C:\Users\guhan\chess-platform\frontend\src\pages\)
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13625,7 +13595,6 @@ footer.container {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.05);
       transition: all var(--transition-normal);
-      cursor: pointer;
     }
 
     .game-card:hover {
@@ -13712,6 +13681,54 @@ footer.container {
     .game-time {
       font-size: var(--font-size-xs);
       color: var(--color-text-muted);
+    }
+
+    /* Game Actions */
+    .game-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .join-btn, .spectate-btn {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-md);
+      border: none;
+      font-weight: var(--font-weight-medium);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      white-space: nowrap;
+    }
+
+    .join-btn {
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      color: var(--color-text-inverse);
+    }
+
+    .join-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .join-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spectate-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .spectate-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--color-text-primary);
+      transform: translateY(-1px);
     }
 
     /* Statistics Panel */
@@ -14484,16 +14501,78 @@ footer.container {
               <div class="status-badge status-${game.status}">${getStatusText(game.status)}</div>
               <div class="game-time">${getTimeAgo(game.created_at)}</div>
             </div>
+            
+            <div class="game-actions">
+              ${game.status === 'waiting' && !game.black_player_username ? 
+                `<button class="btn btn-primary join-btn" data-game-id="${game.id}">
+                  <span>⚡</span> Join Game
+                </button>` : 
+                `<button class="btn btn-secondary spectate-btn" data-game-id="${game.id}">
+                  <span>👁️</span> Spectate
+                </button>`
+              }
+            </div>
           </div>
         `).join('');
         
-        // Add click handlers to game cards
+        // Add click handlers to game cards and action buttons
         document.querySelectorAll('.game-card').forEach(card => {
-          card.addEventListener('click', () => {
-            const gameId = card.dataset.gameId;
+          // Remove the default click handler for the entire card
+          // Instead, only specific buttons should trigger actions
+        });
+        
+        // Add handlers for join buttons
+        document.querySelectorAll('.join-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const gameId = btn.dataset.gameId;
+            await joinGame(gameId);
+          });
+        });
+        
+        // Add handlers for spectate buttons
+        document.querySelectorAll('.spectate-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const gameId = btn.dataset.gameId;
             window.location.href = `/play/?game=${gameId}`;
           });
         });
+      }
+      
+      async function joinGame(gameId) {
+        try {
+          // Show loading state on the button
+          const joinBtn = document.querySelector(`[data-game-id="${gameId}"].join-btn`);
+          if (joinBtn) {
+            joinBtn.disabled = true;
+            joinBtn.innerHTML = '<span>⏳</span> Joining...';
+          }
+          
+          const response = await api.request(`/games/${gameId}/join/`, {
+            method: 'POST'
+          });
+          
+          if (response.ok) {
+            api.showToast('Successfully joined the game!', 'success');
+            // Redirect to the game
+            setTimeout(() => {
+              window.location.href = `/play/?game=${gameId}`;
+            }, 1000);
+          } else {
+            throw new Error(response.message || 'Failed to join game');
+          }
+        } catch (error) {
+          console.error('Failed to join game:', error);
+          api.showToast(error.message || 'Failed to join game. Please try again.', 'error');
+          
+          // Reset button state
+          const joinBtn = document.querySelector(`[data-game-id="${gameId}"].join-btn`);
+          if (joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '<span>⚡</span> Join Game';
+          }
+        }
       }
       
       function showEmptyGames() {
@@ -15251,6 +15330,68 @@ footer.container {
 
 .current-user-info strong {
   color: var(--color-accent-primary);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+}
+
+.connection-indicator {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 4px 8px;
+  border-radius: var(--border-radius-xs);
+  border: 1px solid;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.connection-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.connection-indicator.connected {
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.connection-indicator.connected::before {
+  background: #16a34a;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.connection-indicator.disconnected {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.connection-indicator.disconnected::before {
+  background: #dc2626;
+}
+
+.connection-indicator:not(.connected):not(.disconnected) {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.connection-indicator:not(.connected):not(.disconnected)::before {
+  background: #f59e0b;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .game-status-badge {
@@ -16695,6 +16836,7 @@ footer.container {
   </script>
   <script src="../../utils/api.js"></script>
   <script src="../../utils/router.js"></script>
+  <script src="../../utils/websocket.js"></script>
   <script src="play.js"></script>
   
   <!-- Initialize page after all scripts load -->
@@ -16703,14 +16845,14 @@ footer.container {
       console.log('Game page DOM loaded, initializing...');
       
       // Ensure all dependencies are loaded
-      if (typeof ChessAPI !== 'undefined' && typeof ChessRouter !== 'undefined') {
+      if (typeof ChessAPI !== 'undefined') {
         // Initialize the game page
-        if (typeof initGamePage === 'function') {
-          initGamePage();
+        if (typeof initializeGamePage === 'function') {
+          initializeGamePage();
           window.gamePageReady = true;
           console.log('Game page initialized successfully');
         } else {
-          console.error('initGamePage function not found');
+          console.error('initializeGamePage function not found');
         }
       } else {
         console.error('Required dependencies not loaded');
@@ -16722,7 +16864,12 @@ footer.container {
 ===== chess-platform/frontend/src/pages/game/play.js =====
 /**
  * Chess Game Page Controller
- * Professional chess platform game interface
+ * Professional chess platform game interface with real-time WebSocket support
+ */
+
+/**
+ * Chess Game Controller v2.0 - 401 Error Fixes Applied
+ * Updated: October 7, 2025
  */
 
 class ChessGameController {
@@ -16735,11 +16882,18 @@ class ChessGameController {
     this.currentUser = null;
     this.api = null;
     
+    // WebSocket management
+    this.webSocketManager = null;
+    this.wsConnected = false;
+    this.wsReconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    
     // Timer management
     this.timerInterval = null;
     this.currentTurn = 'white';
     this.gameTimerData = null;
     this.lastTimerUpdate = null;
+    this.useWebSocketTimer = false;
     
     // Computer move state
     this.computerMoveInProgress = false;
@@ -16749,6 +16903,9 @@ class ChessGameController {
     // Bind methods
     this.handleSquareClick = this.handleSquareClick.bind(this);
     this.updateTimerDisplay = this.updateTimerDisplay.bind(this);
+    this.handleWebSocketMove = this.handleWebSocketMove.bind(this);
+    this.handleWebSocketTimer = this.handleWebSocketTimer.bind(this);
+    this.handleWebSocketConnection = this.handleWebSocketConnection.bind(this);
   }
 
   /**
@@ -16781,6 +16938,9 @@ class ChessGameController {
       await this.loadCurrentUser();
       await this.loadGameData();
       
+      // Initialize WebSocket connection
+      await this.initializeWebSocket();
+      
       // Setup UI
       this.setupEventListeners();
       this.setupPeriodicUpdates();
@@ -16790,6 +16950,192 @@ class ChessGameController {
       console.error('Failed to initialize game:', error);
       this.api.showError('Failed to load game');
     }
+  }
+
+  // ===========================================
+  // WEBSOCKET MANAGEMENT
+  // ===========================================
+
+  async initializeWebSocket() {
+    // WebSocket disabled - Django runserver doesn't support WebSockets well
+    // Using reliable polling-based updates instead
+    console.log('WebSocket disabled - using reliable polling system');
+    this.useWebSocketTimer = false;
+    return;
+    
+    // Re-enabling WebSocket after timer integration fixes
+    console.log('Initializing WebSocket connection - timer integration stable');
+    // Temporarily disable WebSocket for debugging timer issues
+    // console.log('WebSocket disabled for debugging - using polling only');
+    // this.useWebSocketTimer = false;
+    // return;
+    
+    try {
+      console.log('Initializing WebSocket connection for game:', this.gameId);
+      
+      // Check if WebSocket utilities are available
+      if (typeof WebSocketManager === 'undefined') {
+        console.warn('WebSocket utilities not available, using fallback polling');
+        this.useWebSocketTimer = false;
+        return;
+      }
+      
+      this.webSocketManager = new WebSocketManager();
+      
+      // Check if WebSocket utilities are available
+      if (typeof WebSocketManager === 'undefined') {
+        console.warn('WebSocket utilities not available, using fallback polling');
+        this.useWebSocketTimer = false;
+        return;
+      }
+      
+      this.webSocketManager = new WebSocketManager();
+      
+      // Get access token for WebSocket authentication
+      const accessToken = localStorage.getItem('access');
+      console.log('Access token from localStorage:', typeof accessToken, accessToken);
+      if (!accessToken) {
+        console.warn('No access token available for WebSocket');
+        this.useWebSocketTimer = false;
+        return;
+      }
+      
+      // Connect to game WebSocket
+      const gameWs = await this.webSocketManager.connectToGame(this.gameId, accessToken);
+      
+      // Setup event handlers
+      gameWs.on('move_made', this.handleWebSocketMove);
+      gameWs.on('timer_update', this.handleWebSocketTimer);
+      gameWs.on('connected', () => this.handleWebSocketConnection(true));
+      gameWs.on('disconnected', () => this.handleWebSocketConnection(false));
+      gameWs.on('error', (error) => {
+        console.error('WebSocket error:', error);
+        this.updateConnectionStatus(false);
+      });
+      
+      console.log('WebSocket connection established');
+      this.updateConnectionStatus(true);
+    } catch (error) {
+      console.error('Failed to initialize WebSocket:', error);
+      this.useWebSocketTimer = false;
+      this.updateConnectionStatus(false);
+    }
+  }
+
+  handleWebSocketMove(data) {
+    console.log('Received WebSocket move:', data);
+    
+    if (data.type === 'move_made' && data.game_state) {
+      // Update game state from WebSocket
+      this.gameData = {
+        ...this.gameData,
+        ...data.game_state,
+        moves: data.game_state.moves || this.gameData.moves
+      };
+      
+      // Update display
+      this.updateGameDisplay();
+      this.renderBoard();
+      
+      // Show move notification if it's opponent's move
+      if (data.move && !this.isPlayerMove(data.move)) {
+        this.api.showSuccess(`Opponent moved: ${data.move.notation}`, 3000);
+      }
+      
+      // Handle game over
+      if (data.game_state.status && ['finished', 'checkmate', 'stalemate'].includes(data.game_state.status)) {
+        this.handleGameOverStatus(data);
+        this.stopTimerUpdates();
+      }
+    }
+  }
+
+  handleWebSocketTimer(data) {
+    console.log('Received WebSocket timer:', data);
+    
+    if (data.type === 'timer_update' || data.type === 'timer_tick') {
+      this.useWebSocketTimer = true;
+      
+      // Update timer display with real-time data
+      const whiteTimer = document.getElementById('whiteTimer');
+      const blackTimer = document.getElementById('blackTimer');
+      
+      const timerData = data.data || data;
+      
+      if (whiteTimer && timerData.white_time !== undefined) {
+        whiteTimer.textContent = this.formatTime(timerData.white_time);
+      }
+      if (blackTimer && timerData.black_time !== undefined) {
+        blackTimer.textContent = this.formatTime(timerData.black_time);
+      }
+      
+      // Update current turn
+      if (timerData.current_turn) {
+        this.currentTurn = timerData.current_turn;
+        this.updateTimerVisuals(timerData.white_time, timerData.black_time);
+      }
+      
+      // Handle timeout
+      if (timerData.white_time <= 0 || timerData.black_time <= 0) {
+        this.handleTimeout(timerData.white_time <= 0 ? 'white' : 'black');
+      }
+    }
+  }
+
+  handleWebSocketConnection(connected) {
+    console.log('WebSocket connection status:', connected);
+    this.updateConnectionStatus(connected);
+    
+    if (connected) {
+      this.wsReconnectAttempts = 0;
+      this.api.showSuccess('Connected to game server', 2000);
+    } else {
+      this.api.showToast('Connection lost - attempting to reconnect...', 'warning');
+      this.attemptReconnection();
+    }
+  }
+
+  updateConnectionStatus(connected) {
+    this.wsConnected = connected;
+    
+    // No UI indicators needed - remove unnecessary connection status
+    
+    // Enable/disable real-time features
+    if (!connected && this.useWebSocketTimer) {
+      // Fall back to polling timer if WebSocket disconnects
+      this.useWebSocketTimer = false;
+      this.startTimerUpdates();
+    }
+  }
+
+  async attemptReconnection() {
+    if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
+      this.api.showError('Failed to reconnect. Please refresh the page.');
+      return;
+    }
+    
+    this.wsReconnectAttempts++;
+    console.log(`Attempting WebSocket reconnection (${this.wsReconnectAttempts}/${this.maxReconnectAttempts})`);
+    
+    setTimeout(async () => {
+      try {
+        if (this.webSocketManager) {
+          await this.webSocketManager.reconnect();
+        }
+      } catch (error) {
+        console.error('Reconnection failed:', error);
+        this.attemptReconnection();
+      }
+    }, 2000 * this.wsReconnectAttempts); // Exponential backoff
+  }
+
+  isPlayerMove(move) {
+    if (!move || !this.currentUser) return false;
+    
+    const isWhitePlayer = this.currentUser.id === this.gameData.white_player;
+    const isWhiteMove = move.color === 'white';
+    
+    return (isWhitePlayer && isWhiteMove) || (!isWhitePlayer && !isWhiteMove);
   }
 
   // ===========================================
@@ -16938,6 +17284,10 @@ class ChessGameController {
         
         // Start timer for active games
         if (this.gameData.status === 'active') {
+          // For active games, just start polling the existing timer
+          this.startTimerUpdates();
+        } else if (this.gameData.status === 'waiting') {
+          // Only try to start timer for waiting games
           await this.startProfessionalTimer();
         }
       } else {
@@ -17123,7 +17473,15 @@ class ChessGameController {
     }
     
     console.log('Rendering board with FEN:', this.gameData?.fen);
+    
+    // Preserve the loading overlay before clearing
+    const loadingOverlay = boardEl.querySelector('#boardLoading');
     boardEl.innerHTML = '';
+    
+    // Re-add the loading overlay if it existed
+    if (loadingOverlay) {
+      boardEl.appendChild(loadingOverlay);
+    }
     
     // Create squares
     for (let rank = 8; rank >= 1; rank--) {
@@ -17396,20 +17754,24 @@ class ChessGameController {
       const response = await this.api.makeMove(this.gameId, from, to, promotion);
       
       if (response.ok) {
-        this.gameData = response.data.game;
-        this.switchTurn('player_move');
-        
-        // Update timer data appropriately
-        this.updateTimerData(response.data.timer);
-        
-        this.updateGameDisplay();
-        this.renderBoard();
-        
-        if (response.data.game_status) {
-          this.handleGameOverStatus(response.data.game_status);
+        // If WebSocket is connected, it will handle the update
+        if (!this.wsConnected) {
+          // Fallback: update locally if no WebSocket
+          this.gameData = response.data.game;
+          this.updateGameDisplay();
+          this.renderBoard();
+          
+          if (response.data.game_status) {
+            this.handleGameOverStatus(response.data.game_status);
+          }
         }
         
-        if (this.gameData.status === 'active') {
+        // Always handle timer switching for player moves
+        this.switchTurn('player_move');
+        this.updateTimerData(response.data.timer);
+        
+        // Start/update timers based on game status
+        if (this.gameData.status === 'active' || response.data.game?.status === 'active') {
           this.startTimerUpdates();
         } else {
           this.stopTimerUpdates();
@@ -17417,6 +17779,7 @@ class ChessGameController {
         
         this.api.showSuccess('Move made successfully!');
         
+        // Handle computer turn
         await this.handleComputerTurn();
       } else {
         this.api.showError(this.api.formatError(response));
@@ -17435,56 +17798,73 @@ class ChessGameController {
 
   async startProfessionalTimer() {
     try {
-      const response = await fetch(`/api/games/${this.gameId}/start-timer/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCookie('csrftoken')
-        }
+      const response = await this.api.request(`/games/${this.gameId}/start-timer/`, {
+        method: 'POST'
       });
       
-      const data = await response.json();
-      
-      if (data.timer_state) {
-        console.log('Professional timer started');
-        this.currentTurn = data.timer_state.current_turn || 'white';
-        this.startTimerUpdates();
+      if (response.ok) {
+        const data = response.data;
+        if (data.timer_state) {
+          console.log('Professional timer started');
+          this.currentTurn = data.timer_state.current_turn || 'white';
+          this.startTimerUpdates();
+        }
       }
     } catch (error) {
       console.error('Failed to start professional timer:', error);
+      // Fallback to simple timer updates
+      this.startTimerUpdates();
     }
   }
 
   updateTimerDisplay() {
-    if (!this.gameId) return;
+    console.log('Timer update started - WebSocket connected:', this.wsConnected, 'Use WebSocket timer:', this.useWebSocketTimer); // Debug log
     
-    fetch(`/api/games/${this.gameId}/professional-timer/`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.white_time !== undefined && data.black_time !== undefined) {
-          const whiteTime = this.formatTime(data.white_time);
-          const blackTime = this.formatTime(data.black_time);
-          
-          const whiteTimer = document.getElementById('whiteTimer');
-          const blackTimer = document.getElementById('blackTimer');
-          
-          if (whiteTimer) whiteTimer.textContent = whiteTime;
-          if (blackTimer) blackTimer.textContent = blackTime;
-          
-          if (data.current_turn) {
-            this.currentTurn = data.current_turn;
-          }
-          
-          // Update visual indicators
-          this.updateTimerVisuals(data.white_time, data.black_time);
-          
-          // Check for timeout
-          if (data.white_time <= 0 || data.black_time <= 0) {
-            this.handleTimeout(data.white_time <= 0 ? 'white' : 'black');
+    // Use professional timer API for accurate timer display
+    if (!this.gameId) {
+      console.log('No gameId available for timer update'); // Debug log
+      return;
+    }
+    
+    console.log('Fetching timer data for game:', this.gameId); // Debug log
+    this.api.request(`/games/${this.gameId}/professional-timer/`)
+      .then(response => {
+        if (response.ok && response.data) {
+          const data = response.data;
+          console.log('Timer data received:', data); // Debug log
+          if (data.white_time !== undefined && data.black_time !== undefined) {
+            const whiteTime = this.formatTime(data.white_time);
+            const blackTime = this.formatTime(data.black_time);
+            
+            console.log('Formatted times - White:', whiteTime, 'Black:', blackTime); // Debug log
+            
+            const whiteTimer = document.getElementById('whiteTimer');
+            const blackTimer = document.getElementById('blackTimer');
+            
+            if (whiteTimer) whiteTimer.textContent = whiteTime;
+            if (blackTimer) blackTimer.textContent = blackTime;
+            
+            if (data.current_turn) {
+              this.currentTurn = data.current_turn;
+            }
+            
+            // Update visual indicators
+            this.updateTimerVisuals(data.white_time, data.black_time);
+            
+            // Check for timeout
+            if (data.white_time <= 0 || data.black_time <= 0) {
+              this.handleTimeout(data.white_time <= 0 ? 'white' : 'black');
+            }
           }
         }
       })
-      .catch(error => console.error('Professional timer error:', error));
+      .catch(error => {
+        console.error('Professional timer error:', error);
+        // Don't spam console on auth errors, fail silently
+        if (error.status !== 401) {
+          console.error('Timer update failed:', error);
+        }
+      });
   }
 
   updateTimerVisuals(whiteTime, blackTime) {
@@ -17509,26 +17889,17 @@ class ChessGameController {
     try {
       console.log(`Professional Timer Move - Reason: ${reason}`);
       
-      fetch(`/api/games/${this.gameId}/timer-move/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCookie('csrftoken')
-        },
-        body: JSON.stringify({ player_color: this.currentTurn })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.timer_state) {
-          this.currentTurn = data.timer_state.current_turn;
-          console.log(`Professional Timer Move Complete - New Turn: ${data.timer_state.current_turn}`);
-          
-          if (data.game_finished) {
-            console.log(`Game finished: ${data.termination}, Winner: ${data.winner}`);
-          }
-        }
-      })
-      .catch(error => console.error('Professional timer move error:', error));
+      // Use WebSocket for timer synchronization instead of API calls
+      if (this.useWebSocketTimer && this.webSocketManager) {
+        console.log('Timer move handled via WebSocket');
+        return;
+      }
+      
+      // Simple local turn switching to avoid 401 errors
+      this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white';
+      console.log(`Turn switched to: ${this.currentTurn}`);
+      this.updateTurnIndicator();
+      
     } catch (error) {
       console.error('Switch turn error:', error);
     }
@@ -17554,10 +17925,16 @@ class ChessGameController {
   }
 
   startTimerUpdates() {
+    // Stop any existing timer
     if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerInterval = setInterval(this.updateTimerDisplay, 1000);
+    
+    // Always use polling timer for reliable updates
+    console.log('Starting polling timer updates'); // Debug log
+    this.timerInterval = setInterval(() => {
+      console.log('Timer interval tick'); // Debug log
+      this.updateTimerDisplay();
+    }, 1000);
     this.updateTimerDisplay();
-    console.log('Clean timer started');
   }
 
   stopTimerUpdates() {
@@ -17644,6 +18021,7 @@ class ChessGameController {
         this.api.showError('Computer failed to move after multiple attempts. Please refresh the page.');
         this.computerMoveInProgress = false;
         this.computerMoveRetryCount = 0;
+        this.showBoardLoading(false); // Clear loading state
       }
     }
   }
@@ -17656,6 +18034,7 @@ class ChessGameController {
       if (!this.isComputerGame() || !this.isComputerTurn()) {
         console.log('Computer move cancelled - not computer\'s turn anymore');
         this.computerMoveInProgress = false;
+        this.showBoardLoading(false);
         return;
       }
       
@@ -17669,13 +18048,22 @@ class ChessGameController {
       
       if (response.ok) {
         console.log('Computer move successful:', response.data);
-        this.gameData = response.data.game;
         
+        // If WebSocket is connected, it will handle the game state update
+        if (!this.wsConnected) {
+          // Fallback: update locally if no WebSocket
+          this.gameData = response.data.game;
+          this.updateGameDisplay();
+          this.renderBoard();
+          
+          if (response.data.game_status) {
+            this.handleGameOverStatus(response.data.game_status);
+          }
+        }
+        
+        // Always handle timer for computer moves
         this.switchTurn('computer_move');
         this.updateTimerData(response.data.timer);
-        
-        this.updateGameDisplay();
-        this.renderBoard();
         
         const moveInfo = response.data.computer_move;
         this.api.showSuccess(
@@ -17683,11 +18071,8 @@ class ChessGameController {
           3000
         );
         
-        if (response.data.game_status) {
-          this.handleGameOverStatus(response.data.game_status);
-        }
-        
-        if (this.gameData.status === 'active') {
+        // Update timers based on game status
+        if (this.gameData?.status === 'active' || response.data.game?.status === 'active') {
           this.startTimerUpdates();
         } else {
           this.stopTimerUpdates();
@@ -17842,9 +18227,11 @@ class ChessGameController {
   }
 
   setupPeriodicUpdates() {
-    // Game state refresh every 5 seconds
+    // Reduced frequency game state refresh - only when WebSocket is unavailable
     const gameInterval = setInterval(async () => {
-      if (document.visibilityState === 'visible' && this.gameData?.status === 'active') {
+      if (document.visibilityState === 'visible' && 
+          this.gameData?.status === 'active' && 
+          !this.wsConnected) {
         try {
           const response = await this.api.getGameDetail(this.gameId);
           if (response.ok && response.data.moves.length !== this.gameData.moves.length) {
@@ -17857,25 +18244,36 @@ class ChessGameController {
           console.error('Failed to refresh game:', error);
         }
       }
-    }, 5000);
+    }, 10000); // Increased interval since WebSocket handles real-time updates
     
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {
       clearInterval(gameInterval);
       this.stopTimerUpdates();
+      
+      // Clean up WebSocket connection
+      if (this.webSocketManager) {
+        this.webSocketManager.disconnect();
+      }
     });
   }
 
   showBoardLoading(show) {
+    console.log(`showBoardLoading called with: ${show}`);
     const loadingEl = document.getElementById('boardLoading');
     const chessBoard = document.getElementById('chessBoard');
     
     if (loadingEl) {
+      console.log(`Setting loading overlay show class to: ${show}`);
       loadingEl.classList.toggle('show', show);
-    } else if (chessBoard) {
-      // Fallback loading indicator
-      chessBoard.style.opacity = show ? '0.5' : '1';
-      chessBoard.style.pointerEvents = show ? 'none' : 'auto';
+    } else {
+      console.log('No boardLoading element found, using fallback opacity');
+      if (chessBoard) {
+        // Fallback loading indicator
+        chessBoard.style.opacity = show ? '0.5' : '1';
+        chessBoard.style.pointerEvents = show ? 'none' : 'auto';
+        console.log(`Set chessBoard opacity to: ${show ? '0.5' : '1'}`);
+      }
     }
   }
 
@@ -22585,7 +22983,14 @@ p {
 
 class ChessAPI {
   constructor() {
-    this.baseURL = 'http://localhost:8000/api';
+    // Auto-detect the appropriate base URL
+    const currentHost = window.location.hostname;
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+      this.baseURL = 'http://localhost:8000/api';
+    } else {
+      // Use the current host (works for mobile access via IP)
+      this.baseURL = `http://${currentHost}:8000/api`;
+    }
     this.accessToken = localStorage.getItem('access');
     this.refreshToken = localStorage.getItem('refresh');
     this.isRefreshing = false;
@@ -24023,6 +24428,410 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Make available globally
 window.router = router;
+===== chess-platform/frontend/src/utils/websocket.js =====
+/**
+ * WebSocket Manager for Real-time Chess Communication
+ * Handles game state synchronization, move updates, and timer management
+ */
+
+class GameWebSocket {
+  constructor(gameId, accessToken) {
+    this.gameId = gameId;
+    this.accessToken = accessToken;
+    this.gameSocket = null;
+    this.timerSocket = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000; // Start with 1 second
+    this.eventHandlers = new Map();
+    this.isConnected = false;
+    this.connectionPromise = null;
+    
+    // Bind methods
+    this.connect = this.connect.bind(this);
+    this.disconnect = this.disconnect.bind(this);
+    this.sendMessage = this.sendMessage.bind(this);
+    this.makeMove = this.makeMove.bind(this);
+  }
+
+  /**
+   * Connect to WebSocket servers
+   */
+  async connect() {
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
+    this.connectionPromise = this._connect();
+    return this.connectionPromise;
+  }
+
+  async _connect() {
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      
+      // Connect to game WebSocket
+      console.log('Constructing WebSocket URL with token:', typeof this.accessToken, this.accessToken);
+      const gameWsUrl = `${protocol}//${host}/ws/game/${this.gameId}/?token=${this.accessToken}`;
+      console.log('Game WebSocket URL:', gameWsUrl);
+      
+      this.gameSocket = new WebSocket(gameWsUrl);
+      
+      // Setup game socket event handlers
+      this.gameSocket.onopen = (event) => {
+        console.log('Game WebSocket connected');
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000;
+        this._triggerEvent('connected', { type: 'game' });
+      };
+
+      this.gameSocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this._handleGameMessage(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      this.gameSocket.onclose = (event) => {
+        console.log('Game WebSocket disconnected:', event.code, event.reason);
+        console.log('WebSocket close details:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          url: gameWsUrl
+        });
+        this.isConnected = false;
+        this._triggerEvent('disconnected', { type: 'game', code: event.code });
+        
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this._scheduleReconnect();
+        }
+      };
+
+      this.gameSocket.onerror = (error) => {
+        console.error('Game WebSocket error:', error);
+        console.error('WebSocket error details:', {
+          url: gameWsUrl,
+          readyState: this.gameSocket?.readyState,
+          protocol: this.gameSocket?.protocol,
+          extensions: this.gameSocket?.extensions
+        });
+        this._triggerEvent('error', { type: 'game', error });
+      };
+
+      // Connect to timer WebSocket (optional)
+      try {
+        const timerWsUrl = `${protocol}//${host}/ws/timer/${this.gameId}/?token=${this.accessToken}`;
+        console.log('Timer WebSocket URL:', timerWsUrl);
+        this.timerSocket = new WebSocket(timerWsUrl);
+        
+        this.timerSocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            this._handleTimerMessage(data);
+          } catch (error) {
+            console.error('Error parsing timer message:', error);
+          }
+        };
+      } catch (error) {
+        console.warn('Timer WebSocket connection failed:', error);
+      }
+
+      // Wait for connection to be established
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('WebSocket connection timeout'));
+        }, 10000);
+
+        this.gameSocket.addEventListener('open', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+
+        this.gameSocket.addEventListener('error', () => {
+          clearTimeout(timeout);
+          reject(new Error('WebSocket connection failed'));
+        });
+      });
+
+      return true;
+      
+    } catch (error) {
+      console.error('WebSocket connection error:', error);
+      this.connectionPromise = null;
+      throw error;
+    }
+  }
+
+  /**
+   * Disconnect from WebSocket servers
+   */
+  disconnect() {
+    this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
+    
+    if (this.gameSocket) {
+      this.gameSocket.close(1000, 'Client disconnect');
+      this.gameSocket = null;
+    }
+    
+    if (this.timerSocket) {
+      this.timerSocket.close(1000, 'Client disconnect');
+      this.timerSocket = null;
+    }
+    
+    this.isConnected = false;
+    this.connectionPromise = null;
+  }
+
+  /**
+   * Send message through game WebSocket
+   */
+  sendMessage(message) {
+    if (!this.gameSocket || this.gameSocket.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket not connected, cannot send message');
+      return false;
+    }
+
+    try {
+      this.gameSocket.send(JSON.stringify(message));
+      return true;
+    } catch (error) {
+      console.error('Error sending WebSocket message:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Make a move through WebSocket
+   */
+  makeMove(fromSquare, toSquare, promotion = null) {
+    const message = {
+      type: 'make_move',
+      from_square: fromSquare,
+      to_square: toSquare,
+      promotion: promotion
+    };
+
+    return this.sendMessage(message);
+  }
+
+  /**
+   * Request current game state
+   */
+  requestGameState() {
+    return this.sendMessage({ type: 'request_game_state' });
+  }
+
+  /**
+   * Send ping to keep connection alive
+   */
+  ping() {
+    return this.sendMessage({ type: 'ping' });
+  }
+
+  /**
+   * Add event handler
+   */
+  on(event, handler) {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, []);
+    }
+    this.eventHandlers.get(event).push(handler);
+  }
+
+  /**
+   * Remove event handler
+   */
+  off(event, handler) {
+    if (this.eventHandlers.has(event)) {
+      const handlers = this.eventHandlers.get(event);
+      const index = handlers.indexOf(handler);
+      if (index > -1) {
+        handlers.splice(index, 1);
+      }
+    }
+  }
+
+  /**
+   * Trigger event handlers
+   */
+  _triggerEvent(event, data) {
+    if (this.eventHandlers.has(event)) {
+      this.eventHandlers.get(event).forEach(handler => {
+        try {
+          handler(data);
+        } catch (error) {
+          console.error(`Error in event handler for ${event}:`, error);
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle game WebSocket messages
+   */
+  _handleGameMessage(data) {
+    console.log('Received game message:', data);
+
+    switch (data.type) {
+      case 'game_state':
+        this._triggerEvent('gameState', data.data);
+        break;
+        
+      case 'move_made':
+        this._triggerEvent('moveMade', data);
+        break;
+        
+      case 'player_connected':
+        this._triggerEvent('playerConnected', data);
+        break;
+        
+      case 'player_disconnected':
+        this._triggerEvent('playerDisconnected', data);
+        break;
+        
+      case 'game_finished':
+        this._triggerEvent('gameFinished', data);
+        break;
+        
+      case 'error':
+        this._triggerEvent('error', data);
+        break;
+        
+      case 'pong':
+        this._triggerEvent('pong', data);
+        break;
+        
+      default:
+        console.warn('Unknown game message type:', data.type);
+    }
+  }
+
+  /**
+   * Handle timer WebSocket messages
+   */
+  _handleTimerMessage(data) {
+    if (data.type === 'timer_tick') {
+      this._triggerEvent('timerUpdate', data.data);
+    }
+  }
+
+  /**
+   * Schedule reconnection attempt
+   */
+  _scheduleReconnect() {
+    this.reconnectAttempts++;
+    
+    setTimeout(() => {
+      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      this.connectionPromise = null;
+      this.connect().catch(error => {
+        console.error('Reconnection failed:', error);
+      });
+    }, this.reconnectDelay);
+
+    // Exponential backoff
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+  }
+
+  /**
+   * Get connection status
+   */
+  getConnectionStatus() {
+    return {
+      isConnected: this.isConnected,
+      gameSocket: this.gameSocket?.readyState,
+      timerSocket: this.timerSocket?.readyState,
+      reconnectAttempts: this.reconnectAttempts
+    };
+  }
+}
+
+/**
+ * Global WebSocket manager for easy access
+ */
+class WebSocketManager {
+  constructor() {
+    this.gameConnections = new Map();
+  }
+
+  /**
+   * Connect to a game's WebSocket
+   */
+  async connectToGame(gameId, accessToken) {
+    const key = `game_${gameId}`;
+    
+    if (this.gameConnections.has(key)) {
+      const existing = this.gameConnections.get(key);
+      if (existing.isConnected) {
+        return existing;
+      } else {
+        existing.disconnect();
+        this.gameConnections.delete(key);
+      }
+    }
+
+    const gameWs = new GameWebSocket(gameId, accessToken);
+    await gameWs.connect();
+    
+    this.gameConnections.set(key, gameWs);
+    return gameWs;
+  }
+
+  /**
+   * Disconnect from a game's WebSocket
+   */
+  disconnectFromGame(gameId) {
+    const key = `game_${gameId}`;
+    
+    if (this.gameConnections.has(key)) {
+      const gameWs = this.gameConnections.get(key);
+      gameWs.disconnect();
+      this.gameConnections.delete(key);
+    }
+  }
+
+  /**
+   * Get WebSocket connection for a game
+   */
+  getGameConnection(gameId) {
+    const key = `game_${gameId}`;
+    return this.gameConnections.get(key);
+  }
+
+  /**
+   * Disconnect all connections
+   */
+  disconnectAll() {
+    this.gameConnections.forEach((gameWs) => {
+      gameWs.disconnect();
+    });
+    this.gameConnections.clear();
+  }
+
+  /**
+   * Get status of all connections
+   */
+  getAllConnectionStatuses() {
+    const statuses = {};
+    this.gameConnections.forEach((gameWs, key) => {
+      statuses[key] = gameWs.getConnectionStatus();
+    });
+    return statuses;
+  }
+}
+
+// Create global instance
+window.webSocketManager = new WebSocketManager();
+
+// Export classes for module use
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { GameWebSocket, WebSocketManager };
+}
 ===== chess-platform/games/admin.py =====
 from django.contrib import admin
 from .models import Game, Move
@@ -24049,6 +24858,508 @@ class GamesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'games'
 
+===== chess-platform/games/consumers.py =====
+"""
+WebSocket consumers for real-time chess gameplay.
+Handles game state synchronization, move updates, and timer management.
+"""
+
+import json
+import asyncio
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework_simplejwt.tokens import UntypedToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from django.contrib.auth import get_user_model
+from .models import Game, Move
+import chess
+import logging
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+
+class GameConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for real-time chess game communication.
+    
+    Handles:
+    - Game state synchronization
+    - Real-time move updates
+    - Timer synchronization
+    - Player connection status
+    - Game events (check, checkmate, etc.)
+    """
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.game_id = None
+        self.game_group_name = None
+        self.user = None
+        self.player_color = None
+        
+    async def connect(self):
+        """Handle WebSocket connection."""
+        self.game_id = self.scope['url_route']['kwargs']['game_id']
+        self.game_group_name = f'game_{self.game_id}'
+        
+        # Authenticate user
+        user = self.get_user_from_token()  # Remove await - this method is not async
+        if not user or user.is_anonymous:
+            await self.close(code=4003)  # Forbidden
+            return
+            
+        self.user = user
+        
+        # Verify user is part of this game
+        game = await self.get_game()
+        if not game:
+            await self.close(code=4004)  # Not Found
+            return
+            
+        if not await self.is_player_in_game(user, game):
+            await self.close(code=4003)  # Forbidden
+            return
+        
+        # Determine player color
+        self.player_color = await self.get_player_color(user, game)
+        
+        # Join game group
+        await self.channel_layer.group_add(
+            self.game_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        # Send initial game state
+        await self.send_game_state()
+        
+        # Notify other players that this player connected
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {
+                'type': 'player_connected',
+                'player': self.user.username,
+                'color': self.player_color
+            }
+        )
+        
+        logger.info(f"Player {user.username} connected to game {self.game_id}")
+
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection."""
+        if self.game_group_name:
+            # Notify other players that this player disconnected
+            await self.channel_layer.group_send(
+                self.game_group_name,
+                {
+                    'type': 'player_disconnected',
+                    'player': self.user.username if self.user else 'Unknown',
+                    'color': self.player_color
+                }
+            )
+            
+            # Leave game group
+            await self.channel_layer.group_discard(
+                self.game_group_name,
+                self.channel_name
+            )
+            
+        logger.info(f"Player disconnected from game {self.game_id}")
+
+    async def receive(self, text_data):
+        """Handle received WebSocket messages."""
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+            
+            if message_type == 'make_move':
+                await self.handle_make_move(data)
+            elif message_type == 'request_game_state':
+                await self.send_game_state()
+            elif message_type == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong'}))
+            else:
+                logger.warning(f"Unknown message type: {message_type}")
+                
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON received")
+            await self.send_error("Invalid message format")
+        except Exception as e:
+            logger.error(f"Error handling message: {e}")
+            await self.send_error("Internal error")
+
+    async def handle_make_move(self, data):
+        """Handle move making requests."""
+        try:
+            from_square = data.get('from_square')
+            to_square = data.get('to_square')
+            promotion = data.get('promotion')
+            
+            if not from_square or not to_square:
+                await self.send_error("Missing move data")
+                return
+            
+            # Get current game state
+            game = await self.get_game()
+            if not game:
+                await self.send_error("Game not found")
+                return
+                
+            if game.status != 'active':
+                await self.send_error("Game is not active")
+                return
+            
+            # Verify it's player's turn
+            board = chess.Board(game.fen)
+            current_turn = 'white' if board.turn else 'black'
+            
+            if current_turn != self.player_color:
+                await self.send_error("Not your turn")
+                return
+            
+            # Validate and make move
+            try:
+                move = chess.Move.from_uci(f"{from_square}{to_square}{promotion or ''}")
+                if move not in board.legal_moves:
+                    await self.send_error("Illegal move")
+                    return
+                    
+                # Apply move to board
+                board.push(move)
+                
+                # Update game in database
+                game = await self.update_game_state(game, board, move, from_square, to_square, promotion)
+                
+                # Broadcast move to all players in game
+                await self.channel_layer.group_send(
+                    self.game_group_name,
+                    {
+                        'type': 'move_made',
+                        'move': {
+                            'from_square': from_square,
+                            'to_square': to_square,
+                            'promotion': promotion,
+                            'notation': board.san(move),
+                            'player': self.user.username,
+                            'color': self.player_color
+                        },
+                        'game_state': await self.get_game_state_data(game, board)
+                    }
+                )
+                
+                logger.info(f"Move made in game {self.game_id}: {from_square}-{to_square}")
+                
+            except ValueError as e:
+                await self.send_error(f"Invalid move: {str(e)}")
+                
+        except Exception as e:
+            logger.error(f"Error making move: {e}")
+            await self.send_error("Error making move")
+
+    async def send_game_state(self):
+        """Send current game state to this client."""
+        game = await self.get_game()
+        if game:
+            board = chess.Board(game.fen)
+            game_state = await self.get_game_state_data(game, board)
+            
+            await self.send(text_data=json.dumps({
+                'type': 'game_state',
+                'data': game_state
+            }))
+
+    async def send_error(self, message):
+        """Send error message to client."""
+        await self.send(text_data=json.dumps({
+            'type': 'error',
+            'message': message
+        }))
+
+    # Group message handlers
+    async def move_made(self, event):
+        """Handle move_made group message."""
+        await self.send(text_data=json.dumps(event))
+
+    async def player_connected(self, event):
+        """Handle player_connected group message."""
+        await self.send(text_data=json.dumps(event))
+
+    async def player_disconnected(self, event):
+        """Handle player_disconnected group message."""
+        await self.send(text_data=json.dumps(event))
+
+    async def timer_update(self, event):
+        """Handle timer_update group message."""
+        await self.send(text_data=json.dumps(event))
+
+    async def game_finished(self, event):
+        """Handle game_finished group message."""
+        await self.send(text_data=json.dumps(event))
+
+    # Database operations
+    @database_sync_to_async
+    def get_user_from_token(self):
+        """Extract user from JWT token in query string."""
+        try:
+            token = None
+            query_string = self.scope.get('query_string', b'').decode()
+            
+            if query_string:
+                params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
+                token = params.get('token')
+            
+            if not token:
+                return AnonymousUser()
+            
+            # Validate JWT token
+            try:
+                UntypedToken(token)
+                from rest_framework_simplejwt.authentication import JWTAuthentication
+                jwt_auth = JWTAuthentication()
+                validated_token = jwt_auth.get_validated_token(token)
+                user = jwt_auth.get_user(validated_token)
+                return user
+            except (InvalidToken, TokenError):
+                return AnonymousUser()
+                
+        except Exception as e:
+            logger.error(f"Error authenticating user: {e}")
+            return AnonymousUser()
+
+    @database_sync_to_async
+    def get_game(self):
+        """Get game instance from database."""
+        try:
+            return Game.objects.get(id=self.game_id)
+        except ObjectDoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def is_player_in_game(self, user, game):
+        """Check if user is a player in this game."""
+        return game.white_player == user or game.black_player == user
+
+    @database_sync_to_async
+    def get_player_color(self, user, game):
+        """Get player's color in the game."""
+        if game.white_player == user:
+            return 'white'
+        elif game.black_player == user:
+            return 'black'
+        return None
+
+    @database_sync_to_async
+    def update_game_state(self, game, board, move, from_square, to_square, promotion):
+        """Update game state in database after move."""
+        # Update game FEN
+        game.fen = board.fen()
+        
+        # Check for game end conditions
+        if board.is_checkmate():
+            game.status = 'finished'
+            game.result = '1-0' if board.turn == chess.BLACK else '0-1'
+            game.termination = 'checkmate'
+            game.winner = game.white_player if game.result == '1-0' else game.black_player
+        elif board.is_stalemate():
+            game.status = 'finished'
+            game.result = '1/2-1/2'
+            game.termination = 'stalemate'
+        elif board.is_insufficient_material():
+            game.status = 'finished'
+            game.result = '1/2-1/2'
+            game.termination = 'insufficient_material'
+        elif board.is_seventyfive_moves():
+            game.status = 'finished'
+            game.result = '1/2-1/2'
+            game.termination = 'fifty_move_rule'
+        elif board.is_fivefold_repetition():
+            game.status = 'finished'
+            game.result = '1/2-1/2'
+            game.termination = 'threefold_repetition'
+        
+        game.save()
+        
+        # Create move record
+        move_number = game.moves.count() + 1
+        Move.objects.create(
+            game=game,
+            player=self.user,
+            move_number=move_number,
+            from_square=from_square,
+            to_square=to_square,
+            notation=board.san(move),
+            fen_after_move=board.fen(),
+            promotion_piece=promotion
+        )
+        
+        return game
+
+    @database_sync_to_async
+    def get_game_state_data(self, game, board):
+        """Get complete game state data."""
+        moves = list(game.moves.all().values(
+            'move_number', 'notation', 'from_square', 'to_square', 
+            'player__username', 'created_at'
+        ))
+        
+        return {
+            'id': game.id,
+            'fen': game.fen,
+            'status': game.status,
+            'result': game.result,
+            'white_player': game.white_player.username if game.white_player else None,
+            'black_player': game.black_player.username if game.black_player else None,
+            'current_turn': 'white' if board.turn else 'black',
+            'is_check': board.is_check(),
+            'is_checkmate': board.is_checkmate(),
+            'is_stalemate': board.is_stalemate(),
+            'moves': moves,
+            'white_time_left': getattr(game, 'white_time_left', 600),
+            'black_time_left': getattr(game, 'black_time_left', 600),
+        }
+
+
+class TimerConsumer(AsyncWebsocketConsumer):
+    """
+    Dedicated consumer for game timer synchronization.
+    Handles precise timer updates and time management.
+    """
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.game_id = None
+        self.timer_group_name = None
+        self.timer_task = None
+        
+    def get_user_from_token(self):
+        """Extract user from JWT token in query string."""
+        try:
+            token = None
+            query_string = self.scope.get('query_string', b'').decode()
+            
+            if query_string:
+                params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
+                token = params.get('token')
+            
+            if not token:
+                return AnonymousUser()
+            
+            # Validate JWT token
+            try:
+                UntypedToken(token)
+                from rest_framework_simplejwt.authentication import JWTAuthentication
+                jwt_auth = JWTAuthentication()
+                validated_token = jwt_auth.get_validated_token(token)
+                user = jwt_auth.get_user(validated_token)
+                return user
+            except Exception:
+                return AnonymousUser()
+        except Exception:
+            return AnonymousUser()
+    
+    @database_sync_to_async
+    def get_game(self):
+        """Get game object from database."""
+        try:
+            return Game.objects.get(id=self.game_id)
+        except Game.DoesNotExist:
+            return None
+    
+    @database_sync_to_async
+    def is_player_in_game(self, user, game):
+        """Check if user is a player in the game."""
+        return user in [game.white_player, game.black_player]
+        
+    async def connect(self):
+        """Handle timer WebSocket connection."""
+        self.game_id = self.scope['url_route']['kwargs']['game_id']
+        self.timer_group_name = f'timer_{self.game_id}'
+        
+        # Authenticate user for timer access
+        user = self.get_user_from_token()
+        if not user or user.is_anonymous:
+            await self.close(code=4003)  # Forbidden
+            return
+            
+        # Verify user is part of this game
+        game = await self.get_game()
+        if not game:
+            await self.close(code=4004)  # Not Found
+            return
+            
+        if not await self.is_player_in_game(user, game):
+            await self.close(code=4003)  # Forbidden
+            return
+        
+        # Join timer group
+        await self.channel_layer.group_add(
+            self.timer_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        # Start timer updates
+        self.timer_task = asyncio.create_task(self.timer_loop())
+        
+    async def disconnect(self, close_code):
+        """Handle timer WebSocket disconnection."""
+        if self.timer_task:
+            self.timer_task.cancel()
+            
+        if self.timer_group_name:
+            await self.channel_layer.group_discard(
+                self.timer_group_name,
+                self.channel_name
+            )
+            
+    async def timer_loop(self):
+        """Main timer loop for sending periodic updates."""
+        try:
+            while True:
+                game = await self.get_game()
+                if game and game.status == 'active':
+                    timer_data = await self.get_timer_data(game)
+                    
+                    await self.channel_layer.group_send(
+                        self.timer_group_name,
+                        {
+                            'type': 'timer_tick',
+                            'data': timer_data
+                        }
+                    )
+                
+                await asyncio.sleep(1)  # Update every second
+                
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Timer loop error: {e}")
+    
+    async def timer_tick(self, event):
+        """Handle timer tick group message."""
+        await self.send(text_data=json.dumps(event))
+    
+    @database_sync_to_async
+    def get_game(self):
+        """Get game for timer updates."""
+        try:
+            return Game.objects.get(id=self.game_id)
+        except ObjectDoesNotExist:
+            return None
+    
+    @database_sync_to_async 
+    def get_timer_data(self, game):
+        """Get current timer data."""
+        return {
+            'white_time': getattr(game, 'white_time_left', 600),
+            'black_time': getattr(game, 'black_time_left', 600),
+            'current_turn': 'white' if chess.Board(game.fen).turn else 'black'
+        }
 ===== chess-platform/games/models.py =====
 # games/models.py
 from django.db import models
@@ -24345,6 +25656,16 @@ class Game(models.Model):
                 self._timer_manager.current_turn = self.get_current_player_color()
                 self._timer_manager.game_started = True
                 
+                # CRITICAL FIX: Set last_move_time for existing active games
+                # Use the most recent move time or current time if no moves
+                if self.moves.exists():
+                    latest_move = self.moves.latest('created_at')
+                    self._timer_manager.last_move_time = latest_move.created_at.timestamp()
+                else:
+                    # No moves yet, use current time to start countdown
+                    import time
+                    self._timer_manager.last_move_time = time.time()
+                
         return self._timer_manager
 
     def get_bot_time_manager(self, bot_rating=1500):
@@ -24418,6 +25739,95 @@ class Game(models.Model):
         return 'white' if move_count % 2 == 0 else 'black'
 
     # ================== END PROFESSIONAL TIMER INTEGRATION ==================
+
+    # ================== WEBSOCKET INTEGRATION ==================
+    
+    def notify_move(self, move_data):
+        """Notify all players about a move via WebSocket - OPTIMIZED for speed."""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        group_name = f'game_{self.id}'
+        
+        if channel_layer:
+            # Send immediate lightweight notification
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'move_made',
+                    'move': move_data,
+                    'game_state': {
+                        'id': self.id,
+                        'fen': self.fen,
+                        'status': self.status,
+                        'white_time_left': self.white_time_left,
+                        'black_time_left': self.black_time_left,
+                    }
+                }
+            )
+    
+    def notify_timer_update(self):
+        """Notify all players about timer updates via WebSocket."""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        timer_group = f'timer_{self.id}'
+        
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                timer_group,
+                {
+                    'type': 'timer_update',
+                    'data': {
+                        'white_time': self.white_time_left,
+                        'black_time': self.black_time_left,
+                        'current_turn': self.get_current_player_color()
+                    }
+                }
+            )
+    
+    def notify_game_finished(self, reason):
+        """Notify all players that the game has finished."""
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        group_name = f'game_{self.id}'
+        
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'game_finished',
+                    'result': self.result,
+                    'termination': self.termination,
+                    'winner': self.winner.username if self.winner else None,
+                    'reason': reason
+                }
+            )
+    
+    def get_websocket_state(self):
+        """Get game state data optimized for WebSocket transmission."""
+        board = chess.Board(self.fen)
+        
+        return {
+            'id': self.id,
+            'fen': self.fen,
+            'status': self.status,
+            'result': self.result,
+            'white_player': self.white_player.username if self.white_player else None,
+            'black_player': self.black_player.username if self.black_player else None,
+            'current_turn': 'white' if board.turn else 'black',
+            'is_check': board.is_check(),
+            'is_checkmate': board.is_checkmate(),
+            'is_stalemate': board.is_stalemate(),
+            'white_time_left': self.white_time_left,
+            'black_time_left': self.black_time_left,
+        }
+    
+    # ================== END WEBSOCKET INTEGRATION ==================
 
 
 class Move(models.Model):
@@ -24546,6 +25956,21 @@ class GameInvitation(models.Model):
         """Get user-friendly display for the invitation"""
         return f"{self.time_control.get_display_name()} game"
 
+===== chess-platform/games/routing.py =====
+"""
+WebSocket URL routing for chess game real-time communication.
+"""
+
+from django.urls import re_path
+from . import consumers
+
+websocket_urlpatterns = [
+    # Game WebSocket for real-time gameplay
+    re_path(r'ws/game/(?P<game_id>\d+)/$', consumers.GameConsumer.as_asgi()),
+    
+    # Timer WebSocket for precise timer synchronization
+    re_path(r'ws/timer/(?P<game_id>\d+)/$', consumers.TimerConsumer.as_asgi()),
+]
 ===== chess-platform/games/serializers.py =====
 from rest_framework import serializers
 from .models import Game, Move
@@ -24646,6 +26071,7 @@ from django.contrib.auth import get_user_model
 import json
 import logging
 import random
+import traceback
 
 from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
@@ -24767,6 +26193,19 @@ def make_move(request, pk):
     
     logger.info(f"Move saved: {move_obj}")
 
+    # TODO: Re-enable timer logic after fixing the integration issue
+    # Temporarily disabled to allow moves to work
+    # player_color = 'white' if request.user == game.white_player else 'black'
+    # try:
+    #     logger.info(f"Attempting to update timer for {player_color}")
+    #     timer_state = game.make_timer_move(player_color)
+    #     logger.info(f"Timer updated for {player_color}: white={timer_state.get('white_time'):.1f}s, black={timer_state.get('black_time'):.1f}s")
+    # except Exception as e:
+    #     logger.error(f"Timer update failed: {e}")
+    #     # Continue with move processing even if timer fails
+    #     import traceback
+    #     logger.error(f"Timer error details: {traceback.format_exc()}")
+
     # Update game state
     game.fen = new_fen
     game.last_move_at = timezone.now()  # Update timer reference point
@@ -24778,11 +26217,46 @@ def make_move(request, pk):
         elif result == '0-1':
             game.winner = game.black_player
         logger.info(f"Game finished with result: {result}")
+        
+        # Notify players via WebSocket that game has finished
+        termination_reason = 'checkmate' if board.is_checkmate() else 'stalemate'
+        game.notify_game_finished(termination_reason)
     else:
         game.status = 'active'
     
     game.save()
     logger.info(f"Game updated: status={game.status}, fen={game.fen}")
+
+    # TIMER LOGIC TEMPORARILY DISABLED - CAUSING 500 ERRORS
+    # Update timer after successful move with comprehensive error handling
+    # try:
+    #     timer_manager = game.get_timer_manager()
+    #     if timer_manager:
+    #         logger.info(f"Updating timer for game {pk} after move by {request.user.username}")
+    #         timer_manager.make_move(request.user.username)
+    #         
+    #         # Persist timer state to database
+    #         game.make_timer_move()
+    #         logger.info(f"Timer updated successfully for game {pk}")
+    #     else:
+    #         logger.warning(f"No timer manager found for game {pk}")
+    # except Exception as timer_error:
+    #     # Log the error but don't fail the move
+    #     logger.error(f"Timer update failed for game {pk}: {timer_error}")
+    #     logger.error(f"Timer error traceback: {traceback.format_exc()}")
+    #     # Move continues successfully even if timer fails
+
+    # Notify players via WebSocket about the move
+    move_data = {
+        'from_square': from_sq,
+        'to_square': to_sq,
+        'promotion': promotion,
+        'notation': san,
+        'player': request.user.username,
+        'move_number': move_number,
+        'timestamp': timezone.now().isoformat()
+    }
+    game.notify_move(move_data)
 
     # Check game status for detailed information
     game_status = {
@@ -24870,6 +26344,13 @@ def join_game(request, pk):
     game.black_player = request.user
     game.status = 'active'
     game.save()
+    
+    # Automatically start the professional timer when game becomes active
+    try:
+        game.start_professional_timer()
+        logger.info(f"Professional timer started for game {game.id}")
+    except Exception as e:
+        logger.error(f"Failed to start timer for game {game.id}: {e}")
 
     serializer = GameSerializer(game)
     logger.info(f"User {request.user} joined game {game.id}")
@@ -25117,14 +26598,63 @@ def make_computer_move(request, pk):
         
         logger.info(f"Making computer move with difficulty: {difficulty}")
         
-        # Simple computer move - get a random legal move for now to fix the 500 error
+        # Extract rating from computer player username or use difficulty
+        rating = difficulty
+        computer_player_name = ""
+        
+        # Check which player is the computer and extract rating from username
+        current_turn = board.turn
+        if current_turn == chess.WHITE and game.white_player:
+            if 'computer' in game.white_player.username.lower():
+                computer_player_name = game.white_player.username
+        elif current_turn == chess.BLACK and game.black_player:
+            if 'computer' in game.black_player.username.lower():
+                computer_player_name = game.black_player.username
+        
+        # Try to extract rating from username (e.g., "Computer_1600" -> "1600")
+        if computer_player_name:
+            import re
+            rating_match = re.search(r'(\d{3,4})', computer_player_name)
+            if rating_match:
+                rating = rating_match.group(1)
+                logger.info(f"Extracted rating {rating} from computer player: {computer_player_name}")
+        
+        # Use the unified chess engine
         try:
+            logger.info(f"Calling engine with FEN: {game.fen}, Rating: {rating}")
+            engine_result = get_computer_move(game.fen, str(rating), "balanced")
+            
+            if not engine_result.get('success', False):
+                raise Exception(f"Engine returned error: {engine_result.get('error', 'Unknown error')}")
+            
+            # Extract move information from engine response
+            move_uci = engine_result.get('move', '')
+            move_san = engine_result.get('san', '')
+            
+            if not move_uci or not move_san:
+                raise Exception("Engine did not return valid move information")
+            
+            from_square = move_uci[:2]
+            to_square = move_uci[2:4]
+            
+            move_info = {
+                'uci': move_uci,
+                'san': move_san,
+                'from_square': from_square,
+                'to_square': to_square,
+                'notation': move_san
+            }
+            
+            logger.info(f"Engine selected move: {move_san} ({move_uci}) with rating {rating}")
+            
+        except Exception as e:
+            logger.error(f"Error with engine move: {e}")
+            # Fallback to random legal move if engine fails
             legal_moves = list(board.legal_moves)
             if not legal_moves:
                 return Response({"detail": "No legal moves available for computer."},
                                status=status.HTTP_400_BAD_REQUEST)
             
-            # Pick a random legal move for now
             move = random.choice(legal_moves)
             move_uci = move.uci()
             move_san = board.san(move)
@@ -25139,12 +26669,7 @@ def make_computer_move(request, pk):
                 'notation': move_san
             }
             
-            logger.info(f"Computer selected move: {move_san} ({move_uci})")
-            
-        except Exception as e:
-            logger.error(f"Error selecting computer move: {e}")
-            return Response({"detail": "Failed to calculate computer move."},
-                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.info(f"Using fallback random move: {move_san} ({move_uci})")
         
         # Calculate new FEN by applying the move
         try:
@@ -25233,11 +26758,11 @@ def make_computer_move(request, pk):
                     "uci": move_info['uci']
                 },
                 "engine_info": {
-                    "thinking_time": 0.5,
-                    "evaluation": 0.0,
-                    "rating": int(difficulty) if difficulty.isdigit() else 1200,
+                    "thinking_time": engine_result.get('thinking_time', 0.5) if 'engine_result' in locals() else 0.5,
+                    "evaluation": engine_result.get('evaluation', 0.0) if 'engine_result' in locals() else 0.0,
+                    "rating": int(rating) if str(rating).isdigit() else 1200,
                     "personality": "balanced",
-                    "move_source": "random_legal",
+                    "move_source": "unified_engine" if 'engine_result' in locals() and engine_result.get('success') else "fallback_random",
                     "game_phase": "unknown"
                 },
                 "game_status": {
