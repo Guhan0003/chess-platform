@@ -200,10 +200,15 @@ def make_move(request, pk):
         'timestamp': timezone.now().isoformat()
     }
     
+    print(f"🎯 API VIEW: Move processed successfully: {from_sq}→{to_sq}")
+    print(f"🎯 API VIEW: About to call notify_move with data: {move_data}")
+    
     # Send immediate WebSocket notification (async operation, don't wait)
     try:
         game.notify_move(move_data)
+        print(f"✅ API VIEW: notify_move called successfully")
     except Exception as ws_error:
+        print(f"❌ API VIEW: WebSocket notification failed: {ws_error}")
         logger.warning(f"WebSocket notification failed: {ws_error}")
         # Continue without failing the move
 

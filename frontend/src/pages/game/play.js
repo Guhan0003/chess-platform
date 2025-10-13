@@ -100,6 +100,7 @@ class ChessGameController {
     try {
       // Check if WebSocket utilities are available
       if (typeof WebSocketManager === 'undefined') {
+        console.log('WebSocket utilities not available - using polling mode');
         this.useWebSocketTimer = false;
         return;
       }
@@ -109,6 +110,7 @@ class ChessGameController {
       // Get access token for WebSocket authentication
       const accessToken = localStorage.getItem('access');
       if (!accessToken) {
+        console.log('No access token available - using polling mode');
         this.useWebSocketTimer = false;
         return;
       }
@@ -121,21 +123,39 @@ class ChessGameController {
       gameWs.on('timer_update', this.handleWebSocketTimer);
       gameWs.on('connected', () => this.handleWebSocketConnection(true));
       gameWs.on('disconnected', () => this.handleWebSocketConnection(false));
+      gameWs.on('reconnectionFailed', () => {
+        console.log('WebSocket reconnection failed - switching to polling permanently');
+        this.webSocketManager = null;
+        this.updateConnectionStatus(false);
+      });
+      gameWs.on('pollingMode', () => {
+        console.log('Switching to polling mode');
+        this.updateConnectionStatus(false);
+      });
       gameWs.on('error', (error) => {
         // WebSocket connection failed - using polling fallback
+        console.log('WebSocket error - falling back to polling');
         this.updateConnectionStatus(false);
       });
       
       this.updateConnectionStatus(true);
     } catch (error) {
       // WebSocket unavailable - using optimized polling mode
+      console.log('WebSocket connection failed - using polling mode');
       this.useWebSocketTimer = false;
+      this.webSocketManager = null;
       this.updateConnectionStatus(false);
     }
   }
 
   handleWebSocketMove(data) {
+    console.log('📡 Received WebSocket move data:', data);
+    
     if (data.type === 'move_made' && data.game_state) {
+      console.log('✅ Processing move_made message');
+      console.log('Previous moves count:', this.gameData?.moves?.length || 0);
+      console.log('New moves count:', data.game_state.moves?.length || 0);
+      
       // Update game state from WebSocket
       this.gameData = {
         ...this.gameData,
@@ -143,13 +163,24 @@ class ChessGameController {
         moves: data.game_state.moves || this.gameData.moves
       };
       
-      // Update display
+      // Update display immediately
       this.updateGameDisplay();
       this.renderBoard();
+      this.updateMoveHistory();
+      this.updateGameStatus();
+      
+      console.log('🎯 Board and UI updated from WebSocket');
       
       // Show move notification if it's opponent's move
       if (data.move && !this.isPlayerMove(data.move)) {
         this.api.showSuccess(`Opponent moved: ${data.move.notation}`, 3000);
+        console.log('👥 Opponent move notification shown');
+      }
+      
+      // Handle computer turn if needed
+      if (this.isComputerTurn()) {
+        console.log('🤖 Triggering computer turn');
+        this.handleComputerTurn();
       }
       
       // Handle game over
@@ -157,6 +188,8 @@ class ChessGameController {
         this.handleGameOverStatus(data);
         this.stopTimerUpdates();
       }
+    } else {
+      console.warn('❌ Invalid move_made data:', data);
     }
   }
 
@@ -191,22 +224,28 @@ class ChessGameController {
   }
 
   handleWebSocketConnection(connected) {
-    console.log('WebSocket connection status:', connected);
     this.updateConnectionStatus(connected);
     
     if (connected) {
       this.wsReconnectAttempts = 0;
-      this.api.showSuccess('Connected to game server', 2000);
-    } else {
-      this.api.showToast('Connection lost - attempting to reconnect...', 'warning');
+      console.log('WebSocket connection established successfully');
+    } else if (this.wsReconnectAttempts < this.maxReconnectAttempts && this.webSocketManager) {
+      console.log('WebSocket disconnected - attempting reconnection...');
       this.attemptReconnection();
+    } else {
+      console.log('WebSocket permanently disconnected - polling mode active');
     }
   }
 
   updateConnectionStatus(connected) {
+    const wasConnected = this.wsConnected;
     this.wsConnected = connected;
     
-    // No UI indicators needed - remove unnecessary connection status
+    if (connected && !wasConnected) {
+      console.log('🚀 WebSocket connected - Real-time updates enabled');
+    } else if (!connected && wasConnected) {
+      console.log('⚡ WebSocket disconnected - Polling mode active (1.5s intervals)');
+    }
     
     // Enable/disable real-time features
     if (!connected && this.useWebSocketTimer) {
@@ -218,7 +257,9 @@ class ChessGameController {
 
   async attemptReconnection() {
     if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
-      this.api.showError('Failed to reconnect. Please refresh the page.');
+      console.log('Max WebSocket reconnection attempts reached - switching to polling mode');
+      this.webSocketManager = null;
+      this.updateConnectionStatus(false);
       return;
     }
     
@@ -228,11 +269,20 @@ class ChessGameController {
     setTimeout(async () => {
       try {
         if (this.webSocketManager) {
-          await this.webSocketManager.reconnect();
+          const gameWs = this.webSocketManager.getGameConnection(this.gameId);
+          if (gameWs) {
+            await gameWs.connect();
+          }
         }
       } catch (error) {
-        console.error('Reconnection failed:', error);
-        this.attemptReconnection();
+        console.log(`WebSocket reconnection attempt ${this.wsReconnectAttempts} failed`);
+        if (this.wsReconnectAttempts < this.maxReconnectAttempts) {
+          this.attemptReconnection();
+        } else {
+          console.log('All WebSocket reconnection attempts failed - using polling mode');
+          this.webSocketManager = null;
+          this.updateConnectionStatus(false);
+        }
       }
     }, 2000 * this.wsReconnectAttempts); // Exponential backoff
   }
@@ -862,17 +912,21 @@ class ChessGameController {
       const response = await this.api.makeMove(this.gameId, from, to, promotion);
       
       if (response.ok) {
-        // If WebSocket is connected, it will handle the update
-        if (!this.wsConnected) {
-          // Fallback: update locally if no WebSocket
-          this.gameData = response.data.game;
-          this.updateGameDisplay();
-          this.renderBoard();
-          
-          if (response.data.game_status) {
-            this.handleGameOverStatus(response.data.game_status);
-          }
+        console.log('✅ Move API call successful');
+        
+        // Always update the game data from the response
+        // The WebSocket will provide real-time updates, but we need immediate feedback
+        this.gameData = response.data.game;
+        this.updateGameDisplay();
+        this.renderBoard();
+        this.updateMoveHistory();
+        this.updateGameStatus();
+        
+        if (response.data.game_status) {
+          this.handleGameOverStatus(response.data.game_status);
         }
+        
+        console.log('🎯 Local game state updated from API response');
         
         // Always handle timer switching for player moves
         this.switchTurn('player_move');
@@ -1327,30 +1381,55 @@ class ChessGameController {
   setupPeriodicUpdates() {
     // Fast game state refresh for 1-2 second move updates  
     const gameInterval = setInterval(async () => {
+      // Only poll when WebSocket is not connected and page is visible
       if (document.visibilityState === 'visible' && 
-          this.gameData?.status === 'active') {
+          this.gameData?.status === 'active' &&
+          (!this.wsConnected || !this.webSocketManager)) {
         try {
           const response = await this.api.getGameDetail(this.gameId);
-          if (response.ok && response.data.moves.length !== this.gameData.moves.length) {
-            this.gameData = response.data;
-            this.updateMoveHistory();
-            this.updateGameStatus();
-            this.renderBoard();
+          if (response.ok && response.data) {
+            const newMoveCount = response.data.moves ? response.data.moves.length : 0;
+            const currentMoveCount = this.gameData.moves ? this.gameData.moves.length : 0;
+            
+            if (newMoveCount !== currentMoveCount) {
+              console.log(`Polling detected move update: ${currentMoveCount} → ${newMoveCount} moves`);
+              this.gameData = response.data;
+              this.updateMoveHistory();
+              this.updateGameStatus();
+              this.renderBoard();
+              
+              // Update timer data if available
+              if (response.data.timer_data) {
+                this.updateTimerData(response.data.timer_data);
+              }
+              
+              // Handle computer turn if needed
+              if (this.isComputerTurn()) {
+                this.handleComputerTurn();
+              }
+            }
           }
         } catch (error) {
-          console.error('Failed to refresh game:', error);
+          if (error.status !== 401) { // Don't log auth errors
+            console.error('Polling failed:', error);
+          }
         }
       }
     }, 1500); // Optimized to 1.5 seconds for fast move detection
     
+    // Store interval reference for cleanup
+    this.gamePollingInterval = gameInterval;
+    
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {
-      clearInterval(gameInterval);
+      if (this.gamePollingInterval) {
+        clearInterval(this.gamePollingInterval);
+      }
       this.stopTimerUpdates();
       
       // Clean up WebSocket connection
       if (this.webSocketManager) {
-        this.webSocketManager.disconnect();
+        this.webSocketManager.disconnectAll();
       }
     });
   }

@@ -38,14 +38,35 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.game_group_name = None
         self.user = None
         self.player_color = None
+        print(f"🔧 GameConsumer initialized")  # Debug print
         
     async def connect(self):
         """Handle WebSocket connection."""
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.game_group_name = f'game_{self.game_id}'
         
-        # For testing - temporarily skip authentication
-        # self.user = AnonymousUser()
+        # Authenticate user
+        self.user = await self.get_user_from_token()
+        
+        # Get game and verify access
+        game = await self.get_game()
+        if not game:
+            print(f"❌ WebSocket connection rejected: Game {self.game_id} not found")
+            await self.close(code=4004)
+            return
+            
+        # Check if user is a player in this game (allow anonymous for testing)
+        if not self.user.is_anonymous:
+            if not await self.is_player_in_game(self.user, game):
+                print(f"❌ WebSocket connection rejected: User {self.user.username} not in game {self.game_id}")
+                await self.close(code=4003)
+                return
+            self.player_color = await self.get_player_color(self.user, game)
+        else:
+            # For testing purposes, allow anonymous connections
+            print(f"⚠️ Anonymous WebSocket connection to game {self.game_id} (testing mode)")
+            self.user = AnonymousUser()
+            self.player_color = 'white'  # Default for testing
         
         # Join game group
         await self.channel_layer.group_add(
@@ -55,14 +76,27 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         await self.accept()
         
-        # Send test message
+        # Send connection success message
         await self.send(text_data=json.dumps({
             'type': 'connection_success',
-            'message': 'WebSocket connected successfully!'
+            'message': 'WebSocket connected successfully!',
+            'game_id': self.game_id,
+            'player_color': self.player_color
         }))
         
-        logger.info(f"WebSocket connected to game {self.game_id}")
-        print(f"🚀 WebSocket connected to game {self.game_id}")  # Add console print
+        # Notify other players
+        if not self.user.is_anonymous:
+            await self.channel_layer.group_send(
+                self.game_group_name,
+                {
+                    'type': 'player_connected',
+                    'player': self.user.username,
+                    'color': self.player_color
+                }
+            )
+        
+        logger.info(f"WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")
+        print(f"🚀 WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")  # Add console print
 
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection."""
@@ -150,26 +184,31 @@ class GameConsumer(AsyncWebsocketConsumer):
                 board.push(move)
                 
                 # Update game in database
-                game = await self.update_game_state(game, board, move, from_square, to_square, promotion)
+                game = await self.update_game_state(game, board, move, from_square, to_square, promotion, san)
                 
                 # Broadcast move to all players in game IMMEDIATELY
+                move_data = {
+                    'type': 'move_made',
+                    'move': {
+                        'from_square': from_square,
+                        'to_square': to_square,
+                        'promotion': promotion,
+                        'notation': san,
+                        'player': self.user.username if not self.user.is_anonymous else 'Player',
+                        'color': self.player_color
+                    },
+                    'game_state': await self.get_game_state_data(game, board)
+                }
+                
+                print(f"📡 Broadcasting move: {from_square}→{to_square} to group {self.game_group_name}")
+                
                 await self.channel_layer.group_send(
                     self.game_group_name,
-                    {
-                        'type': 'move_made',
-                        'move': {
-                            'from_square': from_square,
-                            'to_square': to_square,
-                            'promotion': promotion,
-                            'notation': san,
-                            'player': self.user.username,
-                            'color': self.player_color
-                        },
-                        'game_state': await self.get_game_state_data(game, board)
-                    }
+                    move_data
                 )
                 
                 logger.info(f"Move made in game {self.game_id}: {from_square}-{to_square}")
+                print(f"✅ Move broadcast complete: {from_square}→{to_square}")
                 
             except ValueError as e:
                 await self.send_error(f"Invalid move: {str(e)}")
@@ -227,25 +266,39 @@ class GameConsumer(AsyncWebsocketConsumer):
             query_string = self.scope.get('query_string', b'').decode()
             
             if query_string:
-                params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
+                # Parse query parameters
+                params = {}
+                for param in query_string.split('&'):
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        params[key] = value
                 token = params.get('token')
             
             if not token:
+                print(f"⚠️ No token provided in WebSocket connection")
                 return AnonymousUser()
             
             # Validate JWT token
             try:
-                UntypedToken(token)
                 from rest_framework_simplejwt.authentication import JWTAuthentication
-                jwt_auth = JWTAuthentication()
-                validated_token = jwt_auth.get_validated_token(token)
-                user = jwt_auth.get_user(validated_token)
+                from rest_framework_simplejwt.tokens import AccessToken
+                
+                # Validate the token
+                access_token = AccessToken(token)
+                user_id = access_token['user_id']
+                
+                # Get user from database
+                user = User.objects.get(id=user_id)
+                print(f"✅ WebSocket authenticated user: {user.username}")
                 return user
-            except (InvalidToken, TokenError):
+                
+            except (InvalidToken, TokenError, User.DoesNotExist) as e:
+                print(f"⚠️ WebSocket token validation failed: {e}")
                 return AnonymousUser()
                 
         except Exception as e:
             logger.error(f"Error authenticating user: {e}")
+            print(f"❌ WebSocket authentication error: {e}")
             return AnonymousUser()
 
     @database_sync_to_async
@@ -271,7 +324,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         return None
 
     @database_sync_to_async
-    def update_game_state(self, game, board, move, from_square, to_square, promotion):
+    def update_game_state(self, game, board, move, from_square, to_square, promotion, san):
         """Update game state in database after move."""
         # Update game FEN
         game.fen = board.fen()
@@ -305,11 +358,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         move_number = game.moves.count() + 1
         Move.objects.create(
             game=game,
-            player=self.user,
+            player=self.user if not self.user.is_anonymous else None,
             move_number=move_number,
             from_square=from_square,
             to_square=to_square,
-            notation=board.san(move),
+            notation=san,  # Use the pre-calculated SAN notation
             fen_after_move=board.fen(),
             promotion_piece=promotion
         )
@@ -380,6 +433,11 @@ class TimerConsumer(AsyncWebsocketConsumer):
             return AnonymousUser()
     
     @database_sync_to_async
+    def get_user_from_token_async(self):
+        """Async version of get_user_from_token for timer consumer."""
+        return self.get_user_from_token()
+    
+    @database_sync_to_async
     def get_game(self):
         """Get game object from database."""
         try:
@@ -397,19 +455,19 @@ class TimerConsumer(AsyncWebsocketConsumer):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.timer_group_name = f'timer_{self.game_id}'
         
-        # Authenticate user for timer access
-        user = self.get_user_from_token()
-        if not user or user.is_anonymous:
-            await self.close(code=4003)  # Forbidden
-            return
-            
-        # Verify user is part of this game
+        # Authenticate user for timer access (allow anonymous for testing)
+        user = await self.get_user_from_token_async()
+        
+        # Verify game exists
         game = await self.get_game()
         if not game:
+            print(f"❌ Timer WebSocket: Game {self.game_id} not found")
             await self.close(code=4004)  # Not Found
             return
             
-        if not await self.is_player_in_game(user, game):
+        # For authenticated users, verify they're in the game
+        if not user.is_anonymous and not await self.is_player_in_game(user, game):
+            print(f"❌ Timer WebSocket: User {user.username} not in game {self.game_id}")
             await self.close(code=4003)  # Forbidden
             return
         
@@ -420,6 +478,15 @@ class TimerConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
+        
+        print(f"🕐 Timer WebSocket connected to game {self.game_id}")
+        
+        # Send initial timer data
+        timer_data = await self.get_timer_data(game)
+        await self.send(text_data=json.dumps({
+            'type': 'timer_tick',
+            'data': timer_data
+        }))
         
         # Start timer updates
         self.timer_task = asyncio.create_task(self.timer_loop())

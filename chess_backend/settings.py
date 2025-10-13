@@ -102,6 +102,8 @@ WSGI_APPLICATION = 'chess_backend.wsgi.application'
 ASGI_APPLICATION = 'chess_backend.asgi.application'
 
 # Channel layers configuration for WebSocket
+# Channel layers configuration for WebSocket
+# Using InMemoryChannelLayer for development (single process only)
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',

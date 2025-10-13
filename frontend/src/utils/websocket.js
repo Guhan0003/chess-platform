@@ -50,17 +50,14 @@ class GameWebSocket {
       // Connect to game WebSocket  
       const gameWsUrl = `${protocol}//${host}/ws/game/${this.gameId}/?token=${this.accessToken}`;
       
-      // Create WebSocket with error suppression
-      this.gameSocket = new WebSocket(gameWsUrl);
+      console.log(`🔌 Attempting WebSocket connection to: ws://${host}/ws/game/${this.gameId}/`);
       
-      // Suppress browser's native connection error messages
-      this.gameSocket.addEventListener('error', () => {
-        // Silent handling - we'll show our own clean message
-      });
+      // Create WebSocket
+      this.gameSocket = new WebSocket(gameWsUrl);
       
       // Setup game socket event handlers
       this.gameSocket.onopen = (event) => {
-        console.log('✅ WebSocket connected - Real-time moves enabled');
+        console.log('✅ WebSocket connected successfully - Real-time moves enabled');
         this.isConnected = true;
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
@@ -78,17 +75,22 @@ class GameWebSocket {
 
       this.gameSocket.onclose = (event) => {
         this.isConnected = false;
-        this._triggerEvent('disconnected', { type: 'game', code: event.code });
+        this._triggerEvent('disconnected', { type: 'game', code: event.code, reason: event.reason });
         
-        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (this.reconnectAttempts < this.maxReconnectAttempts && event.code !== 1000) {
           this._scheduleReconnect();
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.warn('WebSocket reconnection failed - using polling mode');
+          this._triggerEvent('reconnectionFailed', { attempts: this.reconnectAttempts });
         }
       };
 
       this.gameSocket.onerror = (error) => {
         // WebSocket connection failed - but we have polling fallback
         if (this.reconnectAttempts === 0) {
-          console.warn('⚠️ WebSocket connection failed - using fast polling fallback');
+          console.warn('❌ WebSocket connection failed - using polling fallback');
+          console.log('WebSocket URL was:', gameWsUrl);
+          console.log('Make sure the server is running with: python -m daphne -b 127.0.0.1 -p 8000 chess_backend.asgi:application');
         }
         this._triggerEvent('error', { type: 'game', error });
       };
@@ -172,6 +174,17 @@ class GameWebSocket {
     
     this.isConnected = false;
     this.connectionPromise = null;
+  }
+
+  /**
+   * Stop all reconnection attempts and switch to polling mode
+   */
+  stopReconnecting() {
+    this.reconnectAttempts = this.maxReconnectAttempts;
+    this.isConnected = false;
+    this.connectionPromise = null;
+    console.log('WebSocket reconnection stopped - switching to polling mode');
+    this._triggerEvent('pollingMode', { reason: 'manual_stop' });
   }
 
   /**
@@ -293,6 +306,11 @@ class GameWebSocket {
         this._triggerEvent('pong', data);
         break;
         
+      case 'connection_success':
+        console.log('✅ WebSocket connection confirmed:', data.message);
+        this._triggerEvent('connectionConfirmed', data);
+        break;
+        
       default:
         console.warn('Unknown game message type:', data.type);
     }
@@ -313,10 +331,17 @@ class GameWebSocket {
   _scheduleReconnect() {
     this.reconnectAttempts++;
     
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn('WebSocket reconnection failed - using polling mode');
+      this._triggerEvent('reconnectionFailed', { attempts: this.reconnectAttempts });
+      return;
+    }
+    
     setTimeout(() => {
       this.connectionPromise = null;
       this.connect().catch(error => {
-        console.warn('WebSocket reconnection failed - using polling mode');
+        console.warn(`WebSocket reconnection attempt ${this.reconnectAttempts} failed`);
+        // Will try again via _scheduleReconnect if under max attempts
       });
     }, this.reconnectDelay);
 
