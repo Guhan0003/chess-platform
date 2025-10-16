@@ -492,6 +492,116 @@ class Game(models.Model):
     
     # ================== END WEBSOCKET INTEGRATION ==================
 
+    # ================== ENHANCED TIMEOUT HANDLING ==================
+    
+    def check_timeout(self):
+        """
+        Check if any player has timed out. 
+        Returns timeout information if timeout occurred.
+        """
+        if self.status != 'active':
+            return {'timeout': False}
+        
+        try:
+            timer = self.get_timer_manager()
+            timeout_player = timer.check_timeout()
+            
+            if timeout_player:
+                return {
+                    'timeout': True,
+                    'timeout_player': timeout_player,
+                    'winner': self.black_player if timeout_player == 'white' else self.white_player
+                }
+            
+            return {'timeout': False}
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error checking timeout for game {self.id}: {e}")
+            return {'timeout': False}
+    
+    def handle_timeout(self):
+        """
+        Handle timeout by ending the game and setting the winner.
+        Returns True if timeout was handled, False otherwise.
+        """
+        try:
+            timeout_info = self.check_timeout()
+            
+            if not timeout_info['timeout']:
+                return False
+            
+            timeout_player = timeout_info['timeout_player']
+            winner = timeout_info['winner']
+            
+            # Update game status for timeout
+            self.status = 'finished'
+            self.result = '0-1' if timeout_player == 'white' else '1-0'
+            self.termination = 'timeout'
+            self.winner = winner
+            self.finished_at = timezone.now()
+            
+            # Set time left to 0 for the player who timed out
+            if timeout_player == 'white':
+                self.white_time_left = 0
+            else:
+                self.black_time_left = 0
+                
+            self.save()
+            
+            # Create timeout move record for history
+            move_number = self.moves.count() + 1
+            Move.objects.create(
+                game=self,
+                player=self.white_player if timeout_player == 'white' else self.black_player,
+                move_number=move_number,
+                from_square='',
+                to_square='',
+                notation=f'{timeout_player.capitalize()} forfeits on time',
+                fen_after_move=self.fen
+            )
+            
+            # Notify via WebSocket
+            self.notify_game_finished('timeout')
+            
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Game {self.id} ended due to timeout: {timeout_player} player timed out, {winner.username if winner else 'None'} wins")
+            
+            return True
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error handling timeout for game {self.id}: {e}")
+            return False
+    
+    def get_timer_display(self):
+        """Get timer display information for management commands and logging"""
+        try:
+            timer = self.get_timer_manager()
+            timer_state = timer.get_timer_state()
+            
+            return {
+                'white_time': f"{timer_state.get('white_time', 0):.1f}",
+                'black_time': f"{timer_state.get('black_time', 0):.1f}",
+                'current_turn': timer_state.get('current_turn', 'white'),
+                'game_started': timer_state.get('game_started', False),
+                'game_ended': timer_state.get('game_ended', False)
+            }
+        except Exception as e:
+            return {
+                'white_time': 'N/A',
+                'black_time': 'N/A',
+                'current_turn': 'unknown',
+                'game_started': False,
+                'game_ended': False,
+                'error': str(e)
+            }
+    
+    # ================== END ENHANCED TIMEOUT HANDLING ==================
+
 
 class Move(models.Model):
     """Store moves with notation and metadata"""

@@ -18,4 +18,9 @@ urlpatterns = [
     path("<int:game_id>/timer-move/", views.make_professional_timer_move, name="professional-timer-move"),
     path("<int:game_id>/bot-thinking-time/", views.get_bot_thinking_time, name="bot-thinking-time"),
     # ================== END PROFESSIONAL TIMER ENDPOINTS ==================
+    
+    # ================== GAME SESSION GUARD ENDPOINTS ==================
+    path("active-constraints/", views.check_active_game_constraints, name="check-active-constraints"),
+    path("<int:game_id>/resign/", views.resign_game, name="resign-game"),
+    # ================== END GAME SESSION GUARD ENDPOINTS ==================
 ]

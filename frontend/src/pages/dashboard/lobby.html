@@ -6,6 +6,7 @@
   <title>Lobby - Chess Platform</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <script src="../../utils/api.js"></script>
+  <script src="../../utils/gameSessionGuard.js"></script>
   <script src="../../utils/router.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -481,7 +482,7 @@
       gap: var(--space-sm);
     }
 
-    .join-btn, .spectate-btn {
+    .join-btn, .spectate-btn, .resume-btn, .replay-btn {
       padding: var(--space-sm) var(--space-md);
       border-radius: var(--radius-md);
       border: none;
@@ -521,6 +522,28 @@
       background: rgba(255, 255, 255, 0.15);
       color: var(--color-text-primary);
       transform: translateY(-1px);
+    }
+
+    .resume-btn {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: var(--color-text-inverse);
+    }
+
+    .resume-btn:hover {
+      background: linear-gradient(135deg, #218838 0%, #1ea68a 100%);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .replay-btn {
+      background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+      color: var(--color-text-inverse);
+    }
+
+    .replay-btn:hover {
+      background: linear-gradient(135deg, #138496 0%, #5a2d91 100%);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
     }
 
     /* Statistics Panel */
@@ -1021,7 +1044,7 @@
                 <div class="action-card join-game" id="joinGameBtn">
                   <span class="action-icon">🔍</span>
                   <h3 class="action-title">Browse Games</h3>
-                  <p class="action-description">Join existing games or spectate ongoing matches</p>
+                  <p class="action-description">Join new games, resume your matches, or view replays</p>
                 </div>
                 
                 <div class="action-card puzzles" data-route="/puzzles">
@@ -1299,9 +1322,7 @@
                 `<button class="btn btn-primary join-btn" data-game-id="${game.id}">
                   <span>⚡</span> Join Game
                 </button>` : 
-                `<button class="btn btn-secondary spectate-btn" data-game-id="${game.id}">
-                  <span>👁️</span> Spectate
-                </button>`
+                getGameActionButton(game, currentUser)
               }
             </div>
           </div>
@@ -1324,6 +1345,24 @@
         
         // Add handlers for spectate buttons
         document.querySelectorAll('.spectate-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const gameId = btn.dataset.gameId;
+            window.location.href = `/play/?game=${gameId}`;
+          });
+        });
+
+        // Add handlers for resume buttons
+        document.querySelectorAll('.resume-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const gameId = btn.dataset.gameId;
+            window.location.href = `/play/?game=${gameId}`;
+          });
+        });
+
+        // Add handlers for replay buttons
+        document.querySelectorAll('.replay-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const gameId = btn.dataset.gameId;
@@ -1561,6 +1600,31 @@
         
         const diffInDays = Math.floor(diffInHours / 24);
         return `${diffInDays}d ago`;
+      }
+
+      function getGameActionButton(game, currentUser) {
+        if (!currentUser) {
+          return `<button class="btn btn-secondary spectate-btn" data-game-id="${game.id}">
+            <span>👁️</span> Spectate
+          </button>`;
+        }
+
+        const isPlayerInGame = (game.white_player_username === currentUser.username) || 
+                              (game.black_player_username === currentUser.username);
+
+        if (game.status === 'finished') {
+          return `<button class="btn btn-info replay-btn" data-game-id="${game.id}">
+            <span>📺</span> View Replay
+          </button>`;
+        } else if (isPlayerInGame) {
+          return `<button class="btn btn-success resume-btn" data-game-id="${game.id}">
+            <span>🎯</span> Resume Game
+          </button>`;
+        } else {
+          return `<button class="btn btn-secondary spectate-btn" data-game-id="${game.id}">
+            <span>👁️</span> Spectate
+          </button>`;
+        }
       }
     }
 

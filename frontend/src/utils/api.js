@@ -451,6 +451,28 @@ class ChessAPI {
   }
 
   // =================================
+  // Game Session Guard Methods
+  // =================================
+
+  /**
+   * Check for active games that prevent navigation
+   * Used by GameSessionGuard to determine if resignation is required
+   */
+  async checkActiveGameConstraints() {
+    return this.request('/games/active-constraints/');
+  }
+
+  /**
+   * Resign from a specific game
+   * @param {number} gameId - Game ID to resign from
+   */
+  async resignGame(gameId) {
+    return this.request(`/games/${gameId}/resign/`, {
+      method: 'POST'
+    });
+  }
+
+  // =================================
   // Profile API Methods
   // =================================
 

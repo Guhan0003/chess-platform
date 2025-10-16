@@ -61,129 +61,6 @@ def main():
 if __name__ == '__main__':
     main()
 
-===== chess-platform/MOVE_OPTIMIZATION_REPORT.md =====
-# Chess Platform Move Synchronization Optimization
-
-## Performance Improvements Implemented
-
-### Overview
-This document outlines the optimizations implemented to reduce move synchronization time from 10-14 seconds to 2-3 seconds in the chess platform.
-
-### Optimizations Applied
-
-#### 1. Frontend Optimizations (`frontend/src/pages/game/play.js`)
-
-**Fast Refresh System:**
-- Added `scheduleOpponentRefresh()` method that performs multiple rapid refresh attempts
-- Schedules updates at 500ms, 1000ms, and 2000ms intervals after each move
-- Provides sub-3-second updates even without WebSocket connectivity
-
-**Enhanced Timer Updates:**
-- Reduced timer update interval from 1000ms to 500ms for smoother experience
-- Immediate game state updates after successful moves
-- Optimized timer switching logic
-
-**WebSocket Re-enablement:**
-- Re-enabled WebSocket connections for real-time updates
-- Added proper error handling and fallback mechanisms
-- Immediate move feedback without waiting for polling
-
-#### 2. Backend Optimizations (`games/views.py`)
-
-**Database Query Optimization:**
-- Added `select_related('white_player', 'black_player')` to avoid N+1 queries
-- Optimized GameDetailView with `prefetch_related('moves__player')`
-- Reduced database roundtrips for move processing
-
-**Asynchronous Notifications:**
-- WebSocket notifications sent in separate threads (non-blocking)
-- Immediate API response without waiting for notification delivery
-- Error handling to prevent notification failures from blocking moves
-
-#### 3. WebSocket Optimizations (`games/consumers.py`)
-
-**Faster Move Broadcasting:**
-- SAN notation calculated before move application for speed
-- Immediate move broadcasting to all connected players
-- Optimized game state data transmission
-
-#### 4. Model Optimizations (`games/models.py`)
-
-**Threaded Notifications:**
-- WebSocket notifications execute in daemon threads
-- Non-blocking notification system
-- Improved error handling and logging
-
-### Performance Targets Achieved
-
-| Metric | Before | After | Target |
-|--------|--------|-------|--------|
-| Move Response Time | 10-14s | 2-3s | <3s |
-| Timer Update Frequency | 1s | 0.5s | <1s |
-| Database Queries | Multiple | Optimized | Minimal |
-| WebSocket Status | Disabled | Enabled | Active |
-
-### Key Features
-
-1. **Triple-Layer Approach:**
-   - WebSocket (fastest): Real-time updates when available
-   - Fast Polling: 500ms, 1s, 2s refresh attempts
-   - Standard Polling: 500ms timer updates
-
-2. **Graceful Degradation:**
-   - System works even if WebSocket fails
-   - Multiple fallback mechanisms
-   - No single point of failure
-
-3. **Professional Implementation:**
-   - No unnecessary code removal
-   - Maintains all existing functionality
-   - Comprehensive error handling
-   - Backwards compatibility
-
-### Testing
-
-A performance test script (`test_move_performance.py`) has been created to validate:
-- Move response times under 3 seconds
-- System reliability under load
-- Proper error handling
-- WebSocket and polling fallbacks
-
-### Usage
-
-The optimizations are automatically active. To test performance:
-
-```bash
-cd /path/to/chess-platform
-python test_move_performance.py
-```
-
-### Technical Notes
-
-- All optimizations maintain existing functionality
-- No breaking changes to existing APIs
-- Enhanced logging for debugging
-- Thread-safe operations
-- Memory-efficient implementation
-
-### Benefits
-
-1. **Improved User Experience:**
-   - Near-instant move feedback
-   - Smooth timer updates
-   - Responsive interface
-
-2. **Better Scalability:**
-   - Reduced server load
-   - Optimized database usage
-   - Efficient WebSocket handling
-
-3. **Enhanced Reliability:**
-   - Multiple fallback systems
-   - Error resilience
-   - Professional error handling
-
-The chess platform now provides a professional, responsive gaming experience with move synchronization times consistently under 3 seconds.
 ===== chess-platform/PROJECT_DOCUMENTATION.md =====
 # 🏆 Chess Platform - Professional Project Documentation
 
@@ -2624,6 +2501,8 @@ WSGI_APPLICATION = 'chess_backend.wsgi.application'
 ASGI_APPLICATION = 'chess_backend.asgi.application'
 
 # Channel layers configuration for WebSocket
+# Channel layers configuration for WebSocket
+# Using InMemoryChannelLayer for development (single process only)
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
@@ -8862,7 +8741,8 @@ if (document.readyState === 'loading') {
 window.ChessApp = ChessApp;
 
 ===== chess-platform/frontend/index.html =====
-//this is test frontend/index.html(real frontend is in C:\Users\guhan\chess-platform\frontend\src\pages\)
+<!-- This is test frontend/index.html(real frontend is in C:\Users\guhan\chess-platform\frontend\src\pages\)
+ -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -17089,6 +16969,7 @@ class ChessGameController {
     try {
       // Check if WebSocket utilities are available
       if (typeof WebSocketManager === 'undefined') {
+        console.log('WebSocket utilities not available - using polling mode');
         this.useWebSocketTimer = false;
         return;
       }
@@ -17098,6 +16979,7 @@ class ChessGameController {
       // Get access token for WebSocket authentication
       const accessToken = localStorage.getItem('access');
       if (!accessToken) {
+        console.log('No access token available - using polling mode');
         this.useWebSocketTimer = false;
         return;
       }
@@ -17110,21 +16992,39 @@ class ChessGameController {
       gameWs.on('timer_update', this.handleWebSocketTimer);
       gameWs.on('connected', () => this.handleWebSocketConnection(true));
       gameWs.on('disconnected', () => this.handleWebSocketConnection(false));
+      gameWs.on('reconnectionFailed', () => {
+        console.log('WebSocket reconnection failed - switching to polling permanently');
+        this.webSocketManager = null;
+        this.updateConnectionStatus(false);
+      });
+      gameWs.on('pollingMode', () => {
+        console.log('Switching to polling mode');
+        this.updateConnectionStatus(false);
+      });
       gameWs.on('error', (error) => {
         // WebSocket connection failed - using polling fallback
+        console.log('WebSocket error - falling back to polling');
         this.updateConnectionStatus(false);
       });
       
       this.updateConnectionStatus(true);
     } catch (error) {
       // WebSocket unavailable - using optimized polling mode
+      console.log('WebSocket connection failed - using polling mode');
       this.useWebSocketTimer = false;
+      this.webSocketManager = null;
       this.updateConnectionStatus(false);
     }
   }
 
   handleWebSocketMove(data) {
+    console.log('📡 Received WebSocket move data:', data);
+    
     if (data.type === 'move_made' && data.game_state) {
+      console.log('✅ Processing move_made message');
+      console.log('Previous moves count:', this.gameData?.moves?.length || 0);
+      console.log('New moves count:', data.game_state.moves?.length || 0);
+      
       // Update game state from WebSocket
       this.gameData = {
         ...this.gameData,
@@ -17132,13 +17032,24 @@ class ChessGameController {
         moves: data.game_state.moves || this.gameData.moves
       };
       
-      // Update display
+      // Update display immediately
       this.updateGameDisplay();
       this.renderBoard();
+      this.updateMoveHistory();
+      this.updateGameStatus();
+      
+      console.log('🎯 Board and UI updated from WebSocket');
       
       // Show move notification if it's opponent's move
       if (data.move && !this.isPlayerMove(data.move)) {
         this.api.showSuccess(`Opponent moved: ${data.move.notation}`, 3000);
+        console.log('👥 Opponent move notification shown');
+      }
+      
+      // Handle computer turn if needed
+      if (this.isComputerTurn()) {
+        console.log('🤖 Triggering computer turn');
+        this.handleComputerTurn();
       }
       
       // Handle game over
@@ -17146,6 +17057,8 @@ class ChessGameController {
         this.handleGameOverStatus(data);
         this.stopTimerUpdates();
       }
+    } else {
+      console.warn('❌ Invalid move_made data:', data);
     }
   }
 
@@ -17180,22 +17093,28 @@ class ChessGameController {
   }
 
   handleWebSocketConnection(connected) {
-    console.log('WebSocket connection status:', connected);
     this.updateConnectionStatus(connected);
     
     if (connected) {
       this.wsReconnectAttempts = 0;
-      this.api.showSuccess('Connected to game server', 2000);
-    } else {
-      this.api.showToast('Connection lost - attempting to reconnect...', 'warning');
+      console.log('WebSocket connection established successfully');
+    } else if (this.wsReconnectAttempts < this.maxReconnectAttempts && this.webSocketManager) {
+      console.log('WebSocket disconnected - attempting reconnection...');
       this.attemptReconnection();
+    } else {
+      console.log('WebSocket permanently disconnected - polling mode active');
     }
   }
 
   updateConnectionStatus(connected) {
+    const wasConnected = this.wsConnected;
     this.wsConnected = connected;
     
-    // No UI indicators needed - remove unnecessary connection status
+    if (connected && !wasConnected) {
+      console.log('🚀 WebSocket connected - Real-time updates enabled');
+    } else if (!connected && wasConnected) {
+      console.log('⚡ WebSocket disconnected - Polling mode active (1.5s intervals)');
+    }
     
     // Enable/disable real-time features
     if (!connected && this.useWebSocketTimer) {
@@ -17207,7 +17126,9 @@ class ChessGameController {
 
   async attemptReconnection() {
     if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
-      this.api.showError('Failed to reconnect. Please refresh the page.');
+      console.log('Max WebSocket reconnection attempts reached - switching to polling mode');
+      this.webSocketManager = null;
+      this.updateConnectionStatus(false);
       return;
     }
     
@@ -17217,11 +17138,20 @@ class ChessGameController {
     setTimeout(async () => {
       try {
         if (this.webSocketManager) {
-          await this.webSocketManager.reconnect();
+          const gameWs = this.webSocketManager.getGameConnection(this.gameId);
+          if (gameWs) {
+            await gameWs.connect();
+          }
         }
       } catch (error) {
-        console.error('Reconnection failed:', error);
-        this.attemptReconnection();
+        console.log(`WebSocket reconnection attempt ${this.wsReconnectAttempts} failed`);
+        if (this.wsReconnectAttempts < this.maxReconnectAttempts) {
+          this.attemptReconnection();
+        } else {
+          console.log('All WebSocket reconnection attempts failed - using polling mode');
+          this.webSocketManager = null;
+          this.updateConnectionStatus(false);
+        }
       }
     }, 2000 * this.wsReconnectAttempts); // Exponential backoff
   }
@@ -17851,17 +17781,21 @@ class ChessGameController {
       const response = await this.api.makeMove(this.gameId, from, to, promotion);
       
       if (response.ok) {
-        // If WebSocket is connected, it will handle the update
-        if (!this.wsConnected) {
-          // Fallback: update locally if no WebSocket
-          this.gameData = response.data.game;
-          this.updateGameDisplay();
-          this.renderBoard();
-          
-          if (response.data.game_status) {
-            this.handleGameOverStatus(response.data.game_status);
-          }
+        console.log('✅ Move API call successful');
+        
+        // Always update the game data from the response
+        // The WebSocket will provide real-time updates, but we need immediate feedback
+        this.gameData = response.data.game;
+        this.updateGameDisplay();
+        this.renderBoard();
+        this.updateMoveHistory();
+        this.updateGameStatus();
+        
+        if (response.data.game_status) {
+          this.handleGameOverStatus(response.data.game_status);
         }
+        
+        console.log('🎯 Local game state updated from API response');
         
         // Always handle timer switching for player moves
         this.switchTurn('player_move');
@@ -18316,30 +18250,55 @@ class ChessGameController {
   setupPeriodicUpdates() {
     // Fast game state refresh for 1-2 second move updates  
     const gameInterval = setInterval(async () => {
+      // Only poll when WebSocket is not connected and page is visible
       if (document.visibilityState === 'visible' && 
-          this.gameData?.status === 'active') {
+          this.gameData?.status === 'active' &&
+          (!this.wsConnected || !this.webSocketManager)) {
         try {
           const response = await this.api.getGameDetail(this.gameId);
-          if (response.ok && response.data.moves.length !== this.gameData.moves.length) {
-            this.gameData = response.data;
-            this.updateMoveHistory();
-            this.updateGameStatus();
-            this.renderBoard();
+          if (response.ok && response.data) {
+            const newMoveCount = response.data.moves ? response.data.moves.length : 0;
+            const currentMoveCount = this.gameData.moves ? this.gameData.moves.length : 0;
+            
+            if (newMoveCount !== currentMoveCount) {
+              console.log(`Polling detected move update: ${currentMoveCount} → ${newMoveCount} moves`);
+              this.gameData = response.data;
+              this.updateMoveHistory();
+              this.updateGameStatus();
+              this.renderBoard();
+              
+              // Update timer data if available
+              if (response.data.timer_data) {
+                this.updateTimerData(response.data.timer_data);
+              }
+              
+              // Handle computer turn if needed
+              if (this.isComputerTurn()) {
+                this.handleComputerTurn();
+              }
+            }
           }
         } catch (error) {
-          console.error('Failed to refresh game:', error);
+          if (error.status !== 401) { // Don't log auth errors
+            console.error('Polling failed:', error);
+          }
         }
       }
     }, 1500); // Optimized to 1.5 seconds for fast move detection
     
+    // Store interval reference for cleanup
+    this.gamePollingInterval = gameInterval;
+    
     // Clean up on page unload
     window.addEventListener('beforeunload', () => {
-      clearInterval(gameInterval);
+      if (this.gamePollingInterval) {
+        clearInterval(this.gamePollingInterval);
+      }
       this.stopTimerUpdates();
       
       // Clean up WebSocket connection
       if (this.webSocketManager) {
-        this.webSocketManager.disconnect();
+        this.webSocketManager.disconnectAll();
       }
     });
   }
@@ -24567,17 +24526,14 @@ class GameWebSocket {
       // Connect to game WebSocket  
       const gameWsUrl = `${protocol}//${host}/ws/game/${this.gameId}/?token=${this.accessToken}`;
       
-      // Create WebSocket with error suppression
-      this.gameSocket = new WebSocket(gameWsUrl);
+      console.log(`🔌 Attempting WebSocket connection to: ws://${host}/ws/game/${this.gameId}/`);
       
-      // Suppress browser's native connection error messages
-      this.gameSocket.addEventListener('error', () => {
-        // Silent handling - we'll show our own clean message
-      });
+      // Create WebSocket
+      this.gameSocket = new WebSocket(gameWsUrl);
       
       // Setup game socket event handlers
       this.gameSocket.onopen = (event) => {
-        console.log('✅ WebSocket connected - Real-time moves enabled');
+        console.log('✅ WebSocket connected successfully - Real-time moves enabled');
         this.isConnected = true;
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
@@ -24595,17 +24551,22 @@ class GameWebSocket {
 
       this.gameSocket.onclose = (event) => {
         this.isConnected = false;
-        this._triggerEvent('disconnected', { type: 'game', code: event.code });
+        this._triggerEvent('disconnected', { type: 'game', code: event.code, reason: event.reason });
         
-        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (this.reconnectAttempts < this.maxReconnectAttempts && event.code !== 1000) {
           this._scheduleReconnect();
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.warn('WebSocket reconnection failed - using polling mode');
+          this._triggerEvent('reconnectionFailed', { attempts: this.reconnectAttempts });
         }
       };
 
       this.gameSocket.onerror = (error) => {
         // WebSocket connection failed - but we have polling fallback
         if (this.reconnectAttempts === 0) {
-          console.warn('⚠️ WebSocket connection failed - using fast polling fallback');
+          console.warn('❌ WebSocket connection failed - using polling fallback');
+          console.log('WebSocket URL was:', gameWsUrl);
+          console.log('Make sure the server is running with: python -m daphne -b 127.0.0.1 -p 8000 chess_backend.asgi:application');
         }
         this._triggerEvent('error', { type: 'game', error });
       };
@@ -24689,6 +24650,17 @@ class GameWebSocket {
     
     this.isConnected = false;
     this.connectionPromise = null;
+  }
+
+  /**
+   * Stop all reconnection attempts and switch to polling mode
+   */
+  stopReconnecting() {
+    this.reconnectAttempts = this.maxReconnectAttempts;
+    this.isConnected = false;
+    this.connectionPromise = null;
+    console.log('WebSocket reconnection stopped - switching to polling mode');
+    this._triggerEvent('pollingMode', { reason: 'manual_stop' });
   }
 
   /**
@@ -24810,6 +24782,11 @@ class GameWebSocket {
         this._triggerEvent('pong', data);
         break;
         
+      case 'connection_success':
+        console.log('✅ WebSocket connection confirmed:', data.message);
+        this._triggerEvent('connectionConfirmed', data);
+        break;
+        
       default:
         console.warn('Unknown game message type:', data.type);
     }
@@ -24830,10 +24807,17 @@ class GameWebSocket {
   _scheduleReconnect() {
     this.reconnectAttempts++;
     
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn('WebSocket reconnection failed - using polling mode');
+      this._triggerEvent('reconnectionFailed', { attempts: this.reconnectAttempts });
+      return;
+    }
+    
     setTimeout(() => {
       this.connectionPromise = null;
       this.connect().catch(error => {
-        console.warn('WebSocket reconnection failed - using polling mode');
+        console.warn(`WebSocket reconnection attempt ${this.reconnectAttempts} failed`);
+        // Will try again via _scheduleReconnect if under max attempts
       });
     }, this.reconnectDelay);
 
@@ -25002,14 +24986,35 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.game_group_name = None
         self.user = None
         self.player_color = None
+        print(f"🔧 GameConsumer initialized")  # Debug print
         
     async def connect(self):
         """Handle WebSocket connection."""
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.game_group_name = f'game_{self.game_id}'
         
-        # For testing - temporarily skip authentication
-        # self.user = AnonymousUser()
+        # Authenticate user
+        self.user = await self.get_user_from_token()
+        
+        # Get game and verify access
+        game = await self.get_game()
+        if not game:
+            print(f"❌ WebSocket connection rejected: Game {self.game_id} not found")
+            await self.close(code=4004)
+            return
+            
+        # Check if user is a player in this game (allow anonymous for testing)
+        if not self.user.is_anonymous:
+            if not await self.is_player_in_game(self.user, game):
+                print(f"❌ WebSocket connection rejected: User {self.user.username} not in game {self.game_id}")
+                await self.close(code=4003)
+                return
+            self.player_color = await self.get_player_color(self.user, game)
+        else:
+            # For testing purposes, allow anonymous connections
+            print(f"⚠️ Anonymous WebSocket connection to game {self.game_id} (testing mode)")
+            self.user = AnonymousUser()
+            self.player_color = 'white'  # Default for testing
         
         # Join game group
         await self.channel_layer.group_add(
@@ -25019,14 +25024,27 @@ class GameConsumer(AsyncWebsocketConsumer):
         
         await self.accept()
         
-        # Send test message
+        # Send connection success message
         await self.send(text_data=json.dumps({
             'type': 'connection_success',
-            'message': 'WebSocket connected successfully!'
+            'message': 'WebSocket connected successfully!',
+            'game_id': self.game_id,
+            'player_color': self.player_color
         }))
         
-        logger.info(f"WebSocket connected to game {self.game_id}")
-        print(f"🚀 WebSocket connected to game {self.game_id}")  # Add console print
+        # Notify other players
+        if not self.user.is_anonymous:
+            await self.channel_layer.group_send(
+                self.game_group_name,
+                {
+                    'type': 'player_connected',
+                    'player': self.user.username,
+                    'color': self.player_color
+                }
+            )
+        
+        logger.info(f"WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")
+        print(f"🚀 WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")  # Add console print
 
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection."""
@@ -25114,26 +25132,31 @@ class GameConsumer(AsyncWebsocketConsumer):
                 board.push(move)
                 
                 # Update game in database
-                game = await self.update_game_state(game, board, move, from_square, to_square, promotion)
+                game = await self.update_game_state(game, board, move, from_square, to_square, promotion, san)
                 
                 # Broadcast move to all players in game IMMEDIATELY
+                move_data = {
+                    'type': 'move_made',
+                    'move': {
+                        'from_square': from_square,
+                        'to_square': to_square,
+                        'promotion': promotion,
+                        'notation': san,
+                        'player': self.user.username if not self.user.is_anonymous else 'Player',
+                        'color': self.player_color
+                    },
+                    'game_state': await self.get_game_state_data(game, board)
+                }
+                
+                print(f"📡 Broadcasting move: {from_square}→{to_square} to group {self.game_group_name}")
+                
                 await self.channel_layer.group_send(
                     self.game_group_name,
-                    {
-                        'type': 'move_made',
-                        'move': {
-                            'from_square': from_square,
-                            'to_square': to_square,
-                            'promotion': promotion,
-                            'notation': san,
-                            'player': self.user.username,
-                            'color': self.player_color
-                        },
-                        'game_state': await self.get_game_state_data(game, board)
-                    }
+                    move_data
                 )
                 
                 logger.info(f"Move made in game {self.game_id}: {from_square}-{to_square}")
+                print(f"✅ Move broadcast complete: {from_square}→{to_square}")
                 
             except ValueError as e:
                 await self.send_error(f"Invalid move: {str(e)}")
@@ -25164,7 +25187,14 @@ class GameConsumer(AsyncWebsocketConsumer):
     # Group message handlers
     async def move_made(self, event):
         """Handle move_made group message."""
-        await self.send(text_data=json.dumps(event))
+        try:
+            print(f"🎯 Consumer received move_made event: {event}")
+            await self.send(text_data=json.dumps(event))
+            print(f"✅ Consumer sent move_made to client")
+        except Exception as e:
+            print(f"❌ Error sending move_made to client: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
 
     async def player_connected(self, event):
         """Handle player_connected group message."""
@@ -25191,25 +25221,39 @@ class GameConsumer(AsyncWebsocketConsumer):
             query_string = self.scope.get('query_string', b'').decode()
             
             if query_string:
-                params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
+                # Parse query parameters
+                params = {}
+                for param in query_string.split('&'):
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        params[key] = value
                 token = params.get('token')
             
             if not token:
+                print(f"⚠️ No token provided in WebSocket connection")
                 return AnonymousUser()
             
             # Validate JWT token
             try:
-                UntypedToken(token)
                 from rest_framework_simplejwt.authentication import JWTAuthentication
-                jwt_auth = JWTAuthentication()
-                validated_token = jwt_auth.get_validated_token(token)
-                user = jwt_auth.get_user(validated_token)
+                from rest_framework_simplejwt.tokens import AccessToken
+                
+                # Validate the token
+                access_token = AccessToken(token)
+                user_id = access_token['user_id']
+                
+                # Get user from database
+                user = User.objects.get(id=user_id)
+                print(f"✅ WebSocket authenticated user: {user.username}")
                 return user
-            except (InvalidToken, TokenError):
+                
+            except (InvalidToken, TokenError, User.DoesNotExist) as e:
+                print(f"⚠️ WebSocket token validation failed: {e}")
                 return AnonymousUser()
                 
         except Exception as e:
             logger.error(f"Error authenticating user: {e}")
+            print(f"❌ WebSocket authentication error: {e}")
             return AnonymousUser()
 
     @database_sync_to_async
@@ -25235,7 +25279,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         return None
 
     @database_sync_to_async
-    def update_game_state(self, game, board, move, from_square, to_square, promotion):
+    def update_game_state(self, game, board, move, from_square, to_square, promotion, san):
         """Update game state in database after move."""
         # Update game FEN
         game.fen = board.fen()
@@ -25269,11 +25313,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         move_number = game.moves.count() + 1
         Move.objects.create(
             game=game,
-            player=self.user,
+            player=self.user if not self.user.is_anonymous else None,
             move_number=move_number,
             from_square=from_square,
             to_square=to_square,
-            notation=board.san(move),
+            notation=san,  # Use the pre-calculated SAN notation
             fen_after_move=board.fen(),
             promotion_piece=promotion
         )
@@ -25344,6 +25388,11 @@ class TimerConsumer(AsyncWebsocketConsumer):
             return AnonymousUser()
     
     @database_sync_to_async
+    def get_user_from_token_async(self):
+        """Async version of get_user_from_token for timer consumer."""
+        return self.get_user_from_token()
+    
+    @database_sync_to_async
     def get_game(self):
         """Get game object from database."""
         try:
@@ -25361,19 +25410,19 @@ class TimerConsumer(AsyncWebsocketConsumer):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.timer_group_name = f'timer_{self.game_id}'
         
-        # Authenticate user for timer access
-        user = self.get_user_from_token()
-        if not user or user.is_anonymous:
-            await self.close(code=4003)  # Forbidden
-            return
-            
-        # Verify user is part of this game
+        # Authenticate user for timer access (allow anonymous for testing)
+        user = await self.get_user_from_token_async()
+        
+        # Verify game exists
         game = await self.get_game()
         if not game:
+            print(f"❌ Timer WebSocket: Game {self.game_id} not found")
             await self.close(code=4004)  # Not Found
             return
             
-        if not await self.is_player_in_game(user, game):
+        # For authenticated users, verify they're in the game
+        if not user.is_anonymous and not await self.is_player_in_game(user, game):
+            print(f"❌ Timer WebSocket: User {user.username} not in game {self.game_id}")
             await self.close(code=4003)  # Forbidden
             return
         
@@ -25384,6 +25433,15 @@ class TimerConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
+        
+        print(f"🕐 Timer WebSocket connected to game {self.game_id}")
+        
+        # Send initial timer data
+        timer_data = await self.get_timer_data(game)
+        await self.send(text_data=json.dumps({
+            'type': 'timer_tick',
+            'data': timer_data
+        }))
         
         # Start timer updates
         self.timer_task = asyncio.create_task(self.timer_loop())
@@ -25828,38 +25886,49 @@ class Game(models.Model):
         """Notify all players about a move via WebSocket - OPTIMIZED for speed."""
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
-        import threading
         
         channel_layer = get_channel_layer()
         group_name = f'game_{self.id}'
         
+        print(f"🔍 Channel layer available: {channel_layer is not None}")
+        print(f"🔍 Group name: {group_name}")
+        
         if channel_layer:
-            # Send notification in a separate thread for instant response
-            def send_notification():
-                try:
-                    async_to_sync(channel_layer.group_send)(
-                        group_name,
-                        {
-                            'type': 'move_made',
-                            'move': move_data,
-                            'game_state': {
-                                'id': self.id,
-                                'fen': self.fen,
-                                'status': self.status,
-                                'white_time_left': self.white_time_left,
-                                'black_time_left': self.black_time_left,
-                            }
+            # Send notification synchronously to avoid connection issues
+            try:
+                print(f"📡 Broadcasting move to WebSocket group: {group_name}")
+                print(f"Move data: {move_data}")
+                
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {
+                        'type': 'move_made',
+                        'move': move_data,
+                        'game_state': {
+                            'id': self.id,
+                            'fen': self.fen,
+                            'status': self.status,
+                            'white_time_left': self.white_time_left,
+                            'black_time_left': self.black_time_left,
+                            'moves': list(self.moves.all().values(
+                                'move_number', 'notation', 'from_square', 'to_square',
+                                'player__username', 'created_at'
+                            )),
+                            'white_player': self.white_player.username if self.white_player else None,
+                            'black_player': self.black_player.username if self.black_player else None,
                         }
-                    )
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"WebSocket notification failed: {e}")
-            
-            # Execute notification asynchronously
-            thread = threading.Thread(target=send_notification)
-            thread.daemon = True
-            thread.start()
+                    }
+                )
+                print(f"✅ WebSocket broadcast completed for game {self.id}")
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"WebSocket notification failed: {e}")
+                print(f"❌ WebSocket broadcast failed: {e}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
+        else:
+            print(f"❌ No channel layer available for WebSocket broadcasting")
     
     def notify_timer_update(self):
         """Notify all players about timer updates via WebSocket."""
@@ -26355,10 +26424,15 @@ def make_move(request, pk):
         'timestamp': timezone.now().isoformat()
     }
     
+    print(f"🎯 API VIEW: Move processed successfully: {from_sq}→{to_sq}")
+    print(f"🎯 API VIEW: About to call notify_move with data: {move_data}")
+    
     # Send immediate WebSocket notification (async operation, don't wait)
     try:
         game.notify_move(move_data)
+        print(f"✅ API VIEW: notify_move called successfully")
     except Exception as ws_error:
+        print(f"❌ API VIEW: WebSocket notification failed: {ws_error}")
         logger.warning(f"WebSocket notification failed: {ws_error}")
         # Continue without failing the move
 

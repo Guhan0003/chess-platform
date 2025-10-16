@@ -1,5 +1,6 @@
 import chess
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, generics
@@ -1042,4 +1043,139 @@ def get_bot_thinking_time(request, game_id):
         )
 
 
-# ================== END PROFESSIONAL TIMER API ENDPOINTS ==================
+# ================== GAME SESSION GUARD API ENDPOINTS ==================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_active_game_constraints(request):
+    """
+    Check if user has active timed games that would be affected by navigation
+    Used by GameSessionGuard to prevent unauthorized exits
+    """
+    try:
+        user = request.user
+        
+        # Get all active games where user is a player
+        active_games = Game.objects.filter(
+            Q(white_player=user) | Q(black_player=user),
+            status='active'
+        ).select_related('white_player', 'black_player').prefetch_related('moves')
+        
+        # Build game data for the frontend - consider all active games as constraints
+        games_data = []
+        for game in active_games:
+            # For timed games, check if they're under 1 hour
+            is_timed_constraint = True
+            
+            # Check if this is a bot game (less restrictive)
+            is_bot_game = False
+            if game.white_player and 'computer' in game.white_player.username.lower():
+                is_bot_game = True
+            if game.black_player and 'computer' in game.black_player.username.lower():
+                is_bot_game = True
+            
+            # Bot games are less restrictive constraints
+            if not is_bot_game:
+                games_data.append({
+                    'id': game.id,
+                    'white_player_username': game.white_player.username if game.white_player else 'Computer',
+                    'black_player_username': game.black_player.username if game.black_player else 'Computer',
+                    'time_control': getattr(game, 'time_control', '10+0'),
+                    'status': game.status,
+                    'last_move_at': game.last_move_at.isoformat() if game.last_move_at else None,
+                    'created_at': game.created_at.isoformat(),
+                    'is_bot_game': is_bot_game
+                })
+        
+        has_active_games = len(games_data) > 0
+        
+        logger.info(f"Active game constraints check for {user.username}: {len(games_data)} active games requiring resignation")
+        
+        return Response({
+            'hasActiveGames': has_active_games,
+            'games': games_data,
+            'count': len(games_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error checking active game constraints for user {request.user}: {e}")
+        return Response(
+            {"detail": f"Error checking active games: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def resign_game(request, game_id):
+    """
+    Resign from a game
+    Used by GameSessionGuard when user confirms they want to leave
+    """
+    try:
+        game = get_object_or_404(Game, id=game_id)
+        user = request.user
+        
+        # Verify user is a player in this game
+        if user not in [game.white_player, game.black_player]:
+            return Response(
+                {"detail": "You are not a player in this game."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Can only resign from active games
+        if game.status != 'active':
+            return Response(
+                {"detail": f"Cannot resign from a {game.status} game."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Determine winner (the other player)
+        if user == game.white_player:
+            game.winner = game.black_player
+            resign_color = 'white'
+            game.result = '0-1'  # Black wins
+        else:
+            game.winner = game.white_player
+            resign_color = 'black'
+            game.result = '1-0'  # White wins
+        
+        # Update game status
+        game.status = 'finished'
+        game.termination = 'resignation'
+        game.finished_at = timezone.now()
+        
+        # Save the resignation
+        game.save()
+        
+        logger.info(f"Game {game_id} resigned by {user.username} ({resign_color})")
+        
+        # Create resignation move record for history
+        move_number = game.moves.count() + 1
+        Move.objects.create(
+            game=game,
+            player=user,
+            move_number=move_number,
+            from_square='',
+            to_square='',
+            notation=f'{resign_color.capitalize()} resigns',
+            fen_after_move=game.fen
+        )
+        
+        return Response({
+            'message': f'Successfully resigned from game {game_id}',
+            'game_id': game_id,
+            'resigned_by': user.username,
+            'winner': game.winner.username if game.winner else None,
+            'game_status': game.status
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error resigning from game {game_id} by user {request.user}: {e}")
+        return Response(
+            {"detail": f"Error resigning from game: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+# ================== END GAME SESSION GUARD API ENDPOINTS ==================
