@@ -35,6 +35,7 @@ class ChessGameController {
     this.computerMoveInProgress = false;
     this.computerMoveRetryCount = 0;
     this.MAX_COMPUTER_MOVE_RETRIES = 3;
+    this.lastComputerMoveAttempt = 0; // Timestamp to prevent rapid duplicate calls
     
     // Bind methods
     this.handleSquareClick = this.handleSquareClick.bind(this);
@@ -74,15 +75,27 @@ class ChessGameController {
       await this.loadCurrentUser();
       await this.loadGameData();
       
-      // Initialize WebSocket connection
-      await this.initializeWebSocket();
+      // Initialize WebSocket connection (skip for bot games)
+      if (!this.isComputerGame()) {
+        console.log('Human vs Human game detected - initializing WebSocket...');
+        await this.initializeWebSocket();
+      } else {
+        console.log('Bot game detected - skipping WebSocket initialization');
+        this.wsConnected = false;
+        this.useWebSocketTimer = false;
+      }
       
       // Setup UI
       this.setupEventListeners();
       this.setupPeriodicUpdates();
       
       // Show connection mode info
-      const mode = this.wsConnected ? '🚀 WebSocket (instant)' : '⚡ Fast polling (1.5s)';
+      let mode;
+      if (this.isComputerGame()) {
+        mode = '🤖 Bot game (WebSocket disabled)';
+      } else {
+        mode = this.wsConnected ? '🚀 WebSocket (instant)' : '⚡ Fast polling (1.5s)';
+      }
       console.log(`🎯 Game ready - Move updates: ${mode}`);
     } catch (error) {
       console.error('Failed to initialize game:', error);
@@ -1121,19 +1134,53 @@ class ChessGameController {
 
   async handleComputerTurn() {
     try {
+      // Prevent rapid-fire calls using timestamp
+      const now = Date.now();
+      if (now - this.lastComputerMoveAttempt < 2000) { // 2 second minimum between attempts
+        console.log('Computer move attempt too soon, skipping...');
+        return;
+      }
+      
+      // Enhanced validation to prevent unnecessary API calls
       if (this.gameData && ['finished', 'checkmate', 'stalemate'].includes(this.gameData.status)) {
         console.log(`Game is finished (${this.gameData.status}), skipping computer move`);
         return;
       }
       
-      if (this.computerMoveInProgress || !this.isComputerGame() || !this.isComputerTurn()) {
+      // More robust checks to prevent race conditions
+      if (this.computerMoveInProgress) {
+        console.log('Computer move already in progress, skipping...');
         return;
       }
+      
+      if (!this.isComputerGame()) {
+        console.log('Not a computer game, skipping computer move');
+        return;
+      }
+      
+      if (!this.isComputerTurn()) {
+        console.log('Not computer\'s turn, skipping computer move');
+        return;
+      }
+      
+      // Additional check: make sure we have valid game data and FEN
+      if (!this.gameData.fen || this.gameData.fen === '') {
+        console.log('Invalid FEN state, skipping computer move');
+        return;
+      }
+      
+      // Update timestamp to prevent rapid calls
+      this.lastComputerMoveAttempt = now;
       
       console.log('Initiating computer move...');
       
       setTimeout(async () => {
-        await this.makeComputerMoveWithRetry();
+        // Double-check before actually making the move
+        if (!this.computerMoveInProgress && this.isComputerTurn()) {
+          await this.makeComputerMoveWithRetry();
+        } else {
+          console.log('Computer move conditions changed, aborting...');
+        }
       }, 800);
       
     } catch (error) {
@@ -1143,7 +1190,16 @@ class ChessGameController {
   }
 
   async makeComputerMoveWithRetry() {
-    if (this.computerMoveInProgress) return;
+    if (this.computerMoveInProgress) {
+      console.log('Computer move already in progress, skipping retry...');
+      return;
+    }
+    
+    // Additional validation before starting
+    if (!this.isComputerGame() || !this.isComputerTurn()) {
+      console.log('Computer move conditions not met, aborting retry...');
+      return;
+    }
     
     this.computerMoveInProgress = true;
     
@@ -1153,24 +1209,37 @@ class ChessGameController {
     } catch (error) {
       console.error(`Computer move failed (attempt ${this.computerMoveRetryCount + 1}):`, error);
       
+      // Handle 400 error (not computer's turn) gracefully
       if (error.status === 400) {
-        console.log('Computer move failed with 400 error - game likely finished');
+        console.log('Computer move failed with 400 error - not computer\'s turn or game finished');
         this.computerMoveInProgress = false;
         this.computerMoveRetryCount = 0;
+        this.showBoardLoading(false); // Ensure loading state is cleared
         return;
       }
       
-      if (this.computerMoveRetryCount < this.MAX_COMPUTER_MOVE_RETRIES) {
+      // Only retry on 500 errors or network issues, not on 400 errors
+      if (error.status !== 400 && this.computerMoveRetryCount < this.MAX_COMPUTER_MOVE_RETRIES) {
         this.computerMoveRetryCount++;
         console.log(`Retrying computer move in 2 seconds... (${this.computerMoveRetryCount}/${this.MAX_COMPUTER_MOVE_RETRIES})`);
         
         setTimeout(async () => {
           this.computerMoveInProgress = false;
-          await this.makeComputerMoveWithRetry();
+          // Re-check conditions before retry
+          if (this.isComputerGame() && this.isComputerTurn()) {
+            await this.makeComputerMoveWithRetry();
+          } else {
+            console.log('Computer move conditions changed during retry, aborting...');
+            this.computerMoveRetryCount = 0;
+          }
         }, 2000);
       } else {
-        console.error('Max computer move retries exceeded');
-        this.api.showError('Computer failed to move after multiple attempts. Please refresh the page.');
+        if (error.status === 400) {
+          console.log('Computer move aborted due to invalid conditions (400 error)');
+        } else {
+          console.error('Max computer move retries exceeded');
+          this.api.showError('Computer failed to move after multiple attempts. Please refresh the page.');
+        }
         this.computerMoveInProgress = false;
         this.computerMoveRetryCount = 0;
         this.showBoardLoading(false); // Clear loading state
@@ -1379,12 +1448,18 @@ class ChessGameController {
   }
 
   setupPeriodicUpdates() {
+    // Determine polling interval based on game type
+    const pollingInterval = this.isComputerGame() ? 2000 : 1500; // Slower for bot games
+    
     // Fast game state refresh for 1-2 second move updates  
     const gameInterval = setInterval(async () => {
       // Only poll when WebSocket is not connected and page is visible
-      if (document.visibilityState === 'visible' && 
-          this.gameData?.status === 'active' &&
-          (!this.wsConnected || !this.webSocketManager)) {
+      // For bot games, always poll since WebSocket is disabled
+      const shouldPoll = document.visibilityState === 'visible' && 
+                        this.gameData?.status === 'active' &&
+                        (this.isComputerGame() || (!this.wsConnected || !this.webSocketManager));
+      
+      if (shouldPoll) {
         try {
           const response = await this.api.getGameDetail(this.gameId);
           if (response.ok && response.data) {
@@ -1403,9 +1478,14 @@ class ChessGameController {
                 this.updateTimerData(response.data.timer_data);
               }
               
-              // Handle computer turn if needed
-              if (this.isComputerTurn()) {
-                this.handleComputerTurn();
+              // Handle computer turn if needed (with additional safety checks)
+              if (this.isComputerGame() && this.isComputerTurn() && !this.computerMoveInProgress) {
+                // Add a small delay to prevent immediate rapid-fire calls
+                setTimeout(() => {
+                  if (this.isComputerTurn() && !this.computerMoveInProgress) {
+                    this.handleComputerTurn();
+                  }
+                }, 300);
               }
             }
           }
@@ -1415,7 +1495,7 @@ class ChessGameController {
           }
         }
       }
-    }, 1500); // Optimized to 1.5 seconds for fast move detection
+    }, pollingInterval); // Use dynamic interval based on game type
     
     // Store interval reference for cleanup
     this.gamePollingInterval = gameInterval;
