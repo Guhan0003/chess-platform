@@ -38,7 +38,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.game_group_name = None
         self.user = None
         self.player_color = None
-        print(f"🔧 GameConsumer initialized")  # Debug print
         
     async def connect(self):
         """Handle WebSocket connection."""
@@ -351,6 +350,35 @@ class GameConsumer(AsyncWebsocketConsumer):
             game.status = 'finished'
             game.result = '1/2-1/2'
             game.termination = 'threefold_repetition'
+        
+        # UPDATE RATINGS if game finished - Professional global rating system
+        # ONLY UPDATE FOR PLAYER VS PLAYER GAMES (not bot games)
+        if game.status == 'finished' and game.white_player and game.black_player:
+            # Check if either player is a bot (has 'computer' in username)
+            is_white_bot = 'computer' in game.white_player.username.lower()
+            is_black_bot = 'computer' in game.black_player.username.lower()
+            
+            # Only update ratings if BOTH players are humans (not bots)
+            if not is_white_bot and not is_black_bot:
+                from games.services.rating_service import update_game_ratings
+                try:
+                    # Note: We're already in a @database_sync_to_async function,
+                    # so we call update_game_ratings synchronously (Django will handle it)
+                    # Get time control string (category) from TimeControl model
+                    time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    update_game_ratings(
+                        white_player=game.white_player,
+                        black_player=game.black_player,
+                        game_result=game.result,
+                        time_control=time_control_str,
+                        game_instance=game
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to update ratings via WebSocket: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            else:
+                logger.info(f"Skipping rating update - bot game via WebSocket")
         
         game.save()
         

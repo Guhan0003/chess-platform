@@ -179,11 +179,58 @@
       gap: var(--space-sm);
       margin-bottom: var(--space-lg);
     }
+    
+    .profile-ratings {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .rating-item {
+      text-align: center;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+      transition: all var(--transition-normal);
+    }
+    
+    .rating-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(118, 150, 86, 0.3);
+    }
+    
+    .rating-item.active {
+      background: rgba(118, 150, 86, 0.1);
+      border-color: var(--color-accent-primary);
+    }
+    
+    .rating-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-xs);
+      font-weight: var(--font-weight-medium);
+    }
 
     .rating-value {
       font-size: var(--font-size-xl);
       font-weight: var(--font-weight-bold);
       color: var(--color-accent-primary);
+      margin-bottom: var(--space-xs);
+    }
+    
+    .rating-item.active .rating-value {
+      color: var(--color-accent-secondary);
+    }
+    
+    .rating-peak {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-tertiary);
     }
 
     .rating-change {
@@ -1007,11 +1054,23 @@
             </div>
             <h2 class="profile-username" id="profileUsername">Loading...</h2>
             
-            <div class="profile-rating">
-              <span class="rating-value" id="currentRating">----</span>
-              <span class="rating-change positive" id="ratingChange" style="display: none;">
-                +24
-              </span>
+            <!-- Rating Display - All Time Controls -->
+            <div class="profile-ratings">
+              <div class="rating-item">
+                <div class="rating-label">⚡ Blitz</div>
+                <div class="rating-value" id="blitzRating">----</div>
+                <div class="rating-peak" id="blitzPeak">Peak: ----</div>
+              </div>
+              <div class="rating-item active">
+                <div class="rating-label">🏃 Rapid</div>
+                <div class="rating-value" id="rapidRating">----</div>
+                <div class="rating-peak" id="rapidPeak">Peak: ----</div>
+              </div>
+              <div class="rating-item">
+                <div class="rating-label">♟️ Classical</div>
+                <div class="rating-value" id="classicalRating">----</div>
+                <div class="rating-peak" id="classicalPeak">Peak: ----</div>
+              </div>
             </div>
 
             <div class="profile-stats">
@@ -1202,6 +1261,20 @@
           // Set up event listeners
           setupEventListeners();
           
+          // Add visibility change listener to reload profile when page becomes visible
+          document.addEventListener('visibilitychange', async function() {
+            if (!document.hidden) {
+              console.log('🔄 Page visible again - reloading profile data...');
+              await loadUserProfile();
+            }
+          });
+          
+          // Also reload profile when window gains focus
+          window.addEventListener('focus', async function() {
+            console.log('🔄 Window focused - reloading profile data...');
+            await loadUserProfile();
+          });
+          
         } catch (error) {
           console.error('Failed to initialize profile:', error);
           api.showError('Failed to load profile data');
@@ -1253,10 +1326,15 @@
       
       async function loadUserProfile() {
         try {
+          // Force fresh data - add timestamp to prevent caching
           const response = await api.getUserProfile();
           if (response.ok) {
             currentUser = response.data;
+            console.log('✅ Profile loaded:', currentUser);
+            console.log(`📊 Ratings - Blitz: ${currentUser.blitz_rating}, Rapid: ${currentUser.rapid_rating}, Classical: ${currentUser.classical_rating}`);
             updateProfileDisplay();
+          } else {
+            console.error('Failed to load profile:', response);
           }
         } catch (error) {
           console.error('Failed to load user profile:', error);
@@ -1297,15 +1375,23 @@
           }
         }
         
-        document.getElementById('currentRating').textContent = currentUser.rating || 1200;
+        // Update all three ratings (Blitz, Rapid, Classical)
+        document.getElementById('blitzRating').textContent = currentUser.blitz_rating || 1200;
+        document.getElementById('rapidRating').textContent = currentUser.rapid_rating || 1200;
+        document.getElementById('classicalRating').textContent = currentUser.classical_rating || 1200;
         
-        // Update stats
-        document.getElementById('totalGames').textContent = currentUser.games_played || 0;
-        const winRate = currentUser.games_played > 0 
-          ? Math.round((currentUser.games_won / currentUser.games_played) * 100)
-          : 0;
-        document.getElementById('winRate').textContent = winRate + '%';
-        document.getElementById('bestRating').textContent = currentUser.best_rating || currentUser.rating || 1200;
+        document.getElementById('blitzPeak').textContent = `Peak: ${currentUser.blitz_peak || currentUser.blitz_rating || 1200}`;
+        document.getElementById('rapidPeak').textContent = `Peak: ${currentUser.rapid_peak || currentUser.rapid_rating || 1200}`;
+        document.getElementById('classicalPeak').textContent = `Peak: ${currentUser.classical_peak || currentUser.classical_rating || 1200}`;
+        
+        // Update stats (use rapid rating as default for display)
+        document.getElementById('totalGames').textContent = currentUser.total_games || 0;
+        document.getElementById('winRate').textContent = (currentUser.win_rate || 0) + '%';
+        
+        // Show peak rating from preferred time control
+        const preferredTimeControl = currentUser.preferred_time_control || 'rapid';
+        const peakRating = currentUser[`${preferredTimeControl}_peak`] || currentUser[`${preferredTimeControl}_rating`] || 1200;
+        document.getElementById('bestRating').textContent = peakRating;
       }
       
       async function loadUserStats() {

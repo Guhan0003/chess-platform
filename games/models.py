@@ -5,8 +5,11 @@ from django.utils import timezone
 from datetime import timedelta
 import chess
 import json
+import logging
 from .utils.timer_manager import TimerManager
 from .utils.time_control import TimeManager, create_time_manager
+
+logger = logging.getLogger(__name__)
 
 
 class ChessManager:
@@ -229,47 +232,6 @@ class Game(models.Model):
     def __str__(self):
         return f"Game {self.id} ({self.white_player} vs {self.black_player})"
 
-    def initialize_timers(self):
-        """Set both players' clocks to the initial time"""
-        if self.time_control:
-            self.white_time_remaining = self.time_control.initial_time
-            self.black_time_remaining = self.time_control.initial_time
-        self.last_move_time = timezone.now()
-        self.save()
-
-    def update_clock(self, is_white_move=True):
-        """
-        Deduct time from the player who is currently moving.
-        Should be called when a move is made.
-        """
-        if not self.last_move_time:
-            self.last_move_time = timezone.now()
-            self.save()
-            return
-
-        now = timezone.now()
-        elapsed = int((now - self.last_move_time).total_seconds())
-
-        if is_white_move:
-            self.white_time_remaining = max(0, self.white_time_remaining - elapsed)
-            if self.white_time_remaining > 0 and self.time_control:
-                self.white_time_remaining += self.time_control.increment
-        else:
-            self.black_time_remaining = max(0, self.black_time_remaining - elapsed)
-            if self.black_time_remaining > 0 and self.time_control:
-                self.black_time_remaining += self.time_control.increment
-
-        self.last_move_time = now
-        self.save()
-
-    def check_time_expired(self):
-        """Return 'white' or 'black' if a player's time ran out"""
-        if self.white_time_remaining <= 0:
-            return 'white'
-        if self.black_time_remaining <= 0:
-            return 'black'
-        return None
-
     # ================== PROFESSIONAL TIMER INTEGRATION ==================
 
     def get_timer_manager(self):
@@ -420,8 +382,6 @@ class Game(models.Model):
                     )
                     print(f"✅ WebSocket broadcast completed for game {self.id}")
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.warning(f"WebSocket notification failed: {e}")
                     print(f"❌ WebSocket broadcast failed: {e}")
             
@@ -516,8 +476,6 @@ class Game(models.Model):
             return {'timeout': False}
             
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error checking timeout for game {self.id}: {e}")
             return {'timeout': False}
     
@@ -547,6 +505,34 @@ class Game(models.Model):
                 self.white_time_left = 0
             else:
                 self.black_time_left = 0
+            
+            # UPDATE RATINGS - Professional global rating system
+            # ONLY UPDATE FOR PLAYER VS PLAYER GAMES (not bot games)
+            if self.white_player and self.black_player:
+                # Check if either player is a bot (has 'computer' in username)
+                is_white_bot = 'computer' in self.white_player.username.lower()
+                is_black_bot = 'computer' in self.black_player.username.lower()
+                
+                # Only update ratings if BOTH players are humans (not bots)
+                if not is_white_bot and not is_black_bot:
+                    try:
+                        from games.services import update_game_ratings
+                        # Get time control string (category) from TimeControl model
+                        time_control_str = self.time_control.category if self.time_control else 'rapid'
+                        rating_result = update_game_ratings(
+                            white_player=self.white_player,
+                            black_player=self.black_player,
+                            game_result=self.result,
+                            time_control=time_control_str,
+                            game_instance=self
+                        )
+                        logger.info(f"Ratings updated after timeout: {rating_result}")
+                    except Exception as e:
+                        logger.error(f"Failed to update ratings after timeout: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                else:
+                    logger.info(f"Skipping rating update - bot game timeout")
                 
             self.save()
             
@@ -565,15 +551,11 @@ class Game(models.Model):
             # Notify via WebSocket
             self.notify_game_finished('timeout')
             
-            import logging
-            logger = logging.getLogger(__name__)
             logger.info(f"Game {self.id} ended due to timeout: {timeout_player} player timed out, {winner.username if winner else 'None'} wins")
             
             return True
             
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error handling timeout for game {self.id}: {e}")
             return False
     

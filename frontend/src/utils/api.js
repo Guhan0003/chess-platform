@@ -317,7 +317,15 @@ class ChessAPI {
    * Get current user profile
    */
   async getUserProfile() {
-    return this.request('/auth/profile/');
+    // Add cache-busting timestamp to ensure fresh data
+    const timestamp = new Date().getTime();
+    return this.request(`/auth/profile/?t=${timestamp}`, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   }
 
   /**

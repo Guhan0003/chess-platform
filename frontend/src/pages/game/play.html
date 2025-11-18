@@ -198,6 +198,26 @@
         <div class="result-info">
           <div class="result-message" id="gameResultMessage"></div>
           <div class="result-details" id="gameResultDetails"></div>
+          <!-- Rating Changes -->
+          <div class="rating-changes" id="ratingChangesSection" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <div style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #888;">
+              📊 Rating Changes
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                <div style="font-size: 12px; color: #888; margin-bottom: 5px;">White</div>
+                <div style="font-size: 14px; font-weight: 600;" id="whitePlayerName">---</div>
+                <div style="font-size: 20px; font-weight: bold; margin: 8px 0;" id="whiteRatingChange">---</div>
+                <div style="font-size: 11px; color: #666;" id="whiteRatingFull">--- → ---</div>
+              </div>
+              <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                <div style="font-size: 12px; color: #888; margin-bottom: 5px;">Black</div>
+                <div style="font-size: 14px; font-weight: 600;" id="blackPlayerName">---</div>
+                <div style="font-size: 20px; font-weight: bold; margin: 8px 0;" id="blackRatingChange">---</div>
+                <div style="font-size: 11px; color: #666;" id="blackRatingFull">--- → ---</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

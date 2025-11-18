@@ -25,9 +25,6 @@ User = get_user_model()
 # Add logging
 logger = logging.getLogger(__name__)
 
-# Get the custom user model
-User = get_user_model()
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
@@ -161,6 +158,37 @@ def make_move(request, pk):
         elif result == '0-1':
             game.winner = game.black_player
         logger.info(f"Game finished with result: {result}")
+        
+        # Store result for rating update
+        game.result = result
+        
+        # UPDATE RATINGS - Professional global rating system
+        # ONLY UPDATE FOR PLAYER VS PLAYER GAMES (not bot games)
+        if game.white_player and game.black_player:
+            # Check if either player is a bot (has 'computer' in username)
+            is_white_bot = 'computer' in game.white_player.username.lower()
+            is_black_bot = 'computer' in game.black_player.username.lower()
+            
+            # Only update ratings if BOTH players are humans (not bots)
+            if not is_white_bot and not is_black_bot:
+                try:
+                    from games.services import update_game_ratings
+                    # Get time control string (category) from TimeControl model
+                    time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    rating_result = update_game_ratings(
+                        white_player=game.white_player,
+                        black_player=game.black_player,
+                        game_result=result,
+                        time_control=time_control_str,
+                        game_instance=game
+                    )
+                    logger.info(f"Ratings updated for PvP game: {rating_result}")
+                except Exception as e:
+                    logger.error(f"Failed to update ratings: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            else:
+                logger.info(f"Skipping rating update - bot game (white_bot={is_white_bot}, black_bot={is_black_bot})")
         
         # Notify players via WebSocket that game has finished
         termination_reason = 'checkmate' if board.is_checkmate() else 'stalemate'
@@ -1146,6 +1174,34 @@ def resign_game(request, game_id):
         game.termination = 'resignation'
         game.finished_at = timezone.now()
         
+        # UPDATE RATINGS - Professional global rating system
+        # ONLY UPDATE FOR PLAYER VS PLAYER GAMES (not bot games)
+        if game.white_player and game.black_player:
+            # Check if either player is a bot (has 'computer' in username)
+            is_white_bot = 'computer' in game.white_player.username.lower()
+            is_black_bot = 'computer' in game.black_player.username.lower()
+            
+            # Only update ratings if BOTH players are humans (not bots)
+            if not is_white_bot and not is_black_bot:
+                try:
+                    from games.services import update_game_ratings
+                    # Get time control string (category) from TimeControl model
+                    time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    rating_result = update_game_ratings(
+                        white_player=game.white_player,
+                        black_player=game.black_player,
+                        game_result=game.result,
+                        time_control=time_control_str,
+                        game_instance=game
+                    )
+                    logger.info(f"Ratings updated after resignation: {rating_result}")
+                except Exception as e:
+                    logger.error(f"Failed to update ratings after resignation: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            else:
+                logger.info(f"Skipping rating update - bot game resignation")
+        
         # Save the resignation
         game.save()
         
@@ -1177,5 +1233,75 @@ def resign_game(request, game_id):
             {"detail": f"Error resigning from game: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_rating_preview_view(request, game_id):
+    """
+    Get rating preview for all possible game outcomes.
+    Shows what ratings would be after win/loss/draw.
+    """
+    try:
+        game = Game.objects.select_related('white_player', 'black_player', 'time_control').get(id=game_id)
+        
+        # Verify user is part of this game
+        if game.white_player != request.user and game.black_player != request.user:
+            return Response({
+                'error': 'You are not part of this game'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if game has both players
+        if not game.white_player or not game.black_player:
+            return Response({
+                'error': 'Game does not have both players'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get time control
+        time_control = game.time_control.name if game.time_control else 'rapid'
+        rating_field = f'{time_control}_rating'
+        games_field = f'{time_control}_games'
+        
+        # Get current ratings
+        white_rating = getattr(game.white_player, rating_field)
+        black_rating = getattr(game.black_player, rating_field)
+        
+        white_games = getattr(game.white_player, games_field, 0)
+        black_games = getattr(game.black_player, games_field, 0)
+        
+        # Get rating preview from GlobalRatingService
+        from games.services import get_rating_preview
+        preview_data = get_rating_preview(
+            white_rating=white_rating,
+            black_rating=black_rating,
+            time_control=time_control,
+            white_games=white_games,
+            black_games=black_games
+        )
+        
+        # Add player usernames
+        preview_data['players'] = {
+            'white': game.white_player.username,
+            'black': game.black_player.username
+        }
+        preview_data['game_id'] = game_id
+        preview_data['game_status'] = game.status
+        
+        return Response(preview_data, status=status.HTTP_200_OK)
+        
+    except Game.DoesNotExist:
+        return Response({
+            'error': 'Game not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+        
+    except Exception as e:
+        logger.error(f"Error getting rating preview for game {game_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to get rating preview',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # ================== END GAME SESSION GUARD API ENDPOINTS ==================
