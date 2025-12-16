@@ -33,12 +33,16 @@ def serve_professional_frontend(request, page_path=""):
         'play': 'src/pages/game/play.html',
         'forgot-password': 'src/pages/auth/forgot-password.html',
         'profile': 'src/pages/profile/profile.html',
+        'settings': 'src/pages/settings/settings.html',
         'puzzles': 'src/pages/puzzles/puzzles.html'
     }
     
     # Get the file path
     file_relative_path = route_map.get(page_path, 'src/pages/auth/login.html')
     file_path = os.path.join(settings.BASE_DIR, 'frontend', file_relative_path)
+    
+    print(f"🔍 Trying to serve: {page_path} -> {file_path}")
+    print(f"📁 File exists: {os.path.exists(file_path)}")
     
     if os.path.exists(file_path):
         return FileResponse(open(file_path, 'rb'))
@@ -73,7 +77,12 @@ urlpatterns = [
     path('game/<int:game_id>/', serve_professional_frontend, {'page_path': 'play'}, name='game_detail'),
     path('forgot-password/', serve_professional_frontend, {'page_path': 'forgot-password'}, name='forgot-password'),
     path('profile/', serve_professional_frontend, {'page_path': 'profile'}, name='profile'),
+    path('settings/', serve_professional_frontend, {'page_path': 'settings'}, name='settings'),
     path('puzzles/', serve_professional_frontend, {'page_path': 'puzzles'}, name='puzzles'),
+    
+    # Settings page resources
+    path('settings/settings.js', lambda request: serve_frontend_static(request, 'src/pages/settings/settings.js')),
+    path('src/pages/settings/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/pages/settings/{filename}')),
     
     # Test WebSocket connection
     path('test_websocket_connection.html', lambda request: serve_frontend_static(request, '../test_websocket_connection.html')),

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import settings_views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 app_name = 'accounts'
@@ -36,6 +37,12 @@ urlpatterns = [
     
     # Skill level endpoints
     path('skill-levels/', views.get_skill_levels, name='skill-levels'),  # Get available skill levels
+    
+    # User Settings endpoints
+    path('settings/', settings_views.get_user_settings, name='user-settings'),  # Get current settings
+    path('settings/update/', settings_views.update_user_settings, name='update-settings'),  # Update settings
+    path('settings/reset/', settings_views.reset_settings_to_default, name='reset-settings'),  # Reset to defaults
+    path('settings/themes/', settings_views.get_available_themes, name='available-themes'),  # Get theme options
 ]
 
 # URL Pattern Examples for Frontend Integration:

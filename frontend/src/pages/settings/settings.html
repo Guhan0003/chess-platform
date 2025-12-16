@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Chess Platform</title>
+  <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Settings-specific styles maintaining design consistency */
+    .settings-container {
+      min-height: 100vh;
+      background: 
+        radial-gradient(ellipse at top left, rgba(118, 150, 86, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(240, 217, 181, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Settings Header */
+    .settings-header {
+      height: var(--header-height);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-xl);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .settings-title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .settings-title h1 {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin: 0;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      font-size: var(--font-size-sm);
+      transition: all var(--transition-normal);
+      cursor: pointer;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-accent-primary);
+      transform: translateX(-2px);
+    }
+
+    /* Settings Content */
+    .settings-content {
+      flex: 1;
+      padding: var(--space-xl);
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Settings Sections */
+    .settings-section {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: var(--space-xl);
+      margin-bottom: var(--space-lg);
+    }
+
+    .section-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin: 0 0 var(--space-xs) 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .section-title-icon {
+      font-size: 1.25rem;
+    }
+
+    .section-description {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Setting Items */
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-lg) 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all var(--transition-normal);
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .setting-item:hover {
+      padding-left: var(--space-sm);
+    }
+
+    .setting-info {
+      flex: 1;
+    }
+
+    .setting-label {
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-xs);
+      display: block;
+      font-size: var(--font-size-base);
+    }
+
+    .setting-description {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .setting-control {
+      margin-left: var(--space-xl);
+    }
+
+    /* Toggle Switch - Matching Chess Theme */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: var(--transition-normal);
+      border-radius: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 3px;
+      background-color: var(--color-text-muted);
+      transition: var(--transition-normal);
+      border-radius: 50%;
+      box-shadow: var(--shadow-sm);
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--color-accent-primary);
+      border-color: var(--color-accent-primary);
+    }
+
+    input:checked + .toggle-slider:before {
+      background-color: white;
+      transform: translateX(24px);
+    }
+
+    .toggle-slider:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    input:checked + .toggle-slider:hover {
+      background-color: var(--color-accent-light);
+    }
+
+    /* Select Dropdown - Matching Chess Theme */
+    .select-dropdown {
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      min-width: 160px;
+      transition: all var(--transition-normal);
+      font-family: inherit;
+    }
+
+    .select-dropdown:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--color-accent-primary);
+    }
+
+    .select-dropdown:focus {
+      outline: none;
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 3px rgba(118, 150, 86, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .select-dropdown option {
+      background: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      padding: var(--space-sm);
+    }
+
+    /* Theme Preview Grid */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+    }
+
+    .theme-card {
+      background: var(--color-bg-dark);
+      border: 2px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: var(--space-md);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      text-align: center;
+    }
+
+    .theme-card:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+
+    .theme-card.active {
+      border-color: var(--color-primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .theme-preview {
+      width: 100%;
+      height: 80px;
+      border-radius: var(--border-radius);
+      margin-bottom: var(--space-sm);
+      display: flex;
+      gap: 2px;
+    }
+
+    .theme-preview-square {
+      flex: 1;
+      height: 100%;
+    }
+
+    .theme-name {
+      font-weight: 500;
+      margin-bottom: var(--space-xs);
+    }
+
+    .theme-description {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    /* Action Buttons - Matching Chess Theme */
+    .settings-actions {
+      display: flex;
+      gap: var(--space-md);
+      margin-top: var(--space-xl);
+      padding-top: var(--space-xl);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .btn {
+      padding: var(--space-md) var(--space-xl);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      font-family: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-secondary) 100%);
+      color: var(--color-text-inverse);
+      border: 1px solid var(--color-accent-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-accent-primary) 100%);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--color-text-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-primary);
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: var(--color-error);
+      color: white;
+      border: 1px solid var(--color-error);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #dc2626;
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    /* Loading State */
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Success/Error Messages - Matching Chess Theme */
+    .message {
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-lg);
+      display: none;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      animation: slideInDown 0.3s ease;
+    }
+
+    @keyframes slideInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.show {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .message.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--color-success);
+      color: var(--color-success);
+    }
+
+    .message.success::before {
+      content: "✓";
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+
+    .message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+    }
+
+    .message.error::before {
+      content: "✕";
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .settings-container {
+        padding: var(--space-md);
+      }
+
+      .setting-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .setting-control {
+        margin-left: 0;
+        margin-top: var(--space-md);
+        width: 100%;
+      }
+
+      .theme-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-container">
+    <!-- Header -->
+    <header class="settings-header">
+      <div class="settings-title">
+        <button class="back-btn" onclick="window.history.back()">
+          <span>←</span>
+          <span>Back</span>
+        </button>
+        <h1>⚙️ Settings</h1>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="settings-content">
+      <!-- Messages -->
+      <div id="messageBox" class="message"></div>
+
+    <!-- Game Preferences Section -->
+    <div class="settings-section">
+      <h2 class="section-title">
+        <span class="section-title-icon">🎮</span>
+        Game Preferences
+      </h2>
+      <p class="section-description">Configure how you play chess games</p>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Auto-Queen Promotion</label>
+          <p class="setting-description">Automatically promote pawns to queens</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="auto_queen_promotion">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Show Coordinates</label>
+          <p class="setting-description">Display board coordinates (a-h, 1-8)</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="show_coordinates">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Highlight Legal Moves</label>
+          <p class="setting-description">Show possible moves when selecting a piece</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="highlight_moves">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Sound Effects</label>
+          <p class="setting-description">Play sound effects for moves and events</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="sound_enabled">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Board Appearance Section -->
+    <div class="settings-section">
+      <h2 class="section-title">
+        <span class="section-title-icon">🎨</span>
+        Board Appearance
+      </h2>
+      <p class="section-description">Customize the look of your chessboard</p>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Board Theme</label>
+          <p class="setting-description">Choose your preferred board style</p>
+        </div>
+        <div class="setting-control">
+          <select id="board_theme" class="select-dropdown">
+            <option value="classic">Classic</option>
+            <option value="modern">Modern</option>
+            <option value="wood">Wood</option>
+            <option value="marble">Marble</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Piece Set</label>
+          <p class="setting-description">Choose your piece design</p>
+        </div>
+        <div class="setting-control">
+          <select id="piece_set" class="select-dropdown">
+            <option value="classic">Classic</option>
+            <option value="modern">Modern</option>
+            <option value="staunton">Staunton</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="settings-section">
+      <h2 class="section-title">
+        <span class="section-title-icon">🔔</span>
+        Notifications
+      </h2>
+      <p class="section-description">Manage how you receive notifications</p>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Email Game Invites</label>
+          <p class="setting-description">Receive emails when someone invites you to play</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="email_game_invites">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Email Game Results</label>
+          <p class="setting-description">Receive emails when your games finish</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="email_game_results">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Push Notifications</label>
+          <p class="setting-description">Receive push notifications in browser</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="push_notifications">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy Section -->
+    <div class="settings-section">
+      <h2 class="section-title">
+        <span class="section-title-icon">🔒</span>
+        Privacy
+      </h2>
+      <p class="section-description">Control your privacy and visibility</p>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Allow Challenges</label>
+          <p class="setting-description">Allow other players to challenge you</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="allow_challenges">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label class="setting-label">Show Online Status</label>
+          <p class="setting-description">Let others see when you're online</p>
+        </div>
+        <div class="setting-control">
+          <label class="toggle-switch">
+            <input type="checkbox" id="show_online_status">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+      <!-- Actions -->
+      <div class="settings-actions">
+        <button class="btn btn-primary" id="saveButton">
+          💾 Save Changes
+        </button>
+        <button class="btn btn-secondary" id="cancelButton">
+          Cancel
+        </button>
+        <button class="btn btn-danger" id="resetButton">
+          🔄 Reset to Defaults
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/utils/api.js"></script>
+  <script src="/src/pages/settings/settings.js"></script>
+</body>
+</html>

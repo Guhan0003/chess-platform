@@ -319,13 +319,7 @@ class ChessAPI {
   async getUserProfile() {
     // Add cache-busting timestamp to ensure fresh data
     const timestamp = new Date().getTime();
-    return this.request(`/auth/profile/?t=${timestamp}`, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
+    return this.request(`/auth/profile/?t=${timestamp}`);
   }
 
   /**
@@ -344,6 +338,44 @@ class ChessAPI {
       method: 'POST',
       body: JSON.stringify({ email })
     });
+  }
+
+  // =================================
+  // User Settings API Methods
+  // =================================
+
+  /**
+   * Get current user settings
+   */
+  async getUserSettings() {
+    return this.request('/auth/settings/');
+  }
+
+  /**
+   * Update user settings (partial update)
+   * @param {Object} settings - Settings object with fields to update
+   */
+  async updateUserSettings(settings) {
+    return this.request('/auth/settings/update/', {
+      method: 'PATCH',
+      body: JSON.stringify(settings)
+    });
+  }
+
+  /**
+   * Reset settings to default values
+   */
+  async resetSettingsToDefault() {
+    return this.request('/auth/settings/reset/', {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Get available themes and piece sets
+   */
+  async getAvailableThemes() {
+    return this.request('/auth/settings/themes/');
   }
 
   // =================================

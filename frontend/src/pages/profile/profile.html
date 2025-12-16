@@ -1250,34 +1250,30 @@
       
       async function initializeProfile() {
         try {
-          // Load user profile and stats
-          await loadUserProfile();
-          await loadUserStats();
-          await loadRecentGames();
-          
-          // Set up router routes
+          // Set up router routes first
           setupRoutes();
           
           // Set up event listeners
           setupEventListeners();
           
+          // Load user profile and stats
+          await loadUserProfile();
+          await loadUserStats();
+          await loadRecentGames();
+          
           // Add visibility change listener to reload profile when page becomes visible
           document.addEventListener('visibilitychange', async function() {
-            if (!document.hidden) {
-              console.log('🔄 Page visible again - reloading profile data...');
+            if (!document.hidden && currentUser) {
+              console.log('🔄 Page visible - refreshing data...');
               await loadUserProfile();
             }
           });
           
-          // Also reload profile when window gains focus
-          window.addEventListener('focus', async function() {
-            console.log('🔄 Window focused - reloading profile data...');
-            await loadUserProfile();
-          });
+          console.log('✅ Profile page initialized');
           
         } catch (error) {
-          console.error('Failed to initialize profile:', error);
-          api.showError('Failed to load profile data');
+          console.error('❌ Profile initialization error:', error);
+          showErrorState();
         }
       }
       
@@ -1326,72 +1322,67 @@
       
       async function loadUserProfile() {
         try {
-          // Force fresh data - add timestamp to prevent caching
           const response = await api.getUserProfile();
-          if (response.ok) {
+          if (response && response.ok && response.data) {
             currentUser = response.data;
-            console.log('✅ Profile loaded:', currentUser);
+            console.log('✅ Profile loaded:', currentUser.username);
             console.log(`📊 Ratings - Blitz: ${currentUser.blitz_rating}, Rapid: ${currentUser.rapid_rating}, Classical: ${currentUser.classical_rating}`);
             updateProfileDisplay();
           } else {
-            console.error('Failed to load profile:', response);
+            console.error('❌ Failed to load profile:', response);
+            showErrorState();
           }
         } catch (error) {
-          console.error('Failed to load user profile:', error);
-          // Show skeleton/loading state
-          showLoadingState();
+          console.error('❌ Profile loading error:', error);
+          showErrorState();
         }
       }
       
       function updateProfileDisplay() {
-        if (!currentUser) return;
+        if (!currentUser) {
+          console.warn('⚠️ No user data to display');
+          return;
+        }
         
-        // Update profile info
-        document.getElementById('profileUsername').textContent = currentUser.username;
+        // Safely update each element with null checks
+        const elements = {
+          profileUsername: currentUser.username,
+          blitzRating: currentUser.blitz_rating || 1200,
+          rapidRating: currentUser.rapid_rating || 1200,
+          classicalRating: currentUser.classical_rating || 1200,
+          blitzPeak: `Peak: ${currentUser.blitz_peak || currentUser.blitz_rating || 1200}`,
+          rapidPeak: `Peak: ${currentUser.rapid_peak || currentUser.rapid_rating || 1200}`,
+          classicalPeak: `Peak: ${currentUser.classical_peak || currentUser.classical_rating || 1200}`,
+          totalGames: currentUser.total_games || 0,
+          winRate: (currentUser.win_rate || 0) + '%',
+          bestRating: currentUser.rapid_peak || currentUser.rapid_rating || 1200
+        };
+        
+        // Update all elements safely
+        Object.entries(elements).forEach(([id, value]) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = value;
+        });
         
         // Update avatar display
         const avatarElement = document.getElementById('profileAvatar');
         const avatarText = document.getElementById('avatarText');
         const deleteBtn = document.getElementById('deleteAvatarBtn');
         
-        if (currentUser.avatar) {
-          // User has an avatar
-          if (avatarElement && avatarText) {
+        if (avatarElement && avatarText) {
+          if (currentUser.avatar) {
             avatarElement.style.backgroundImage = `url(${currentUser.avatar})`;
             avatarElement.style.backgroundSize = 'cover';
             avatarElement.style.backgroundPosition = 'center';
             avatarText.style.display = 'none';
             if (deleteBtn) deleteBtn.style.display = 'block';
-          }
-        } else {
-          // No avatar, show initials
-          if (avatarText) {
+          } else {
             avatarText.textContent = currentUser.username.charAt(0).toUpperCase();
             avatarText.style.display = 'block';
+            avatarElement.style.backgroundImage = 'none';
             if (deleteBtn) deleteBtn.style.display = 'none';
           }
-          if (avatarElement) {
-            avatarElement.style.backgroundImage = 'none';
-          }
         }
-        
-        // Update all three ratings (Blitz, Rapid, Classical)
-        document.getElementById('blitzRating').textContent = currentUser.blitz_rating || 1200;
-        document.getElementById('rapidRating').textContent = currentUser.rapid_rating || 1200;
-        document.getElementById('classicalRating').textContent = currentUser.classical_rating || 1200;
-        
-        document.getElementById('blitzPeak').textContent = `Peak: ${currentUser.blitz_peak || currentUser.blitz_rating || 1200}`;
-        document.getElementById('rapidPeak').textContent = `Peak: ${currentUser.rapid_peak || currentUser.rapid_rating || 1200}`;
-        document.getElementById('classicalPeak').textContent = `Peak: ${currentUser.classical_peak || currentUser.classical_rating || 1200}`;
-        
-        // Update stats (use rapid rating as default for display)
-        document.getElementById('totalGames').textContent = currentUser.total_games || 0;
-        document.getElementById('winRate').textContent = (currentUser.win_rate || 0) + '%';
-        
-        // Show peak rating from preferred time control
-        const preferredTimeControl = currentUser.preferred_time_control || 'rapid';
-        const peakRating = currentUser[`${preferredTimeControl}_peak`] || currentUser[`${preferredTimeControl}_rating`] || 1200;
-        document.getElementById('bestRating').textContent = peakRating;
       }
       
       async function loadUserStats() {
@@ -1510,8 +1501,30 @@
       
       function showLoadingState() {
         // Show skeleton loading states
-        document.getElementById('profileUsername').textContent = 'Loading...';
-        document.getElementById('currentRating').textContent = '----';
+        const username = document.getElementById('profileUsername');
+        const rating = document.getElementById('currentRating');
+        if (username) username.textContent = 'Loading...';
+        if (rating) rating.textContent = '----';
+      }
+
+      function showErrorState(message) {
+        // Display error message to user
+        const username = document.getElementById('profileUsername');
+        const rating = document.getElementById('currentRating');
+        if (username) username.textContent = 'Error loading profile';
+        if (rating) rating.textContent = '----';
+        
+        console.error('Profile Error:', message);
+        
+        // Optional: Add a visible error banner
+        const statsElement = document.querySelector('.profile-stats');
+        if (statsElement) {
+          const errorBanner = document.createElement('div');
+          errorBanner.className = 'error-banner';
+          errorBanner.style.cssText = 'background: #ff4444; color: white; padding: 1rem; margin: 1rem 0; border-radius: 8px; text-align: center;';
+          errorBanner.textContent = message || 'Failed to load profile. Please refresh the page.';
+          statsElement.insertBefore(errorBanner, statsElement.firstChild);
+        }
       }
       
       function setupEventListeners() {
