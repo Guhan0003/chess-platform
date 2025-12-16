@@ -84,6 +84,10 @@ urlpatterns = [
     path('settings/settings.js', lambda request: serve_frontend_static(request, 'src/pages/settings/settings.js')),
     path('src/pages/settings/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/pages/settings/{filename}')),
     
+    # Profile page resources
+    path('profile/profile.js', lambda request: serve_frontend_static(request, 'src/pages/profile/profile.js')),
+    path('src/pages/profile/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/pages/profile/{filename}')),
+    
     # Test WebSocket connection
     path('test_websocket_connection.html', lambda request: serve_frontend_static(request, '../test_websocket_connection.html')),
     

@@ -379,6 +379,41 @@ class ChessAPI {
   }
 
   // =================================
+  // Achievement API Methods
+  // =================================
+
+  /**
+   * Get all achievements for current user
+   */
+  async getUserAchievements() {
+    return this.request('/auth/achievements/');
+  }
+
+  /**
+   * Get public achievements for a specific user
+   * @param {number} userId - User ID
+   */
+  async getPublicAchievements(userId) {
+    return this.request(`/auth/achievements/${userId}/`);
+  }
+
+  /**
+   * Check and unlock newly earned achievements
+   */
+  async checkAchievements() {
+    return this.request('/auth/achievements/check/', {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Get progress toward locked achievements
+   */
+  async getAchievementProgress() {
+    return this.request('/auth/achievements/progress/');
+  }
+
+  // =================================
   // Game API Methods
   // =================================
 

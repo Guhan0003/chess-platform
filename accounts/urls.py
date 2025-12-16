@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import settings_views
+from . import achievement_views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 app_name = 'accounts'
@@ -43,6 +44,13 @@ urlpatterns = [
     path('settings/update/', settings_views.update_user_settings, name='update-settings'),  # Update settings
     path('settings/reset/', settings_views.reset_settings_to_default, name='reset-settings'),  # Reset to defaults
     path('settings/themes/', settings_views.get_available_themes, name='available-themes'),  # Get theme options
+    
+    # Achievement endpoints
+    path('achievements/', achievement_views.get_user_achievements, name='user-achievements'),  # Get all achievements
+    path('achievements/<int:user_id>/', achievement_views.get_public_achievements, name='public-achievements'),  # Public view
+    path('achievements/check/', achievement_views.check_and_unlock_achievements, name='check-achievements'),  # Check & unlock
+    path('achievements/progress/', achievement_views.get_achievement_progress, name='achievement-progress'),  # Progress tracking
+    path('achievements/initialize/', achievement_views.initialize_default_achievements, name='initialize-achievements'),  # Admin only
 ]
 
 # URL Pattern Examples for Frontend Integration:

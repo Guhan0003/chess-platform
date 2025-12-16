@@ -70,40 +70,40 @@ class ChessManager:
         
         defaults = [
             # Milestone Achievements
-            {'name': 'First Victory', 'description': 'Win your first game', 
-             'category': 'milestone', 'condition': 'games_won >= 1', 'points': 10, 'icon': '🎯'},
-            {'name': 'Veteran Player', 'description': 'Play 100 games', 
-             'category': 'milestone', 'condition': 'total_games >= 100', 'points': 50, 'icon': '🏆'},
-            {'name': 'Chess Master', 'description': 'Play 1000 games', 
-             'category': 'milestone', 'condition': 'total_games >= 1000', 'points': 200, 'icon': '👑'},
+            {'key': 'first_victory', 'name': 'First Victory', 'description': 'Win your first game', 
+             'category': 'games', 'requirement': {'games_won': 1}, 'points': 10, 'icon': '🎯'},
+            {'key': 'veteran_player', 'name': 'Veteran Player', 'description': 'Play 100 games', 
+             'category': 'games', 'requirement': {'total_games': 100}, 'points': 50, 'icon': '🏆'},
+            {'key': 'chess_master', 'name': 'Chess Master', 'description': 'Play 1000 games', 
+             'category': 'games', 'requirement': {'total_games': 1000}, 'points': 200, 'icon': '👑'},
             
             # Rating Achievements
-            {'name': 'Rising Star', 'description': 'Reach 1400 rating', 
-             'category': 'rating', 'condition': 'rapid_rating >= 1400', 'points': 25, 'icon': '⭐'},
-            {'name': 'Strong Player', 'description': 'Reach 1600 rating', 
-             'category': 'rating', 'condition': 'rapid_rating >= 1600', 'points': 50, 'icon': '💪'},
-            {'name': 'Expert Level', 'description': 'Reach 1800 rating', 
-             'category': 'rating', 'condition': 'rapid_rating >= 1800', 'points': 100, 'icon': '🎓'},
-            {'name': 'Master Level', 'description': 'Reach 2000 rating', 
-             'category': 'rating', 'condition': 'rapid_rating >= 2000', 'points': 200, 'icon': '🥇'},
+            {'key': 'rising_star', 'name': 'Rising Star', 'description': 'Reach 1400 rating', 
+             'category': 'rating', 'requirement': {'rapid_rating': 1400}, 'points': 25, 'icon': '⭐'},
+            {'key': 'strong_player', 'name': 'Strong Player', 'description': 'Reach 1600 rating', 
+             'category': 'rating', 'requirement': {'rapid_rating': 1600}, 'points': 50, 'icon': '💪'},
+            {'key': 'expert_level', 'name': 'Expert Level', 'description': 'Reach 1800 rating', 
+             'category': 'rating', 'requirement': {'rapid_rating': 1800}, 'points': 100, 'icon': '🎓'},
+            {'key': 'master_level', 'name': 'Master Level', 'description': 'Reach 2000 rating', 
+             'category': 'rating', 'requirement': {'rapid_rating': 2000}, 'points': 200, 'icon': '🥇'},
             
             # Streak Achievements
-            {'name': 'Win Streak', 'description': 'Win 5 games in a row', 
-             'category': 'streak', 'condition': 'current_win_streak >= 5', 'points': 30, 'icon': '🔥'},
-            {'name': 'Unstoppable', 'description': 'Win 10 games in a row', 
-             'category': 'streak', 'condition': 'current_win_streak >= 10', 'points': 75, 'icon': '⚡'},
+            {'key': 'win_streak', 'name': 'Win Streak', 'description': 'Win 5 games in a row', 
+             'category': 'streaks', 'requirement': {'win_streak': 5}, 'points': 30, 'icon': '🔥'},
+            {'key': 'unstoppable', 'name': 'Unstoppable', 'description': 'Win 10 games in a row', 
+             'category': 'streaks', 'requirement': {'win_streak': 10}, 'points': 75, 'icon': '⚡'},
             
             # Special Achievements
-            {'name': 'Speed Demon', 'description': 'Win 50 blitz games', 
-             'category': 'special', 'condition': 'blitz_games >= 50', 'points': 40, 'icon': '💨'},
-            {'name': 'Puzzle Solver', 'description': 'Solve 100 puzzles', 
-             'category': 'puzzle', 'condition': 'puzzles_solved >= 100', 'points': 35, 'icon': '🧩'},
+            {'key': 'speed_demon', 'name': 'Speed Demon', 'description': 'Win 50 blitz games', 
+             'category': 'special', 'requirement': {'blitz_games': 50}, 'points': 40, 'icon': '💨'},
+            {'key': 'puzzle_solver', 'name': 'Puzzle Solver', 'description': 'Solve 100 puzzles', 
+             'category': 'puzzles', 'requirement': {'puzzles_solved': 100}, 'points': 35, 'icon': '🧩'},
         ]
 
         created_count = 0
         for ach_data in defaults:
             achievement, created = Achievement.objects.get_or_create(
-                name=ach_data['name'],
+                key=ach_data['key'],
                 defaults=ach_data
             )
             if created:
