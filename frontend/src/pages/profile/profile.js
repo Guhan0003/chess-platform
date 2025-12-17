@@ -21,10 +21,16 @@ class ProfileController {
         return;
       }
 
-      // Load profile data and achievements
+      // Load profile data first
+      await this.loadProfileData();
+      
+      // Auto-check for new achievements silently
+      this.checkAchievementsSilently();
+      
+      // Then load achievements and recent games in parallel
       await Promise.all([
-        this.loadProfileData(),
-        this.loadAchievements()
+        this.loadAchievements(),
+        this.loadRecentGames()
       ]);
 
       // Setup event listeners
@@ -76,20 +82,146 @@ class ProfileController {
     }
   }
 
+  async loadRecentGames() {
+    // Wait for profile data to be loaded first
+    if (!this.profileData) {
+      console.warn('Profile data not loaded yet, skipping recent games');
+      return;
+    }
+
+    try {
+      const response = await this.api.getUserGames(this.profileData.id, 5);
+      console.log('Recent games response:', response);
+      
+      if (response.ok && response.data) {
+        this.displayRecentGames(response.data);
+      } else {
+        this.displayRecentGamesError();
+      }
+    } catch (error) {
+      console.error('Failed to load recent games:', error);
+      this.displayRecentGamesError();
+    }
+  }
+
+  displayRecentGames(games) {
+    const container = document.getElementById('recentGamesList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!games || games.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: var(--space-xl); color: var(--color-text-muted);">
+          <div style="font-size: 2rem; margin-bottom: var(--space-sm);">🎮</div>
+          <div>No games played yet</div>
+          <div style="font-size: var(--font-size-sm); margin-top: var(--space-xs);">Start playing to see your game history</div>
+        </div>
+      `;
+      return;
+    }
+
+    games.forEach(game => {
+      const gameEl = document.createElement('div');
+      gameEl.className = 'game-item';
+      
+      const currentUserId = this.profileData.id;
+      const isWhite = game.white_player === currentUserId;
+      const opponentName = isWhite ? game.black_player_username : game.white_player_username;
+      const result = this.getGameResult(game, isWhite);
+      
+      // Format time control better
+      let timeControl = 'Standard';
+      if (game.time_control) {
+        const tc = game.time_control.toString().toLowerCase();
+        if (tc.includes('bullet')) timeControl = '⚡ Bullet';
+        else if (tc.includes('blitz')) timeControl = '⚡ Blitz';
+        else if (tc.includes('rapid')) timeControl = '⏱️ Rapid';
+        else if (tc.includes('classical')) timeControl = '♟️ Classical';
+      }
+      
+      gameEl.innerHTML = `
+        <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1;">
+          <div style="font-size: 1.5rem;">${result.icon}</div>
+          <div style="flex: 1;">
+            <div style="font-weight: var(--font-weight-semibold); color: var(--color-text-primary); margin-bottom: 2px;">
+              vs ${opponentName || 'Unknown'}
+            </div>
+            <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">
+              ${timeControl} • ${this.formatDate(game.created_at)}
+            </div>
+          </div>
+          <div class="game-result ${result.class}" style="padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm);">
+            ${result.text}
+          </div>
+        </div>
+      `;
+
+      gameEl.style.cursor = 'pointer';
+      gameEl.style.padding = 'var(--space-md)';
+      gameEl.style.borderRadius = 'var(--radius-md)';
+      gameEl.style.transition = 'all var(--transition-normal)';
+      
+      gameEl.addEventListener('mouseenter', () => {
+        gameEl.style.background = 'rgba(255, 255, 255, 0.05)';
+      });
+      gameEl.addEventListener('mouseleave', () => {
+        gameEl.style.background = 'transparent';
+      });
+      gameEl.addEventListener('click', () => {
+        window.location.href = `/play/?game=${game.id}`;
+      });
+
+      container.appendChild(gameEl);
+    });
+  }
+
+  getGameResult(game, isWhite) {
+    if (game.status === 'active' || game.status === 'waiting') {
+      return { text: 'Active', class: 'in-progress', icon: '⏳' };
+    }
+
+    if (!game.winner) {
+      return { text: 'Draw', class: 'draw', icon: '🤝' };
+    }
+
+    // Check if the current user won
+    const playerWon = (isWhite && game.winner === game.white_player) || 
+                      (!isWhite && game.winner === game.black_player);
+    
+    return playerWon 
+      ? { text: 'Won', class: 'won', icon: '🏆' }
+      : { text: 'Lost', class: 'lost', icon: '💔' };
+  }
+
+  displayRecentGamesError() {
+    const container = document.getElementById('recentGamesList');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align: center; padding: var(--space-lg); color: var(--color-error);">Failed to load recent games</div>';
+  }
+
   displayProfile(profile) {
+    console.log('📊 Displaying profile data:', profile);
+
     // Display username
-    const usernameEl = document.getElementById('userName');
+    const usernameEl = document.getElementById('profileUsername');
     if (usernameEl) {
       usernameEl.textContent = profile.username;
     }
 
     // Display avatar
-    const avatarEl = document.getElementById('userAvatar');
-    if (avatarEl) {
-      if (profile.avatar_url) {
-        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="${profile.username}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+    const avatarEl = document.getElementById('profileAvatar');
+    const avatarTextEl = document.getElementById('avatarText');
+    if (avatarEl && avatarTextEl) {
+      if (profile.avatar || profile.avatar_url) {
+        const avatarUrl = profile.avatar || profile.avatar_url;
+        avatarEl.style.backgroundImage = `url(${avatarUrl})`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        avatarTextEl.style.display = 'none';
       } else {
-        avatarEl.textContent = profile.username.charAt(0).toUpperCase();
+        avatarTextEl.textContent = profile.username.charAt(0).toUpperCase();
+        avatarTextEl.style.display = 'flex';
       }
     }
 
@@ -98,11 +230,13 @@ class ProfileController {
     this.displayRating('rapidRating', profile.rapid_rating);
     this.displayRating('classicalRating', profile.classical_rating);
 
+    // Display peak ratings
+    this.displayStat('blitzPeak', `Peak: ${profile.blitz_peak || profile.blitz_rating || 1200}`);
+    this.displayStat('rapidPeak', `Peak: ${profile.rapid_peak || profile.rapid_rating || 1200}`);
+    this.displayStat('classicalPeak', `Peak: ${profile.classical_peak || profile.classical_rating || 1200}`);
+
     // Display stats
-    this.displayStat('totalGames', profile.total_games);
-    this.displayStat('gamesWon', profile.games_won);
-    this.displayStat('gamesDrawn', profile.games_drawn);
-    this.displayStat('gamesLost', profile.games_lost);
+    this.displayStat('totalGames', profile.total_games || 0);
 
     // Calculate and display win rate
     const winRate = profile.total_games > 0 
@@ -110,9 +244,19 @@ class ProfileController {
       : 0;
     this.displayStat('winRate', `${winRate}%`);
 
+    // Display best rating (highest of all time controls)
+    const bestRating = Math.max(
+      profile.rapid_peak || profile.rapid_rating || 1200,
+      profile.blitz_peak || profile.blitz_rating || 1200,
+      profile.classical_peak || profile.classical_rating || 1200
+    );
+    this.displayStat('bestRating', bestRating);
+
     // Display streak
-    this.displayStat('currentStreak', profile.current_win_streak);
-    this.displayStat('bestStreak', profile.best_win_streak);
+    this.displayStat('currentStreak', profile.current_win_streak || 0);
+    this.displayStat('bestStreak', profile.best_win_streak || 0);
+
+    console.log('✅ Profile displayed successfully');
   }
 
   displayRating(elementId, rating) {
@@ -130,13 +274,21 @@ class ProfileController {
   }
 
   displayAchievements(data) {
+    console.log('🏆 Displaying achievements:', data);
+    
     const container = document.getElementById('achievementsList');
-    if (!container) return;
+    if (!container) {
+      console.warn('⚠️ Achievements container not found');
+      return;
+    }
 
     // Clear existing content
     container.innerHTML = '';
 
-    if (!data.achievements || data.achievements.length === 0) {
+    // Handle both direct array and object with achievements property
+    const achievements = Array.isArray(data) ? data : (data.achievements || []);
+
+    if (achievements.length === 0) {
       container.innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; padding: var(--space-xl); color: var(--color-text-muted);">
           No achievements available yet
@@ -146,7 +298,7 @@ class ProfileController {
     }
 
     // Display achievements
-    data.achievements.forEach(achievement => {
+    achievements.forEach(achievement => {
       const achievementEl = document.createElement('div');
       achievementEl.className = `achievement-item ${achievement.unlocked ? 'unlocked' : 'locked'}`;
       
@@ -164,8 +316,12 @@ class ProfileController {
       container.appendChild(achievementEl);
     });
 
-    // Display stats
-    this.displayAchievementStats(data.stats);
+    // Display stats if available
+    if (data.stats) {
+      this.displayAchievementStats(data.stats);
+    }
+
+    console.log(`✅ Displayed ${achievements.length} achievements`);
   }
 
   displayAchievementStats(stats) {
@@ -200,12 +356,28 @@ class ProfileController {
     return date.toLocaleDateString();
   }
 
+  async checkAchievementsSilently() {
+    try {
+      const response = await this.api.checkAchievements();
+      if (response.ok) {
+        const newlyUnlocked = response.data.newly_unlocked || [];
+        if (newlyUnlocked.length > 0) {
+          console.log(`🎉 ${newlyUnlocked.length} new achievement(s) unlocked:`, newlyUnlocked);
+          // Achievements will be shown when loadAchievements() runs
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check achievements:', error);
+    }
+  }
+
   setupEventListeners() {
     // Back button
     const backBtn = document.querySelector('.back-btn');
     if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        window.history.back();
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = '/lobby/';
       });
     }
 

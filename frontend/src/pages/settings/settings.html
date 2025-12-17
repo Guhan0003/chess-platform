@@ -425,34 +425,174 @@
       font-size: 1.2em;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .settings-container {
-        padding: var(--space-md);
+    /* Mobile-First Responsive Design */
+    
+    /* Base mobile styles (up to 640px) */
+    .settings-header {
+      height: var(--header-height-mobile);
+      padding: 0 var(--space-md);
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .settings-title h1 {
+      font-size: var(--font-size-lg);
+    }
+
+    .back-btn {
+      padding: var(--space-sm) var(--space-md);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-sm);
+      min-height: var(--touch-target-min);
+      min-width: var(--touch-target-min);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-content {
+      padding: var(--space-md);
+    }
+
+    .settings-section {
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+      border-radius: var(--radius-md);
+    }
+
+    .section-title {
+      font-size: var(--font-size-md);
+    }
+
+    .setting-item {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--space-md) 0;
+    }
+
+    .setting-control {
+      margin-left: 0;
+      margin-top: var(--space-sm);
+      width: 100%;
+    }
+
+    .theme-grid,
+    .piece-set-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+    }
+
+    .theme-option,
+    .piece-set-option {
+      padding: var(--space-md);
+      border-radius: var(--radius-sm);
+    }
+
+    .settings-actions {
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+      min-height: var(--touch-target-min);
+      padding: var(--space-md);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Small tablet styles (641px to 768px) */
+    @media (min-width: 641px) {
+      .settings-header {
+        height: var(--header-height);
+        padding: 0 var(--space-lg);
+      }
+
+      .settings-title h1 {
+        font-size: var(--font-size-xl);
+      }
+
+      .settings-content {
+        padding: var(--space-lg);
+      }
+
+      .settings-section {
+        padding: var(--space-lg);
+        margin-bottom: var(--space-lg);
+        border-radius: var(--radius-lg);
+      }
+
+      .theme-grid,
+      .piece-set-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       .setting-item {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
       }
 
       .setting-control {
-        margin-left: 0;
-        margin-top: var(--space-md);
-        width: 100%;
+        margin-left: auto;
+        margin-top: 0;
+        width: auto;
+      }
+    }
+
+    /* Large tablet styles (769px to 1024px) */
+    @media (min-width: 769px) {
+      .settings-content {
+        padding: var(--space-xl);
       }
 
-      .theme-grid {
-        grid-template-columns: 1fr;
+      .settings-section {
+        padding: var(--space-xl);
+      }
+
+      .theme-grid,
+      .piece-set-grid {
+        grid-template-columns: repeat(3, 1fr);
       }
 
       .settings-actions {
-        flex-direction: column;
+        flex-direction: row;
       }
 
       .btn {
-        width: 100%;
-        justify-content: center;
+        width: auto;
+        min-width: 150px;
+      }
+    }
+
+    /* Desktop styles (1025px and up) */
+    @media (min-width: 1025px) {
+      .settings-content {
+        max-width: 1000px;
+      }
+
+      .theme-grid,
+      .piece-set-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    /* Touch device optimizations */
+    @media (hover: none) and (pointer: coarse) {
+      .back-btn,
+      .btn {
+        min-height: var(--touch-target-min);
+        padding: var(--space-md);
+      }
+
+      .toggle-switch {
+        min-height: var(--touch-target-min);
+        min-width: calc(var(--touch-target-min) * 1.8);
+      }
+
+      .theme-option,
+      .piece-set-option {
+        padding: var(--space-lg);
       }
     }
   </style>
@@ -462,12 +602,13 @@
     <!-- Header -->
     <header class="settings-header">
       <div class="settings-title">
-        <button class="back-btn" onclick="window.history.back()">
-          <span>←</span>
-          <span>Back</span>
-        </button>
         <h1>⚙️ Settings</h1>
       </div>
+      
+      <a href="#" class="back-btn" data-route="/lobby">
+        <span>←</span>
+        <span>Back to Lobby</span>
+      </a>
     </header>
 
     <!-- Content -->

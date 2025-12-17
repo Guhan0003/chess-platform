@@ -62,7 +62,10 @@ class ChessRouter {
       
       // Handle authentication requirements
       if (route.requiresAuth && !this.checkAuth()) {
-        this.navigate('/login');
+        // Prevent infinite loop - only redirect if not already on login
+        if (path !== '/login' && this.routes['/login']) {
+          this.navigate('/login');
+        }
         return;
       }
       
@@ -79,8 +82,8 @@ class ChessRouter {
       }
     } else {
       console.warn(`No route handler found for: ${path}`);
-      // Default fallback - redirect to login or home
-      this.navigate('/login');
+      // Show error instead of redirecting to prevent infinite loops
+      this.showError(`Page not found: ${path}`);
     }
   }
 

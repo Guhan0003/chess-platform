@@ -190,6 +190,34 @@ def make_move(request, pk):
             else:
                 logger.info(f"Skipping rating update - bot game (white_bot={is_white_bot}, black_bot={is_black_bot})")
         
+        # CHECK AND UNLOCK ACHIEVEMENTS after game completion
+        try:
+            from accounts.achievement_views import check_achievement_requirement
+            from accounts.models import Achievement, UserAchievement
+            
+            # Check achievements for both players
+            for player in [game.white_player, game.black_player]:
+                if player and 'computer' not in player.username.lower():
+                    # Get all active achievements
+                    all_achievements = Achievement.objects.filter(is_active=True)
+                    unlocked_ids = set(UserAchievement.objects.filter(
+                        user=player
+                    ).values_list('achievement_id', flat=True))
+                    
+                    # Check each achievement
+                    for achievement in all_achievements:
+                        if achievement.id not in unlocked_ids:
+                            if check_achievement_requirement(player, achievement):
+                                UserAchievement.objects.create(
+                                    user=player,
+                                    achievement=achievement
+                                )
+                                logger.info(f"🏆 Achievement unlocked for {player.username}: {achievement.name}")
+        except Exception as e:
+            logger.error(f"Failed to check achievements: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
         # Notify players via WebSocket that game has finished
         termination_reason = 'checkmate' if board.is_checkmate() else 'stalemate'
         game.notify_game_finished(termination_reason)
@@ -342,8 +370,25 @@ def join_game(request, pk):
 
 class GameListView(generics.ListAPIView):
     """List recent games."""
-    queryset = Game.objects.all().order_by('-created_at')
     serializer_class = GameSerializer
+
+    def get_queryset(self):
+        """Filter games by user if user_id query parameter is provided"""
+        queryset = Game.objects.all().order_by('-created_at')
+        
+        # Filter by user if user_id parameter is provided
+        user_id = self.request.query_params.get('user_id', None)
+        if user_id:
+            queryset = queryset.filter(
+                Q(white_player__id=user_id) | Q(black_player__id=user_id)
+            )
+        
+        # Limit results
+        limit = self.request.query_params.get('limit', None)
+        if limit:
+            queryset = queryset[:int(limit)]
+            
+        return queryset.select_related('white_player', 'black_player', 'winner')
 
 
 class GameDetailView(generics.RetrieveAPIView):
@@ -1302,6 +1347,264 @@ def get_rating_preview_view(request, game_id):
             'error': 'Failed to get rating preview',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    """Send a game invitation to another player"""
+    try:
+        to_player_id = request.data.get('to_player')
+        time_control_id = request.data.get('time_control')
+        message = request.data.get('message', '')
+        
+        # Validate inputs
+        if not to_player_id:
+            return Response({
+                'error': 'to_player is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not time_control_id:
+            return Response({
+                'error': 'time_control is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get the recipient
+        try:
+            to_player = User.objects.get(id=to_player_id)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'Player not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Can't invite yourself
+        if to_player == request.user:
+            return Response({
+                'error': 'You cannot invite yourself'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get time control
+        try:
+            time_control = TimeControl.objects.get(id=time_control_id)
+        except TimeControl.DoesNotExist:
+            return Response({
+                'error': 'Time control not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check for existing pending invitation
+        existing = GameInvitation.objects.filter(
+            from_player=request.user,
+            to_player=to_player,
+            status='pending'
+        ).exists()
+        
+        if existing:
+            return Response({
+                'error': 'You already have a pending invitation to this player'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create invitation (expires in 5 minutes)
+        invitation = GameInvitation.objects.create(
+            from_player=request.user,
+            to_player=to_player,
+            time_control=time_control,
+            message=message,
+            expires_at=timezone.now() + timedelta(minutes=5)
+        )
+        
+        serializer = GameInvitationSerializer(invitation)
+        logger.info(f"Invitation {invitation.id} created: {request.user.username} → {to_player.username}")
+        
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error sending invitation: {e}")
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to send invitation',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_invitations(request):
+    """List user's invitations (sent and received)"""
+    try:
+        filter_type = request.query_params.get('type', 'all')  # 'sent', 'received', or 'all'
+        filter_status = request.query_params.get('status', 'pending')  # 'pending', 'accepted', etc.
+        
+        if filter_type == 'sent':
+            invitations = GameInvitation.objects.filter(from_player=request.user)
+        elif filter_type == 'received':
+            invitations = GameInvitation.objects.filter(to_player=request.user)
+        else:
+            invitations = GameInvitation.objects.filter(
+                Q(from_player=request.user) | Q(to_player=request.user)
+            )
+        
+        if filter_status:
+            invitations = invitations.filter(status=filter_status)
+        
+        invitations = invitations.select_related(
+            'from_player', 'to_player', 'time_control'
+        ).order_by('-created_at')
+        
+        serializer = GameInvitationSerializer(invitations, many=True)
+        return Response(serializer.data)
+        
+    except Exception as e:
+        logger.error(f"Error listing invitations: {e}")
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to list invitations',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def accept_invitation(request, invitation_id):
+    """Accept a game invitation and create the game"""
+    try:
+        invitation = get_object_or_404(
+            GameInvitation.objects.select_related('from_player', 'to_player', 'time_control'),
+            id=invitation_id
+        )
+        
+        # Only recipient can accept
+        if invitation.to_player != request.user:
+            return Response({
+                'error': 'You can only accept invitations sent to you'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if already responded
+        if invitation.status != 'pending':
+            return Response({
+                'error': f'This invitation has already been {invitation.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if expired
+        if invitation.is_expired():
+            invitation.status = 'expired'
+            invitation.save()
+            return Response({
+                'error': 'This invitation has expired'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Accept and create game
+        game = invitation.accept()
+        
+        if not game:
+            return Response({
+                'error': 'Failed to create game from invitation'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        logger.info(f"Invitation {invitation_id} accepted, game {game.id} created")
+        
+        return Response({
+            'message': 'Invitation accepted',
+            'game_id': game.id,
+            'invitation': GameInvitationSerializer(invitation).data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error accepting invitation {invitation_id}: {e}")
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to accept invitation',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def decline_invitation(request, invitation_id):
+    """Decline a game invitation"""
+    try:
+        invitation = get_object_or_404(GameInvitation, id=invitation_id)
+        
+        # Only recipient can decline
+        if invitation.to_player != request.user:
+            return Response({
+                'error': 'You can only decline invitations sent to you'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if already responded
+        if invitation.status != 'pending':
+            return Response({
+                'error': f'This invitation has already been {invitation.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        invitation.decline()
+        logger.info(f"Invitation {invitation_id} declined by {request.user.username}")
+        
+        return Response({
+            'message': 'Invitation declined',
+            'invitation': GameInvitationSerializer(invitation).data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error declining invitation {invitation_id}: {e}")
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to decline invitation',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def cancel_invitation(request, invitation_id):
+    """Cancel a sent invitation"""
+    try:
+        invitation = get_object_or_404(GameInvitation, id=invitation_id)
+        
+        # Only sender can cancel
+        if invitation.from_player != request.user:
+            return Response({
+                'error': 'You can only cancel invitations you sent'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Can only cancel pending invitations
+        if invitation.status != 'pending':
+            return Response({
+                'error': f'Cannot cancel an invitation that is {invitation.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        invitation.cancel()
+        logger.info(f"Invitation {invitation_id} cancelled by {request.user.username}")
+        
+        return Response({
+            'message': 'Invitation cancelled',
+            'invitation': GameInvitationSerializer(invitation).data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error cancelling invitation {invitation_id}: {e}")
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to cancel invitation',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_time_controls(request):
+    """Get list of available time controls"""
+    try:
+        time_controls = TimeControl.objects.all().order_by('initial_time', 'increment')
+        
+        # Format for frontend
+        data = [{
+            'id': tc.id,
+            'category': tc.category,
+            'display_name': tc.get_display_name(),
+            'initial_time': tc.initial_time,
+            'increment': tc.increment
+        } for tc in time_controls]
+        
+        return Response(data)
+        
+    except Exception as e:
+        logger.error(f"Error getting time controls: {e}")
 # ================== END GAME SESSION GUARD API ENDPOINTS ==================

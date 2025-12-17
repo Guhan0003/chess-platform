@@ -87,6 +87,21 @@ class SettingsController {
   }
 
   setupEventListeners() {
+    // Back button navigation
+    const backButton = document.querySelector('.back-btn');
+    if (backButton) {
+      backButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (this.hasChanges) {
+          if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+            window.location.href = '/lobby/';
+          }
+        } else {
+          window.location.href = '/lobby/';
+        }
+      });
+    }
+
     // Track changes on all inputs
     this.fields.forEach(field => {
       const element = document.getElementById(field);

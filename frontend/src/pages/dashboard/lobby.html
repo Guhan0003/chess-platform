@@ -1707,18 +1707,18 @@
     // Initialize mobile menu
     initMobileMenu();
     
-    // Computer Game Modal Functions
-    function showComputerGameModal() {
-      const modal = document.getElementById('computerGameModal');
-      modal.classList.add('show');
-    }
+      // Computer Game Modal Functions
+      function showComputerGameModal() {
+        const modal = document.getElementById('computerGameModal');
+        modal.classList.add('show');
+      }
 
-    function hideComputerGameModal() {
-      const modal = document.getElementById('computerGameModal');
-      modal.classList.remove('show');
-    }
+      function hideComputerGameModal() {
+        const modal = document.getElementById('computerGameModal');
+        modal.classList.remove('show');
+      }
 
-    function setupComputerGameModal() {
+      function setupComputerGameModal() {
       const modal = document.getElementById('computerGameModal');
       const closeBtn = modal.querySelector('.modal-close');
       const cancelBtn = document.getElementById('cancelComputerGame');
@@ -1761,7 +1761,32 @@
           api.showError('Failed to create computer game. Please try again.');
         }
       });
+      }
+
+      // ==================== INVITE PLAYER MODAL ====================
+      let selectedPlayer = null;
+      let selectedTimeControl = null;
+      let timeControls = [];
+      let allPlayers = [];
+
+      function showInvitePlayerModal() {
+      const modal = document.getElementById('invitePlayerModal');
+      modal.classList.add('show');
+      loadTimeControls();
+      loadAllPlayers();
     }
+
+      function hideInvitePlayerModal() {
+        const modal = document.getElementById('invitePlayerModal');
+        modal.classList.remove('show');
+        selectedPlayer = null;
+        selectedTimeControl = null;
+        document.getElementById('playerSearchInput').value = '';
+        document.getElementById('inviteMessage').value = '';
+        document.getElementById('playersSearchResults').innerHTML = '';
+        document.getElementById('sendInviteBtn').disabled = true;
+      }
+
   </script>
 
   <!-- Computer Game Settings Modal -->
@@ -2119,6 +2144,8 @@
         justify-content: center;
       }
     }
+
   </style>
+
 </body>
 </html>

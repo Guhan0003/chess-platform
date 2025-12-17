@@ -432,6 +432,18 @@ class ChessAPI {
   }
 
   /**
+   * Get games for a specific user
+   * @param {number} userId - User ID (required)
+   * @param {number} limit - Number of games to retrieve (default: 10)
+   */
+  async getUserGames(userId, limit = 10) {
+    if (!userId) {
+      throw new Error('userId is required');
+    }
+    return this.request(`/games/?user_id=${userId}&limit=${limit}`);
+  }
+
+  /**
    * Create new game
    */
   async createGame() {
