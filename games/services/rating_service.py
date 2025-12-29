@@ -129,13 +129,9 @@ class GlobalRatingService:
         if black_new_rating == cls.MINIMUM_RATING and black_old_rating == cls.MINIMUM_RATING:
             black_change = 0
         
-        # Update white player ratings
+        # Update player ratings
         setattr(white_player, rating_field, white_new_rating)
-        white_player.total_games += 1
-        
-        # Update black player ratings
         setattr(black_player, rating_field, black_new_rating)
-        black_player.total_games += 1
         
         # Update peak ratings
         white_peak = getattr(white_player, peak_field)
@@ -146,20 +142,9 @@ class GlobalRatingService:
         if black_new_rating > black_peak:
             setattr(black_player, peak_field, black_new_rating)
         
-        # Update game counts for time control
-        white_games = getattr(white_player, games_field, 0)
-        setattr(white_player, games_field, white_games + 1)
-        
-        black_games = getattr(black_player, games_field, 0)
-        setattr(black_player, games_field, black_games + 1)
-        
-        # Update game statistics
+        # Update game statistics (handles total_games, time_control games, wins/losses/draws, and saves)
         white_player.update_game_stats(white_result, time_control)
         black_player.update_game_stats(black_result, time_control)
-        
-        # Save both players
-        white_player.save()
-        black_player.save()
         
         # Create rating history records
         cls._create_rating_history(

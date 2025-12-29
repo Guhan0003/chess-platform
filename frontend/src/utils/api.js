@@ -538,6 +538,95 @@ class ChessAPI {
   }
 
   // =================================
+  // Puzzle API Methods
+  // =================================
+
+  /**
+   * Get a random puzzle for the user
+   * @param {Object} filters - Optional filters (category, difficulty, theme)
+   */
+  async getRandomPuzzle(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.category) params.append('category', filters.category);
+    if (filters.difficulty) params.append('difficulty', filters.difficulty);
+    if (filters.theme) params.append('theme', filters.theme);
+    if (filters.rating_range) params.append('rating_range', filters.rating_range);
+    
+    const queryString = params.toString();
+    return this.request(`/games/puzzles/random/${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Get a specific puzzle by ID
+   * @param {number} puzzleId - Puzzle ID
+   */
+  async getPuzzle(puzzleId) {
+    return this.request(`/games/puzzles/${puzzleId}/`);
+  }
+
+  /**
+   * Validate a move in a puzzle
+   * @param {number} puzzleId - Puzzle ID
+   * @param {string} move - Move in UCI format
+   * @param {string} currentPosition - Current FEN position
+   * @param {number} moveIndex - Index in solution sequence
+   */
+  async validatePuzzleMove(puzzleId, move, currentPosition, moveIndex = 0) {
+    return this.request(`/games/puzzles/${puzzleId}/validate/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        move: move,
+        current_position: currentPosition,
+        move_index: moveIndex
+      })
+    });
+  }
+
+  /**
+   * Complete a puzzle (record attempt)
+   * @param {number} puzzleId - Puzzle ID
+   * @param {boolean} solved - Whether puzzle was solved
+   * @param {number} timeSpent - Time spent in seconds
+   * @param {Array} movesMade - List of moves attempted
+   * @param {number} hintsUsed - Number of hints used
+   */
+  async completePuzzle(puzzleId, solved, timeSpent, movesMade = [], hintsUsed = 0) {
+    return this.request(`/games/puzzles/${puzzleId}/complete/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        solved: solved,
+        time_spent: timeSpent,
+        moves_made: movesMade,
+        hints_used: hintsUsed
+      })
+    });
+  }
+
+  /**
+   * Get a hint for a puzzle
+   * @param {number} puzzleId - Puzzle ID
+   * @param {number} moveIndex - Current move index
+   */
+  async getPuzzleHint(puzzleId, moveIndex = 0) {
+    return this.request(`/games/puzzles/${puzzleId}/hint/?move_index=${moveIndex}`);
+  }
+
+  /**
+   * Get the full solution for a puzzle
+   * @param {number} puzzleId - Puzzle ID
+   */
+  async getPuzzleSolution(puzzleId) {
+    return this.request(`/games/puzzles/${puzzleId}/solution/`);
+  }
+
+  /**
+   * Get user's puzzle statistics
+   */
+  async getPuzzleStats() {
+    return this.request('/games/puzzles/stats/');
+  }
+
+  // =================================
   // Game Session Guard Methods
   // =================================
 

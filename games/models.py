@@ -710,3 +710,261 @@ class GameInvitation(models.Model):
     def get_display_name(self):
         """Get user-friendly display for the invitation"""
         return f"{self.time_control.get_display_name()} game"
+
+class Puzzle(models.Model):
+    """Chess puzzle for tactical training"""
+    
+    DIFFICULTY_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+        ('expert', 'Expert'),
+    ]
+    
+    CATEGORY_CHOICES = [
+        ('tactics', 'Tactics'),
+        ('endgame', 'Endgame'),
+        ('opening', 'Opening'),
+        ('strategy', 'Strategy'),
+        ('checkmate', 'Checkmate Pattern'),
+        ('defense', 'Defense'),
+    ]
+    
+    THEME_CHOICES = [
+        ('fork', 'Fork'),
+        ('pin', 'Pin'),
+        ('skewer', 'Skewer'),
+        ('discovery', 'Discovered Attack'),
+        ('double_check', 'Double Check'),
+        ('sacrifice', 'Sacrifice'),
+        ('back_rank', 'Back Rank'),
+        ('deflection', 'Deflection'),
+        ('decoy', 'Decoy'),
+        ('overloading', 'Overloading'),
+        ('zwischenzug', 'Zwischenzug'),
+        ('mate_in_1', 'Mate in 1'),
+        ('mate_in_2', 'Mate in 2'),
+        ('mate_in_3', 'Mate in 3+'),
+        ('endgame_basic', 'Basic Endgame'),
+        ('endgame_advanced', 'Advanced Endgame'),
+        ('mixed', 'Mixed'),
+    ]
+
+    # Puzzle identification
+    external_id = models.CharField(max_length=50, unique=True, null=True, blank=True,
+                                   help_text="External puzzle ID (e.g., from Lichess)")
+    
+    # Position and solution
+    fen = models.CharField(max_length=200, help_text="Starting position in FEN notation")
+    solution = models.JSONField(help_text="List of moves in UCI format, e.g., ['e2e4', 'd7d5', 'e4d5']")
+    
+    # Metadata
+    title = models.CharField(max_length=200, blank=True, default='')
+    description = models.TextField(blank=True, default='', help_text="Puzzle objective description")
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='intermediate')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='tactics')
+    themes = models.JSONField(default=list, help_text="List of tactical themes")
+    
+    # Rating and popularity
+    rating = models.IntegerField(default=1500, help_text="Puzzle difficulty rating")
+    times_played = models.IntegerField(default=0)
+    times_solved = models.IntegerField(default=0)
+    average_time = models.FloatField(default=0.0, help_text="Average solve time in seconds")
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Source game reference (optional)
+    source_game = models.ForeignKey(
+        'Game',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='derived_puzzles',
+        help_text="Original game this puzzle was derived from"
+    )
+
+    class Meta:
+        db_table = 'games_puzzle'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['difficulty', 'category']),
+            models.Index(fields=['rating']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return f"Puzzle #{self.id} ({self.difficulty} - {self.category})"
+
+    def get_solve_rate(self):
+        """Calculate puzzle solve rate as percentage"""
+        if self.times_played == 0:
+            return 0
+        return round((self.times_solved / self.times_played) * 100, 1)
+
+    def record_attempt(self, solved, time_spent):
+        """Record a puzzle attempt"""
+        self.times_played += 1
+        if solved:
+            self.times_solved += 1
+        
+        # Update average time
+        if self.average_time == 0:
+            self.average_time = time_spent
+        else:
+            # Weighted average
+            self.average_time = (self.average_time * (self.times_played - 1) + time_spent) / self.times_played
+        
+        self.save()
+
+    def get_objective(self):
+        """Generate objective text based on solution"""
+        if not self.solution:
+            return "Find the best move"
+        
+        # Parse FEN to determine whose turn it is
+        parts = self.fen.split(' ')
+        to_move = 'White' if parts[1] == 'w' else 'Black'
+        
+        move_count = len(self.solution)
+        
+        # Generate objective based on themes
+        themes = self.themes if self.themes else []
+        
+        if 'mate_in_1' in themes:
+            return f"{to_move} to move and checkmate in 1"
+        elif 'mate_in_2' in themes:
+            return f"{to_move} to move and checkmate in 2"
+        elif 'mate_in_3' in themes:
+            return f"{to_move} to move and checkmate"
+        elif 'fork' in themes:
+            return f"{to_move} to move and win material with a fork"
+        elif 'pin' in themes:
+            return f"{to_move} to move and exploit the pin"
+        elif self.category == 'endgame':
+            return f"{to_move} to move in this endgame"
+        else:
+            return f"{to_move} to move and find the best continuation"
+
+
+class PuzzleAttempt(models.Model):
+    """Track user attempts on puzzles"""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='puzzle_attempts'
+    )
+    puzzle = models.ForeignKey(
+        Puzzle,
+        on_delete=models.CASCADE,
+        related_name='attempts'
+    )
+    
+    # Attempt details
+    solved = models.BooleanField(default=False)
+    time_spent = models.FloatField(help_text="Time spent in seconds")
+    moves_made = models.JSONField(default=list, help_text="List of moves attempted")
+    hints_used = models.IntegerField(default=0)
+    
+    # Rating change (for puzzle rating system)
+    rating_before = models.IntegerField(null=True, blank=True)
+    rating_after = models.IntegerField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'games_puzzleattempt'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'puzzle']),
+            models.Index(fields=['user', 'solved']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        status = "✓" if self.solved else "✗"
+        return f"{self.user.username} - Puzzle #{self.puzzle.id} {status}"
+
+
+class UserPuzzleStats(models.Model):
+    """User's overall puzzle statistics"""
+    
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='puzzle_stats'
+    )
+    
+    # Rating
+    puzzle_rating = models.IntegerField(default=1500)
+    highest_rating = models.IntegerField(default=1500)
+    
+    # Stats
+    puzzles_attempted = models.IntegerField(default=0)
+    puzzles_solved = models.IntegerField(default=0)
+    current_streak = models.IntegerField(default=0)
+    best_streak = models.IntegerField(default=0)
+    total_time_spent = models.FloatField(default=0.0, help_text="Total time in seconds")
+    
+    # Category breakdown
+    tactics_solved = models.IntegerField(default=0)
+    endgame_solved = models.IntegerField(default=0)
+    opening_solved = models.IntegerField(default=0)
+    strategy_solved = models.IntegerField(default=0)
+    
+    # Last activity
+    last_puzzle_at = models.DateTimeField(null=True, blank=True)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'games_userpuzzlestats'
+
+    def __str__(self):
+        return f"{self.user.username} - Puzzle Rating: {self.puzzle_rating}"
+
+    def get_accuracy(self):
+        """Calculate overall accuracy"""
+        if self.puzzles_attempted == 0:
+            return 0
+        return round((self.puzzles_solved / self.puzzles_attempted) * 100, 1)
+
+    def record_attempt(self, puzzle, solved, time_spent):
+        """Update stats after a puzzle attempt"""
+        self.puzzles_attempted += 1
+        self.total_time_spent += time_spent
+        self.last_puzzle_at = timezone.now()
+        
+        if solved:
+            self.puzzles_solved += 1
+            self.current_streak += 1
+            if self.current_streak > self.best_streak:
+                self.best_streak = self.current_streak
+            
+            # Update category stats
+            category_field = f"{puzzle.category}_solved"
+            if hasattr(self, category_field):
+                setattr(self, category_field, getattr(self, category_field) + 1)
+            
+            # Update rating (simple Elo-like system)
+            rating_diff = puzzle.rating - self.puzzle_rating
+            k_factor = 32
+            expected = 1 / (1 + 10 ** (-rating_diff / 400))
+            self.puzzle_rating = int(self.puzzle_rating + k_factor * (1 - expected))
+        else:
+            self.current_streak = 0
+            
+            # Rating decrease on failure
+            rating_diff = puzzle.rating - self.puzzle_rating
+            k_factor = 32
+            expected = 1 / (1 + 10 ** (-rating_diff / 400))
+            self.puzzle_rating = int(self.puzzle_rating + k_factor * (0 - expected))
+        
+        # Update highest rating
+        if self.puzzle_rating > self.highest_rating:
+            self.highest_rating = self.puzzle_rating
+        
+        self.save()

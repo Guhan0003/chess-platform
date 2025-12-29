@@ -1,5 +1,6 @@
 from django.urls import path
 from games import views
+from games import puzzle_views
 
 urlpatterns = [
     path("", views.GameListView.as_view(), name="game-list"),                  # GET list
@@ -27,4 +28,15 @@ urlpatterns = [
     # ================== RATING SYSTEM ENDPOINTS ==================
     path("<int:game_id>/rating-preview/", views.get_rating_preview_view, name="rating-preview"),
     # ================== END RATING SYSTEM ENDPOINTS ==================
+    
+    # ================== PUZZLE SYSTEM ENDPOINTS ==================
+    path("puzzles/random/", puzzle_views.get_random_puzzle, name="puzzle-random"),
+    path("puzzles/stats/", puzzle_views.get_user_puzzle_stats, name="puzzle-stats"),
+    path("puzzles/initialize/", puzzle_views.initialize_sample_puzzles, name="puzzle-initialize"),
+    path("puzzles/<int:puzzle_id>/", puzzle_views.get_puzzle_by_id, name="puzzle-detail"),
+    path("puzzles/<int:puzzle_id>/validate/", puzzle_views.validate_puzzle_move, name="puzzle-validate"),
+    path("puzzles/<int:puzzle_id>/complete/", puzzle_views.complete_puzzle, name="puzzle-complete"),
+    path("puzzles/<int:puzzle_id>/hint/", puzzle_views.get_puzzle_hint, name="puzzle-hint"),
+    path("puzzles/<int:puzzle_id>/solution/", puzzle_views.get_puzzle_solution, name="puzzle-solution"),
+    # ================== END PUZZLE SYSTEM ENDPOINTS ==================
 ]

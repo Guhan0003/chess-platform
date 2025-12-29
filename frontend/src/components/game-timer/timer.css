@@ -1,0 +1,246 @@
+/**
+ * Chess Game Timer Styles
+ * Professional timer styling with animations for time pressure
+ */
+
+/* Timer Container */
+.player-timer {
+  font-family: 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: var(--font-size-xl, 1.5rem);
+  font-weight: var(--font-weight-bold, 700);
+  padding: var(--space-sm, 0.5rem) var(--space-md, 1rem);
+  border-radius: var(--radius-md, 0.5rem);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  color: var(--color-text-primary, #ffffff);
+  min-width: 80px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+/* Active Timer State */
+.player-timer.timer-active {
+  background: linear-gradient(135deg, rgba(118, 150, 86, 0.2) 0%, rgba(118, 150, 86, 0.1) 100%);
+  border-color: var(--color-accent-primary, #769656);
+  box-shadow: 0 0 15px rgba(118, 150, 86, 0.3);
+}
+
+/* Low Time Warning (< 30 seconds) */
+.player-timer.timer-low {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border-color: #f59e0b;
+  color: #f59e0b;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+}
+
+/* Critical Time (< 10 seconds) */
+.player-timer.timer-critical {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%);
+  border-color: #ef4444;
+  color: #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Pulsing Animation for Critical Time */
+.player-timer.timer-pulse {
+  animation: timerPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes timerPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    transform: scale(1.02);
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+  }
+}
+
+/* Player Card Current Turn Indicator */
+.player-card.current-turn {
+  border-color: var(--color-accent-primary, #769656);
+  box-shadow: 0 0 20px rgba(118, 150, 86, 0.3);
+  background: linear-gradient(135deg, rgba(118, 150, 86, 0.1) 0%, transparent 100%);
+}
+
+.player-card.current-turn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-accent-primary, #769656);
+  border-radius: var(--radius-md, 0.5rem) 0 0 var(--radius-md, 0.5rem);
+}
+
+/* Timer in Player Card Layout */
+.player-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 1rem);
+  padding: var(--space-md, 1rem);
+  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-lg, 0.75rem);
+  transition: all 0.3s ease;
+}
+
+.player-card .player-timer {
+  margin-left: auto;
+}
+
+/* Compact Timer for Mobile */
+@media (max-width: 768px) {
+  .player-timer {
+    font-size: var(--font-size-lg, 1.25rem);
+    padding: var(--space-xs, 0.25rem) var(--space-sm, 0.5rem);
+    min-width: 60px;
+  }
+}
+
+/* Timer Badge Style (Alternative) */
+.timer-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Roboto Mono', monospace;
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: var(--font-weight-semibold, 600);
+  padding: 4px 8px;
+  border-radius: var(--radius-full, 9999px);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary, #a0a0a0);
+}
+
+.timer-badge.active {
+  background: var(--color-accent-primary, #769656);
+  color: white;
+}
+
+.timer-badge.warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.timer-badge.danger {
+  background: #ef4444;
+  color: white;
+  animation: timerBadgePulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes timerBadgePulse {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+/* Timer Controls (for testing/admin) */
+.timer-controls {
+  display: flex;
+  gap: var(--space-sm, 0.5rem);
+  margin-top: var(--space-sm, 0.5rem);
+}
+
+.timer-controls button {
+  padding: var(--space-xs, 0.25rem) var(--space-sm, 0.5rem);
+  font-size: var(--font-size-xs, 0.75rem);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-sm, 0.25rem);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary, #a0a0a0);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timer-controls button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary, #ffffff);
+}
+
+/* Time Control Selector */
+.time-control-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--space-sm, 0.5rem);
+  padding: var(--space-md, 1rem);
+}
+
+.time-control-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md, 1rem);
+  border: 2px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.time-control-option:hover {
+  border-color: var(--color-accent-primary, #769656);
+  background: rgba(118, 150, 86, 0.1);
+}
+
+.time-control-option.selected {
+  border-color: var(--color-accent-primary, #769656);
+  background: linear-gradient(135deg, rgba(118, 150, 86, 0.2) 0%, rgba(118, 150, 86, 0.1) 100%);
+}
+
+.time-control-option .time-value {
+  font-size: var(--font-size-xl, 1.5rem);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text-primary, #ffffff);
+}
+
+.time-control-option .time-label {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-muted, #666666);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-control-option .time-category {
+  font-size: var(--font-size-xs, 0.75rem);
+  padding: 2px 6px;
+  border-radius: var(--radius-full, 9999px);
+  margin-top: var(--space-xs, 0.25rem);
+}
+
+.time-control-option .time-category.bullet {
+  background: #f59e0b;
+  color: white;
+}
+
+.time-control-option .time-category.blitz {
+  background: #3b82f6;
+  color: white;
+}
+
+.time-control-option .time-category.rapid {
+  background: #22c55e;
+  color: white;
+}
+
+.time-control-option .time-category.classical {
+  background: #8b5cf6;
+  color: white;
+}
+
+/* Increment Display */
+.increment-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #666666);
+}
+
+.increment-display::before {
+  content: '+';
+  font-weight: bold;
+  color: var(--color-accent-secondary, #34d399);
+}

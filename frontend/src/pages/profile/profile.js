@@ -252,6 +252,11 @@ class ProfileController {
     );
     this.displayStat('bestRating', bestRating);
 
+    // Display wins/losses/draws
+    this.displayStat('gamesWon', profile.games_won || 0);
+    this.displayStat('gamesLost', profile.games_lost || 0);
+    this.displayStat('gamesDrawn', profile.games_drawn || 0);
+
     // Display streak
     this.displayStat('currentStreak', profile.current_win_streak || 0);
     this.displayStat('bestStreak', profile.best_win_streak || 0);

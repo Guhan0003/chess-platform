@@ -1100,6 +1100,26 @@
                   <div class="stat-label">Best Rating</div>
                 </div>
               </div>
+              
+              <!-- Win/Loss/Draw Record -->
+              <div class="stats-grid" style="margin-top: var(--space-md);">
+                <div class="stat-item" style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2);">
+                  <div class="stat-value" id="gamesWon" style="color: #22c55e;">--</div>
+                  <div class="stat-label">Wins</div>
+                </div>
+                <div class="stat-item" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2);">
+                  <div class="stat-value" id="gamesLost" style="color: #ef4444;">--</div>
+                  <div class="stat-label">Losses</div>
+                </div>
+                <div class="stat-item" style="background: rgba(156, 163, 175, 0.1); border-color: rgba(156, 163, 175, 0.2);">
+                  <div class="stat-value" id="gamesDrawn" style="color: #9ca3af;">--</div>
+                  <div class="stat-label">Draws</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="bestStreak">--</div>
+                  <div class="stat-label">Best Streak</div>
+                </div>
+              </div>
             </div>
 
             <!-- Online Players -->
@@ -1269,6 +1289,12 @@
             displayRating
           );
           document.getElementById('bestRating').textContent = bestRating;
+          
+          // Update wins/losses/draws/best streak
+          document.getElementById('gamesWon').textContent = currentUser.games_won || 0;
+          document.getElementById('gamesLost').textContent = currentUser.games_lost || 0;
+          document.getElementById('gamesDrawn').textContent = currentUser.games_drawn || 0;
+          document.getElementById('bestStreak').textContent = currentUser.best_win_streak || 0;
         }
       }
       

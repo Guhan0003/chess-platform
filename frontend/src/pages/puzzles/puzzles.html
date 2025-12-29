@@ -3,15 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chess Puzzles - Chess Platform</title>
-  <link rel="stylesheet" href="../../styles/global.css">
-  <script src="../../utils/api.js"></script>
-  <script src="../../utils/router.js"></script>
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="Chess Puzzles - Improve your tactical skills">
+  
+  <title>Puzzles - Chess Platform</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="../../styles/global.css">
+  
   <style>
-    /* Puzzle Page - Matching existing design system */
+    /* ================================
+       Chess Puzzles Page Styles
+       Matching Global Design System
+       ================================ */
+
+    /* Page Container */
     .puzzle-container {
       display: flex;
       min-height: 100vh;
@@ -22,7 +36,7 @@
       background-attachment: fixed;
     }
 
-    /* Sidebar Navigation - Matching lobby design */
+    /* Sidebar Navigation - Matching Lobby */
     .sidebar {
       width: var(--sidebar-width);
       background: var(--glass-bg);
@@ -105,82 +119,168 @@
 
     .nav-item:hover {
       background: rgba(118, 150, 86, 0.1);
-      color: var(--color-text-primary);
+      color: var(--color-accent-primary);
+      transform: translateX(2px);
     }
 
     .nav-item.active {
       background: rgba(118, 150, 86, 0.15);
-      color: var(--color-accent-light);
+      color: var(--color-accent-primary);
+      border: 1px solid rgba(118, 150, 86, 0.2);
     }
 
-    .nav-item-icon {
-      font-size: var(--font-size-base);
-      width: 16px;
+    .nav-icon {
+      font-size: var(--font-size-lg);
+      width: 20px;
       text-align: center;
     }
 
-    /* Main Content Area */
+    /* Main Content */
     .main-content {
-      margin-left: var(--sidebar-width);
       flex: 1;
+      margin-left: var(--sidebar-width);
       display: flex;
       flex-direction: column;
       min-height: 100vh;
     }
 
+    /* Header - Matching Lobby */
     .puzzle-header {
-      padding: var(--space-xl);
-      border-bottom: 1px solid var(--glass-border);
+      height: var(--header-height);
       background: var(--glass-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-    }
-
-    .header-top {
+      border-bottom: 1px solid var(--glass-border);
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--space-lg);
+      justify-content: space-between;
+      padding: 0 var(--space-xl);
+      position: sticky;
+      top: 0;
+      z-index: 90;
     }
 
-    .puzzle-title {
-      font-size: var(--font-size-3xl);
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+    }
+
+    .header-title {
+      font-size: var(--font-size-xl);
       font-weight: var(--font-weight-bold);
       color: var(--color-text-primary);
-      margin: 0;
+    }
+
+    .header-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
     }
 
     .difficulty-badge {
       display: inline-flex;
       align-items: center;
       gap: var(--space-xs);
-      padding: var(--space-sm) var(--space-md);
+      padding: var(--space-xs) var(--space-md);
       background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-secondary) 100%);
       color: white;
       border-radius: var(--radius-full);
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-xs);
       font-weight: var(--font-weight-semibold);
       text-transform: capitalize;
     }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: var(--space-lg);
+    .difficulty-badge.beginner {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
     }
 
-    .stat-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      text-align: center;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+    .difficulty-badge.intermediate {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .difficulty-badge.advanced {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .difficulty-badge.expert {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      font-size: var(--font-size-sm);
       transition: all var(--transition-normal);
     }
 
-    .stat-card:hover {
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-accent-primary);
+      transform: translateX(-2px);
+    }
+
+    /* Content Area - Matching Lobby */
+    .puzzle-content {
+      flex: 1;
+      padding: var(--space-xl);
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: var(--space-xl);
+      align-items: start;
+    }
+
+    .puzzle-main {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .puzzle-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    /* Stats Panel - Matching Lobby */
+    .stats-panel {
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-md);
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all var(--transition-normal);
+    }
+
+    .stat-item:hover {
       background: rgba(255, 255, 255, 0.05);
       transform: translateY(-2px);
     }
@@ -189,79 +289,72 @@
       font-size: var(--font-size-2xl);
       font-weight: var(--font-weight-bold);
       color: var(--color-accent-primary);
-      display: block;
       margin-bottom: var(--space-xs);
     }
 
     .stat-label {
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-xs);
       color: var(--color-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    /* Game Area Layout */
-    .puzzle-game-area {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: var(--space-xl);
-      padding: var(--space-xl);
-      align-items: start;
-    }
-
-    .board-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-lg);
-    }
-
-    .puzzle-objective {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
+    /* Objective Panel */
+    .objective-panel {
       padding: var(--space-lg);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      text-align: center;
-      width: 100%;
-      max-width: 600px;
+      border-radius: var(--radius-lg);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-md);
+    }
+
+    .objective-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .objective-icon {
+      font-size: var(--font-size-xl);
     }
 
     .objective-title {
       font-size: var(--font-size-lg);
       font-weight: var(--font-weight-semibold);
       color: var(--color-text-primary);
-      margin-bottom: var(--space-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
+      margin: 0;
     }
 
-    .objective-description {
+    .objective-text {
       color: var(--color-text-secondary);
       font-size: var(--font-size-base);
       line-height: 1.6;
+      margin: 0;
     }
 
-    /* Chess Board */
-    .board-container {
-      position: relative;
+    /* Board Container */
+    .board-panel {
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-md);
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
     }
 
     .chessboard {
-      width: 500px;
-      height: 500px;
-      background: var(--glass-bg);
-      border: 2px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      width: 480px;
+      height: 480px;
+      background: var(--color-bg-tertiary);
+      border: 3px solid var(--color-border);
+      border-radius: var(--radius-md);
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       grid-template-rows: repeat(8, 1fr);
@@ -287,140 +380,139 @@
     }
 
     .square:hover {
-      background-color: var(--color-accent-light) !important;
-      opacity: 0.8;
+      filter: brightness(1.1);
     }
 
     .square.selected {
-      background-color: var(--color-accent-primary) !important;
+      background-color: rgba(118, 150, 86, 0.7) !important;
       box-shadow: inset 0 0 0 3px var(--color-accent-secondary);
     }
 
-    .square.possible-move {
-      background-color: rgba(118, 150, 86, 0.4) !important;
+    .square.possible-move::after {
+      content: '';
+      position: absolute;
+      width: 30%;
+      height: 30%;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.2);
     }
 
     .square.last-move {
-      background-color: rgba(255, 255, 0, 0.4) !important;
+      background-color: rgba(255, 255, 0, 0.3) !important;
+    }
+
+    .square.hint {
+      background-color: rgba(59, 130, 246, 0.5) !important;
     }
 
     .piece {
-      font-size: 2.5rem;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      font-size: 3rem;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
       transition: transform var(--transition-fast);
       user-select: none;
+      line-height: 1;
     }
 
     .piece:hover {
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
 
-    /* Controls Panel */
+    /* Controls Panel - Matching Lobby sidebar */
     .controls-panel {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
+      padding: var(--space-lg);
       border-radius: var(--radius-lg);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      height: fit-content;
-      max-height: calc(100vh - 2 * var(--space-xl));
-      overflow-y: auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-md);
     }
 
-    .controls-header {
-      padding: var(--space-lg);
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-md);
       border-bottom: 1px solid var(--glass-border);
     }
 
-    .controls-title {
+    .panel-icon {
       font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
+    }
+
+    .panel-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
       color: var(--color-text-primary);
       margin: 0;
     }
 
-    .controls-section {
-      padding: var(--space-lg);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .controls-section:last-child {
-      border-bottom: none;
-    }
-
-    .section-title {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: var(--space-md);
+    .button-group {
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: var(--space-sm);
     }
 
-    .control-button {
-      width: 100%;
+    .control-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
       padding: var(--space-md);
-      margin-bottom: var(--space-sm);
-      border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       background: rgba(255, 255, 255, 0.03);
       color: var(--color-text-primary);
       font-size: var(--font-size-sm);
       font-weight: var(--font-weight-medium);
       cursor: pointer;
       transition: all var(--transition-normal);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
       min-height: var(--touch-target-min);
     }
 
-    .control-button:hover {
+    .control-btn:hover {
       background: rgba(255, 255, 255, 0.08);
       border-color: var(--color-accent-primary);
       transform: translateY(-1px);
     }
 
-    .control-button.primary {
+    .control-btn.primary {
       background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-secondary) 100%);
       border-color: var(--color-accent-primary);
       color: white;
     }
 
-    .control-button.primary:hover {
+    .control-btn.primary:hover {
       background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-accent-primary) 100%);
+      box-shadow: var(--shadow-md);
     }
 
-    .control-button.danger {
-      border-color: var(--color-error);
+    .control-btn.danger {
+      border-color: rgba(239, 68, 68, 0.3);
       color: var(--color-error);
     }
 
-    .control-button.danger:hover {
+    .control-btn.danger:hover {
       background: rgba(239, 68, 68, 0.1);
-    }
-
-    .control-button:last-child {
-      margin-bottom: 0;
+      border-color: var(--color-error);
     }
 
     /* Info Grid */
     .info-grid {
       display: grid;
       gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
     }
 
     .info-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
       background: rgba(255, 255, 255, 0.02);
       border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .info-label {
@@ -430,16 +522,16 @@
 
     .info-value {
       font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
       color: var(--color-text-primary);
     }
 
     /* Progress Bar */
     .progress-container {
-      margin-top: var(--space-md);
+      margin-bottom: var(--space-lg);
     }
 
-    .progress-label {
+    .progress-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -465,16 +557,17 @@
     .move-history {
       max-height: 200px;
       overflow-y: auto;
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.02);
     }
 
     .move-item {
-      padding: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       font-size: var(--font-size-sm);
       color: var(--color-text-secondary);
+      font-family: var(--font-family-mono);
     }
 
     .move-item:last-child {
@@ -482,11 +575,18 @@
     }
 
     .move-item.current {
-      background: var(--color-accent-primary);
-      color: white;
+      background: rgba(118, 150, 86, 0.2);
+      color: var(--color-accent-light);
     }
 
-    /* Status Modal */
+    .move-item.empty {
+      color: var(--color-text-muted);
+      font-style: italic;
+      text-align: center;
+      font-family: var(--font-family-primary);
+    }
+
+    /* Status Message Modal */
     .status-overlay {
       position: fixed;
       top: 0;
@@ -497,6 +597,9 @@
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
       z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       opacity: 0;
       visibility: hidden;
       transition: all var(--transition-normal);
@@ -508,54 +611,52 @@
     }
 
     .status-modal {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.9);
       background: var(--glass-bg);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
-      padding: var(--space-xl);
+      padding: var(--space-2xl);
       text-align: center;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       min-width: 320px;
-      max-width: 480px;
-      z-index: 1001;
+      max-width: 420px;
+      transform: scale(0.9);
       transition: all var(--transition-normal);
+      box-shadow: var(--shadow-xl);
     }
 
     .status-overlay.show .status-modal {
-      transform: translate(-50%, -50%) scale(1);
+      transform: scale(1);
     }
 
     .status-icon {
-      font-size: 3rem;
-      margin-bottom: var(--space-md);
+      font-size: 4rem;
+      margin-bottom: var(--space-lg);
+      line-height: 1;
     }
 
-    .status-icon.success {
+    .status-modal.success .status-icon {
       color: var(--color-success);
     }
 
-    .status-icon.error {
+    .status-modal.error .status-icon {
       color: var(--color-error);
     }
 
-    .status-icon.info {
+    .status-modal.info .status-icon {
       color: var(--color-info);
     }
 
-    .status-modal-title {
+    .status-title {
       font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-semibold);
+      font-weight: var(--font-weight-bold);
       color: var(--color-text-primary);
       margin-bottom: var(--space-sm);
     }
 
-    .status-modal-description {
+    .status-description {
       color: var(--color-text-secondary);
-      margin-bottom: var(--space-lg);
+      margin-bottom: var(--space-xl);
       line-height: 1.6;
     }
 
@@ -575,7 +676,48 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Animations */
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     /* Responsive Design */
+    @media (min-width: 768px) {
+      .sidebar {
+        width: 260px;
+      }
+      
+      .main-content {
+        margin-left: 260px;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .puzzle-content {
+        grid-template-columns: 1fr 320px;
+      }
+      
+      .chessboard {
+        width: 420px;
+        height: 420px;
+      }
+      
+      .piece {
+        font-size: 2.5rem;
+      }
+    }
+
     @media (max-width: 1024px) {
       .sidebar {
         transform: translateX(-100%);
@@ -590,34 +732,35 @@
         margin-left: 0;
       }
 
-      .puzzle-game-area {
+      .puzzle-content {
         grid-template-columns: 1fr;
         gap: var(--space-lg);
       }
 
-      .controls-panel {
+      .puzzle-sidebar {
         order: -1;
-        max-height: none;
       }
 
       .chessboard {
-        width: min(90vw, 450px);
-        height: min(90vw, 450px);
+        width: min(90vw, 480px);
+        height: min(90vw, 480px);
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
 
     @media (max-width: 640px) {
       .puzzle-header {
-        padding: var(--space-lg);
-      }
-
-      .header-top {
         flex-direction: column;
+        height: auto;
+        padding: var(--space-lg);
         gap: var(--space-md);
-        text-align: center;
+        align-items: flex-start;
       }
 
-      .puzzle-game-area {
+      .puzzle-content {
         padding: var(--space-lg);
       }
 
@@ -626,1737 +769,266 @@
         height: min(85vw, 400px);
       }
 
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-md);
-      }
-
       .piece {
         font-size: 2rem;
       }
-    }
-
-    /* Animation Classes */
-    .fade-in {
-      animation: fadeIn 0.6s ease-out;
-    }
-
-    .slide-up {
-      animation: slideUp 0.6s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
       }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+      
+      .stat-item {
+        padding: var(--space-sm);
+      }
+      
+      .stat-value {
+        font-size: var(--font-size-lg);
       }
     }
 
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+    /* Mobile Menu Toggle */
+    .mobile-menu-btn {
+      display: none;
+      padding: var(--space-sm);
+      background: transparent;
+      border: none;
+      color: var(--color-text-primary);
+      font-size: var(--font-size-xl);
+      cursor: pointer;
+    }
+
+    @media (max-width: 1024px) {
+      .mobile-menu-btn {
+        display: block;
       }
     }
   </style>
 </head>
 <body>
-  <div class="puzzle-container">
-    <!-- Sidebar Navigation -->
-    <nav class="sidebar">
-      <div class="sidebar-header">
-        <a href="/lobby/" class="sidebar-logo">♟ Chess Platform</a>
-        <div class="sidebar-subtitle">Train & Improve</div>
-      </div>
-      
-      <div class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Navigation</div>
-          <div class="nav-items">
-            <a href="/lobby/" class="nav-item">
-              <span class="nav-item-icon">🏠</span>
-              <span>Lobby</span>
-            </a>
-            <a href="/play/" class="nav-item">
-              <span class="nav-item-icon">⚔️</span>
-              <span>Play Game</span>
-            </a>
-            <a href="/puzzles/" class="nav-item active">
-              <span class="nav-item-icon">🧩</span>
-              <span>Puzzles</span>
-            </a>
-            <a href="/profile/" class="nav-item">
-              <span class="nav-item-icon">👤</span>
-              <span>Profile</span>
-            </a>
-          </div>
+  <div id="app">
+    <div class="puzzle-container fade-in">
+      <!-- Sidebar Navigation - Matching Lobby -->
+      <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <a href="/lobby/" class="sidebar-logo">♟ Chess Platform</a>
+          <div class="sidebar-subtitle">Train & Improve</div>
         </div>
         
-        <div class="nav-section">
-          <div class="nav-section-title">Puzzle Types</div>
-          <div class="nav-items">
-            <button class="nav-item" onclick="filterPuzzles('tactics')">
-              <span class="nav-item-icon">⚡</span>
-              <span>Tactics</span>
-            </button>
-            <button class="nav-item" onclick="filterPuzzles('endgame')">
-              <span class="nav-item-icon">👑</span>
-              <span>Endgame</span>
-            </button>
-            <button class="nav-item" onclick="filterPuzzles('opening')">
-              <span class="nav-item-icon">📖</span>
-              <span>Opening</span>
-            </button>
-            <button class="nav-item" onclick="filterPuzzles('strategy')">
-              <span class="nav-item-icon">🎯</span>
-              <span>Strategy</span>
-            </button>
+        <div class="sidebar-nav">
+          <div class="nav-section">
+            <div class="nav-section-title">Navigation</div>
+            <div class="nav-items">
+              <a href="/lobby/" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span>Lobby</span>
+              </a>
+              <a href="/play/" class="nav-item">
+                <span class="nav-icon">⚔️</span>
+                <span>Play Game</span>
+              </a>
+              <a href="/puzzles/" class="nav-item active">
+                <span class="nav-icon">🧩</span>
+                <span>Puzzles</span>
+              </a>
+              <a href="/profile/" class="nav-item">
+                <span class="nav-icon">👤</span>
+                <span>Profile</span>
+              </a>
+              <a href="/settings/" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+              </a>
+            </div>
+          </div>
+          
+          <div class="nav-section">
+            <div class="nav-section-title">Puzzle Types</div>
+            <div class="nav-items">
+              <button class="nav-item" data-category="tactics">
+                <span class="nav-icon">⚡</span>
+                <span>Tactics</span>
+              </button>
+              <button class="nav-item" data-category="endgame">
+                <span class="nav-icon">👑</span>
+                <span>Endgame</span>
+              </button>
+              <button class="nav-item" data-category="opening">
+                <span class="nav-icon">📖</span>
+                <span>Opening</span>
+              </button>
+              <button class="nav-item" data-category="strategy">
+                <span class="nav-icon">🎯</span>
+                <span>Strategy</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Header -->
-      <header class="puzzle-header">
-        <div class="header-top">
-          <h1 class="puzzle-title" id="puzzleTitle">Chess Puzzles</h1>
-          <div class="difficulty-badge" id="difficultyBadge">
-            <span>🎯</span>
-            <span id="puzzleDifficulty">Loading...</span>
-          </div>
-        </div>
-        
-        <div class="stats-grid">
-          <div class="stat-card">
-            <span class="stat-value" id="puzzleRating">--</span>
-            <span class="stat-label">Rating</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="puzzlesSolved">--</span>
-            <span class="stat-label">Solved</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="accuracy">--%</span>
-            <span class="stat-label">Accuracy</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="streak">--</span>
-            <span class="stat-label">Streak</span>
-          </div>
-        </div>
-      </header>
-
-      <!-- Puzzle Game Area -->
-      <div class="puzzle-game-area">
-        <section class="board-section fade-in">
-          <div class="puzzle-objective">
-            <div class="objective-title">
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header - Matching Lobby -->
+        <header class="puzzle-header">
+          <div class="header-left">
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+            <div>
+              <h1 class="header-title" id="puzzleTitle">Chess Puzzles</h1>
+              <p class="header-subtitle">Sharpen your tactical vision</p>
+            </div>
+            <div class="difficulty-badge" id="difficultyBadge">
               <span>🎯</span>
-              <span id="puzzleObjective">Loading puzzle...</span>
+              <span id="puzzleDifficulty">Loading...</span>
             </div>
-            <p class="objective-description" id="puzzleDescription">
-              Please wait while we load your next challenge.
-            </p>
           </div>
           
-          <div class="board-container">
-            <div class="chessboard" id="chessboard">
-              <!-- Chess squares will be generated by JavaScript -->
-            </div>
+          <div class="header-actions">
+            <a href="/lobby/" class="back-btn">
+              <span>←</span>
+              <span>Back to Lobby</span>
+            </a>
           </div>
-        </section>
+        </header>
 
-        <aside class="controls-panel slide-up">
-          <div class="controls-header">
-            <h2 class="controls-title">Puzzle Controls</h2>
-          </div>
-          
-          <div class="controls-section">
-            <h3 class="section-title">
-              <span>🎮</span>
-              Actions
-            </h3>
-            <button class="control-button primary" id="nextPuzzleBtn">
-              <span>➡️</span>
-              Next Puzzle
-            </button>
-            <button class="control-button" id="restartBtn">
-              <span>🔄</span>
-              Restart Puzzle
-            </button>
-            <button class="control-button" id="hintBtn">
-              <span>💡</span>
-              Get Hint
-            </button>
-            <button class="control-button danger" id="solutionBtn">
-              <span>🔍</span>
-              Show Solution
-            </button>
-          </div>
-          
-          <div class="controls-section">
-            <h3 class="section-title">
-              <span>📊</span>
-              Information
-            </h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Category</span>
-                <span class="info-value" id="puzzleCategory">--</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Attempts</span>
-                <span class="info-value" id="attempts">0</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Time</span>
-                <span class="info-value" id="timeElapsed">00:00</span>
+        <!-- Content Area -->
+        <div class="puzzle-content">
+          <!-- Main Puzzle Area -->
+          <div class="puzzle-main">
+            <!-- Stats Panel -->
+            <div class="stats-panel">
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <div class="stat-value" id="puzzleRating">--</div>
+                  <div class="stat-label">Rating</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="puzzlesSolved">--</div>
+                  <div class="stat-label">Solved</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="accuracy">--%</div>
+                  <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="streak">--</div>
+                  <div class="stat-label">Streak</div>
+                </div>
               </div>
             </div>
-            <div class="progress-container">
-              <div class="progress-label">
-                <span class="info-label">Progress</span>
-                <span class="info-value" id="puzzleProgress">0%</span>
+
+            <!-- Objective Panel -->
+            <div class="objective-panel">
+              <div class="objective-header">
+                <span class="objective-icon">🎯</span>
+                <h2 class="objective-title" id="puzzleObjective">Loading puzzle...</h2>
               </div>
-              <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+              <p class="objective-text" id="puzzleDescription">
+                Please wait while we load your next challenge.
+              </p>
+            </div>
+
+            <!-- Chess Board -->
+            <div class="board-panel">
+              <div class="chessboard" id="chessboard">
+                <!-- Board squares will be generated by JavaScript -->
               </div>
             </div>
           </div>
-          
-          <div class="controls-section">
-            <h3 class="section-title">
-              <span>📝</span>
-              Move History
-            </h3>
-            <div class="move-history" id="moveHistory">
-              <div class="move-item">Game will start soon...</div>
+
+          <!-- Sidebar Controls -->
+          <div class="puzzle-sidebar">
+            <!-- Controls Panel -->
+            <div class="controls-panel">
+              <div class="panel-header">
+                <span class="panel-icon">🎮</span>
+                <h3 class="panel-title">Controls</h3>
+              </div>
+              
+              <div class="button-group">
+                <button class="control-btn primary" id="nextPuzzleBtn">
+                  <span>➡️</span>
+                  <span>Next Puzzle</span>
+                </button>
+                <button class="control-btn" id="restartBtn">
+                  <span>🔄</span>
+                  <span>Restart</span>
+                </button>
+                <button class="control-btn" id="hintBtn">
+                  <span>💡</span>
+                  <span>Get Hint</span>
+                </button>
+                <button class="control-btn danger" id="solutionBtn">
+                  <span>🔍</span>
+                  <span>Show Solution</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="controls-panel">
+              <div class="panel-header">
+                <span class="panel-icon">📊</span>
+                <h3 class="panel-title">Puzzle Info</h3>
+              </div>
+              
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Category</span>
+                  <span class="info-value" id="puzzleCategory">--</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Attempts</span>
+                  <span class="info-value" id="attempts">0</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Time</span>
+                  <span class="info-value" id="timeElapsed">00:00</span>
+                </div>
+              </div>
+              
+              <div class="progress-container">
+                <div class="progress-header">
+                  <span class="info-label">Daily Progress</span>
+                  <span class="info-value" id="puzzleProgress">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Move History Panel -->
+            <div class="controls-panel">
+              <div class="panel-header">
+                <span class="panel-icon">📝</span>
+                <h3 class="panel-title">Move History</h3>
+              </div>
+              
+              <div class="move-history" id="moveHistory">
+                <div class="move-item empty">No moves yet...</div>
+              </div>
             </div>
           </div>
-        </aside>
+        </div>
+      </main>
+    </div>
+
+    <!-- Status Modal -->
+    <div class="status-overlay" id="statusOverlay">
+      <div class="status-modal" id="statusModal">
+        <div class="status-icon" id="statusIcon">🎉</div>
+        <div class="status-title" id="statusTitle">Puzzle Solved!</div>
+        <div class="status-description" id="statusDescription">
+          Congratulations! You solved the puzzle.
+        </div>
+        <button class="control-btn primary" id="statusButton">Continue</button>
       </div>
-    </main>
-  </div>
-
-  <!-- Status Modal -->
-  <div class="status-overlay" id="statusOverlay">
-    <div class="status-modal">
-      <div class="status-icon" id="statusIcon"></div>
-      <div class="status-modal-title" id="statusTitle"></div>
-      <div class="status-modal-description" id="statusDescription"></div>
-      <button class="control-button primary" id="statusButton">Continue</button>
     </div>
   </div>
 
-  <script>
-    // Professional Chess Puzzle System
-    class ChessPuzzleSystem {
-      constructor() {
-        this.currentPuzzle = null;
-        this.gameState = null;
-        this.selectedSquare = null;
-        this.moveHistory = [];
-        this.startTime = null;
-        this.attempts = 0;
-        this.hintsUsed = 0;
-        this.timer = null;
-        
-        this.initializeBoard();
-        this.setupEventListeners();
-        this.loadPuzzle();
-      }
-
-      initializeBoard() {
-        const board = document.getElementById('chessboard');
-        board.innerHTML = '';
-        
-        for (let row = 0; row < 8; row++) {
-          for (let col = 0; col < 8; col++) {
-            const square = document.createElement('div');
-            square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
-            square.dataset.row = row;
-            square.dataset.col = col;
-            square.addEventListener('click', (e) => this.handleSquareClick(e));
-            board.appendChild(square);
-          }
-        }
-      }
-
-      setupEventListeners() {
-        document.getElementById('nextPuzzleBtn').addEventListener('click', () => this.nextPuzzle());
-        document.getElementById('restartBtn').addEventListener('click', () => this.restartPuzzle());
-        document.getElementById('hintBtn').addEventListener('click', () => this.getHint());
-        document.getElementById('solutionBtn').addEventListener('click', () => this.showSolution());
-        document.getElementById('statusButton').addEventListener('click', () => this.hideStatusMessage());
-        
-        // Close modal on overlay click
-        document.getElementById('statusOverlay').addEventListener('click', (e) => {
-          if (e.target === e.currentTarget) {
-            this.hideStatusMessage();
-          }
-        });
-      }
-
-      async loadPuzzle() {
-        try {
-          this.showLoading();
-          
-          // Example puzzle data - replace with actual API call
-          const puzzle = {
-            id: Math.floor(Math.random() * 1000) + 1,
-            fen: 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',
-            objective: 'White to play and win material',
-            description: 'Find the best move that wins material for White. Look for tactical opportunities.',
-            solution: ['Bxc6+', 'bxc6', 'Nxe5'],
-            category: 'Tactics',
-            rating: 1450,
-            difficulty: 'Intermediate'
-          };
-
-          this.currentPuzzle = puzzle;
-          this.startTime = Date.now();
-          this.attempts = 0;
-          this.hintsUsed = 0;
-          this.moveHistory = [];
-          
-          this.updatePuzzleDisplay();
-          this.loadPosition(puzzle.fen);
-          this.startTimer();
-          
-        } catch (error) {
-          console.error('Failed to load puzzle:', error);
-          this.showStatusMessage('error', 'Error', 'Failed to load puzzle. Please try again.');
-        }
-      }
-
-      updatePuzzleDisplay() {
-        const puzzle = this.currentPuzzle;
-        
-        document.getElementById('puzzleTitle').textContent = `Puzzle #${puzzle.id}`;
-        document.getElementById('puzzleDifficulty').textContent = puzzle.difficulty;
-        document.getElementById('puzzleObjective').textContent = puzzle.objective;
-        document.getElementById('puzzleDescription').textContent = puzzle.description;
-        document.getElementById('puzzleRating').textContent = puzzle.rating;
-        document.getElementById('puzzleCategory').textContent = puzzle.category;
-        document.getElementById('attempts').textContent = this.attempts;
-        
-        // Update difficulty badge style
-        const badge = document.getElementById('difficultyBadge');
-        if (puzzle.difficulty === 'Beginner') {
-          badge.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
-        } else if (puzzle.difficulty === 'Intermediate') {
-          badge.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-        } else if (puzzle.difficulty === 'Advanced') {
-          badge.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-        }
-        
-        // Load some example stats
-        document.getElementById('puzzlesSolved').textContent = '12';
-        document.getElementById('accuracy').textContent = '78%';
-        document.getElementById('streak').textContent = '3';
-      }
-
-      loadPosition(fen) {
-        // Chess piece mapping
-        const pieces = {
-          'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-          'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
-        };
-
-        const board = fen.split(' ')[0];
-        const rows = board.split('/');
-        
-        for (let row = 0; row < 8; row++) {
-          let col = 0;
-          for (let char of rows[row]) {
-            if (isNaN(char)) {
-              const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-              if (square) {
-                square.innerHTML = `<span class="piece">${pieces[char] || ''}</span>`;
-                square.dataset.piece = char;
-              }
-              col++;
-            } else {
-              for (let i = 0; i < parseInt(char); i++) {
-                const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                if (square) {
-                  square.innerHTML = '';
-                  square.dataset.piece = '';
-                }
-                col++;
-              }
-            }
-          }
-        }
-      }
-
-      handleSquareClick(event) {
-        const square = event.currentTarget;
-        
-        if (this.selectedSquare) {
-          // Try to make a move
-          this.tryMove(this.selectedSquare, square);
-          this.clearSelection();
-        } else if (square.dataset.piece) {
-          // Select a piece
-          this.selectSquare(square);
-        }
-      }
-
-      selectSquare(square) {
-        this.clearSelection();
-        this.selectedSquare = square;
-        square.classList.add('selected');
-        
-        // Show possible moves (simplified)
-        this.showPossibleMoves(square);
-      }
-
-      showPossibleMoves(square) {
-        // This is a simplified version - in a real implementation,
-        // you'd calculate legal moves based on piece type and board state
-        const allSquares = document.querySelectorAll('.square');
-        allSquares.forEach(s => s.classList.remove('possible-move'));
-        
-        // For demo purposes, highlight some random squares
-        const randomSquares = [...allSquares].filter(s => s !== square).slice(0, 3);
-        randomSquares.forEach(s => s.classList.add('possible-move'));
-      }
-
-      clearSelection() {
-        if (this.selectedSquare) {
-          this.selectedSquare.classList.remove('selected');
-          this.selectedSquare = null;
-        }
-        
-        document.querySelectorAll('.possible-move').forEach(s => {
-          s.classList.remove('possible-move');
-        });
-      }
-
-      tryMove(fromSquare, toSquare) {
-        this.attempts++;
-        document.getElementById('attempts').textContent = this.attempts;
-        
-        const move = this.formatMove(fromSquare, toSquare);
-        this.addMoveToHistory(move);
-        
-        // Check if move is correct (simplified)
-        if (this.isCorrectMove(move)) {
-          this.executeMove(fromSquare, toSquare);
-          this.checkPuzzleCompletion();
-        } else {
-          this.showStatusMessage('error', 'Incorrect Move', "That's not the best move. Try again!");
-          this.animateIncorrectMove(toSquare);
-        }
-      }
-
-      formatMove(fromSquare, toSquare) {
-        const fromCol = String.fromCharCode(97 + parseInt(fromSquare.dataset.col));
-        const fromRow = 8 - parseInt(fromSquare.dataset.row);
-        const toCol = String.fromCharCode(97 + parseInt(toSquare.dataset.col));
-        const toRow = 8 - parseInt(toSquare.dataset.row);
-        
-        const piece = fromSquare.dataset.piece;
-        const isCapture = toSquare.dataset.piece !== '';
-        
-        return `${piece.toUpperCase()}${fromCol}${fromRow}${isCapture ? 'x' : ''}${toCol}${toRow}`;
-      }
-
-      isCorrectMove(move) {
-        // Simplified check - in reality, you'd compare against the solution
-        return Math.random() > 0.4; // 60% chance for demo
-      }
-
-      executeMove(fromSquare, toSquare) {
-        // Move the piece
-        toSquare.innerHTML = fromSquare.innerHTML;
-        toSquare.dataset.piece = fromSquare.dataset.piece;
-        fromSquare.innerHTML = '';
-        fromSquare.dataset.piece = '';
-        
-        // Add visual feedback
-        toSquare.classList.add('last-move');
-        setTimeout(() => toSquare.classList.remove('last-move'), 1500);
-      }
-
-      addMoveToHistory(move) {
-        this.moveHistory.push(move);
-        this.updateMoveHistoryDisplay();
-      }
-
-      updateMoveHistoryDisplay() {
-        const historyEl = document.getElementById('moveHistory');
-        if (this.moveHistory.length === 0) {
-          historyEl.innerHTML = '<div class="move-item">No moves yet...</div>';
-        } else {
-          historyEl.innerHTML = this.moveHistory.map((move, index) => 
-            `<div class="move-item ${index === this.moveHistory.length - 1 ? 'current' : ''}">${index + 1}. ${move}</div>`
-          ).join('');
-        }
-      }
-
-      checkPuzzleCompletion() {
-        // Simplified completion check
-        if (this.moveHistory.length >= 2 && Math.random() > 0.2) {
-          this.completePuzzle();
-        }
-      }
-
-      completePuzzle() {
-        this.stopTimer();
-        const timeElapsed = Math.floor((Date.now() - this.startTime) / 1000);
-        
-        this.showStatusMessage('success', 'Puzzle Solved!', 
-          `Congratulations! You solved it in ${this.attempts} attempts and ${timeElapsed} seconds.`);
-        
-        this.updateStats();
-      }
-
-      nextPuzzle() {
-        this.clearSelection();
-        this.stopTimer();
-        this.loadPuzzle();
-      }
-
-      restartPuzzle() {
-        if (this.currentPuzzle) {
-          this.clearSelection();
-          this.attempts = 0;
-          this.moveHistory = [];
-          this.startTime = Date.now();
-          
-          this.loadPosition(this.currentPuzzle.fen);
-          this.updatePuzzleDisplay();
-          this.updateMoveHistoryDisplay();
-          this.startTimer();
-        }
-      }
-
-      getHint() {
-        this.hintsUsed++;
-        
-        if (this.currentPuzzle && this.currentPuzzle.solution.length > 0) {
-          const hint = this.currentPuzzle.solution[0];
-          this.showStatusMessage('info', 'Hint', `Try: ${hint}`);
-        } else {
-          this.showStatusMessage('info', 'Hint', 'Look for tactical motifs like forks, pins, or skewers.');
-        }
-      }
-
-      showSolution() {
-        if (this.currentPuzzle && this.currentPuzzle.solution.length > 0) {
-          const solution = this.currentPuzzle.solution.join(', ');
-          this.showStatusMessage('info', 'Solution', `The solution is: ${solution}`);
-        }
-      }
-
-      startTimer() {
-        this.timer = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-          const minutes = Math.floor(elapsed / 60);
-          const seconds = elapsed % 60;
-          document.getElementById('timeElapsed').textContent = 
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }, 1000);
-      }
-
-      stopTimer() {
-        if (this.timer) {
-          clearInterval(this.timer);
-          this.timer = null;
-        }
-      }
-
-      updateStats() {
-        // Update user statistics (simplified)
-        const currentSolved = parseInt(document.getElementById('puzzlesSolved').textContent) || 0;
-        document.getElementById('puzzlesSolved').textContent = currentSolved + 1;
-        
-        const accuracy = Math.max(0, 100 - (this.attempts - 1) * 15);
-        document.getElementById('accuracy').textContent = accuracy + '%';
-        
-        const currentStreak = parseInt(document.getElementById('streak').textContent) || 0;
-        document.getElementById('streak').textContent = currentStreak + 1;
-        
-        const progress = Math.min(100, (currentSolved + 1) * 8);
-        document.getElementById('puzzleProgress').textContent = progress + '%';
-        document.getElementById('progressFill').style.width = progress + '%';
-      }
-
-      showStatusMessage(type, title, description) {
-        const overlayEl = document.getElementById('statusOverlay');
-        const iconEl = document.getElementById('statusIcon');
-        const titleEl = document.getElementById('statusTitle');
-        const descEl = document.getElementById('statusDescription');
-        
-        iconEl.className = `status-icon ${type}`;
-        
-        if (type === 'success') iconEl.textContent = '🎉';
-        else if (type === 'error') iconEl.textContent = '❌';
-        else iconEl.textContent = '💡';
-        
-        titleEl.textContent = title;
-        descEl.textContent = description;
-        
-        overlayEl.classList.add('show');
-      }
-
-      hideStatusMessage() {
-        document.getElementById('statusOverlay').classList.remove('show');
-      }
-
-      showLoading() {
-        document.getElementById('puzzleObjective').innerHTML = 
-          '<span class="loading-spinner"></span> Loading puzzle...';
-      }
-
-      animateIncorrectMove(square) {
-        square.style.background = 'rgba(239, 68, 68, 0.5)';
-        setTimeout(() => {
-          square.style.background = '';
-        }, 800);
-      }
-    }
-
-    // Global functions for navigation
-    function filterPuzzles(category) {
-      console.log('Filtering puzzles by category:', category);
-      // Implementation for filtering puzzles by category
-      // This would typically filter the available puzzles and reload
-    }
-
-    // Initialize the puzzle system when the page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      // Initialize the chess puzzle system
-      new ChessPuzzleSystem();
-      
-      // Set up navigation
-      document.querySelectorAll('a[href]').forEach(link => {
-        link.addEventListener('click', (e) => {
-          // Allow normal navigation - no need to prevent default
-          console.log('Navigating to:', link.href);
-        });
-      });
-    });
-  </script>
-</body>
-</html>
-  <style>
-    /* Professional Puzzle Page Styling */
-    .puzzle-container {
-      display: flex;
-      min-height: 100vh;
-      background: 
-        radial-gradient(ellipse at top left, rgba(118, 150, 86, 0.1) 0%, transparent 50%),
-        radial-gradient(ellipse at bottom right, rgba(240, 217, 181, 0.05) 0%, transparent 50%),
-        linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
-      background-attachment: fixed;
-    }
-
-    /* Sidebar Navigation */
-    .sidebar {
-      width: var(--sidebar-width);
-      background: var(--glass-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-right: 1px solid var(--glass-border);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      height: 100vh;
-      left: 0;
-      top: 0;
-      z-index: 100;
-      overflow-y: auto;
-    }
-
-    .sidebar-header {
-      padding: var(--space-xl) var(--space-lg);
-      border-bottom: 1px solid var(--glass-border);
-    }
-
-    .sidebar-logo {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-bold);
-      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-decoration: none;
-      display: block;
-    }
-
-    .sidebar-nav {
-      flex: 1;
-      padding: var(--space-lg) 0;
-    }
-
-    .nav-section {
-      margin-bottom: var(--space-xl);
-    }
-
-    .nav-section-title {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: var(--space-md);
-      padding: 0 var(--space-lg);
-    }
-
-    .nav-item {
-      display: block;
-      padding: var(--space-md) var(--space-lg);
-      color: var(--color-text-secondary);
-      text-decoration: none;
-      transition: all var(--transition-fast);
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-      cursor: pointer;
-      font-size: var(--font-size-base);
-      font-family: inherit;
-    }
-
-    .nav-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--color-text-primary);
-    }
-
-    .nav-item.active {
-      background: linear-gradient(90deg, var(--color-accent-primary) 0%, transparent 100%);
-      color: var(--color-accent-light);
-      border-right: 3px solid var(--color-accent-primary);
-    }
-
-    .nav-item i {
-      width: 20px;
-      margin-right: var(--space-md);
-      text-align: center;
-    }
-
-    /* Main Content Area */
-    .main-content {
-      margin-left: var(--sidebar-width);
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .puzzle-header {
-      padding: var(--space-xl);
-      border-bottom: 1px solid var(--glass-border);
-      background: var(--glass-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    .puzzle-title-section {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--space-lg);
-    }
-
-    .puzzle-main-title {
-      font-size: var(--font-size-2xl);
-      font-weight: var(--font-weight-bold);
-      color: var(--color-text-primary);
-      margin: 0;
-    }
-
-    .puzzle-difficulty-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: var(--space-sm) var(--space-md);
-      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
-      color: white;
-      border-radius: var(--radius-full);
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-semibold);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .puzzle-stats-bar {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--space-lg);
-    }
-
-    .stat-card {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      text-align: center;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .stat-value {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-bold);
-      color: var(--color-accent-primary);
-      display: block;
-      margin-bottom: var(--space-xs);
-    }
-
-    .stat-label {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* Puzzle Game Area */
-    .puzzle-game-area {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: var(--space-xl);
-      padding: var(--space-xl);
-    }
-
-    .puzzle-board-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .puzzle-objective {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-lg);
-      margin-bottom: var(--space-xl);
-      text-align: center;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      width: 100%;
-      max-width: 600px;
-    }
-
-    .objective-title {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      margin-bottom: var(--space-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
-    }
-
-    .objective-description {
-      color: var(--color-text-secondary);
-      font-size: var(--font-size-base);
-      line-height: 1.6;
-    }
-
-    .chessboard-container {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .chessboard {
-      width: 500px;
-      height: 500px;
-      background: var(--glass-bg);
-      border: 2px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      grid-template-rows: repeat(8, 1fr);
-      overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    }
-
-    .square {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      position: relative;
-    }
-
-    .square.light {
-      background-color: #f0d9b5;
-    }
-
-    .square.dark {
-      background-color: #b58863;
-    }
-
-    .square:hover {
-      background-color: var(--color-accent-light) !important;
-      opacity: 0.8;
-    }
-
-    .square.selected {
-      background-color: var(--color-accent-primary) !important;
-      box-shadow: inset 0 0 0 3px var(--color-accent-dark);
-    }
-
-    .square.possible-move {
-      background-color: rgba(118, 150, 86, 0.3) !important;
-    }
-
-    .square.last-move {
-      background-color: rgba(255, 255, 0, 0.3) !important;
-    }
-
-    .piece {
-      font-size: 2.5rem;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-      transition: transform var(--transition-fast);
-    }
-
-    .piece:hover {
-      transform: scale(1.1);
-    }
-
-    /* Puzzle Controls Panel */
-    .puzzle-controls-panel {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      height: fit-content;
-      max-height: 100%;
-      overflow-y: auto;
-    }
-
-    .controls-header {
-      padding: var(--space-lg);
-      border-bottom: 1px solid var(--glass-border);
-    }
-
-    .controls-title {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      margin: 0;
-    }
-
-    .controls-section {
-      padding: var(--space-lg);
-    }
-
-    .section-title {
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-      color: var(--color-text-primary);
-      margin-bottom: var(--space-md);
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-    }
-
-    .control-button {
-      width: 100%;
-      padding: var(--space-md);
-      margin-bottom: var(--space-md);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      background: var(--glass-bg);
-      color: var(--color-text-primary);
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
-    }
-
-    .control-button:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: var(--color-accent-primary);
-      transform: translateY(-2px);
-    }
-
-    .control-button.primary {
-      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
-      border-color: var(--color-accent-primary);
-      color: white;
-    }
-
-    .control-button.primary:hover {
-      background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-accent-primary) 100%);
-    }
-
-    .control-button.danger {
-      border-color: var(--color-error);
-      color: var(--color-error);
-    }
-
-    .control-button.danger:hover {
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .puzzle-info-grid {
-      display: grid;
-      gap: var(--space-md);
-    }
-
-    .info-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: var(--space-sm);
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: var(--radius-sm);
-    }
-
-    .info-label {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-muted);
-    }
-
-    .info-value {
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      color: var(--color-text-primary);
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: var(--radius-full);
-      overflow: hidden;
-      margin-top: var(--space-sm);
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
-      transition: width var(--transition-normal);
-    }
-
-    /* Move History */
-    .move-history {
-      max-height: 200px;
-      overflow-y: auto;
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .move-item {
-      padding: var(--space-sm);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-    }
-
-    .move-item:last-child {
-      border-bottom: none;
-    }
-
-    .move-item.current {
-      background: var(--color-accent-primary);
-      color: white;
-    }
-
-    /* Status Messages */
-    .status-message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-xl);
-      text-align: center;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      z-index: 1000;
-      min-width: 300px;
-      opacity: 0;
-      visibility: hidden;
-      transition: all var(--transition-normal);
-    }
-
-    .status-message.show {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .status-icon {
-      font-size: 3rem;
-      margin-bottom: var(--space-md);
-    }
-
-    .status-message.success .status-icon {
-      color: var(--color-success);
-    }
-
-    .status-message.error .status-icon {
-      color: var(--color-error);
-    }
-
-    .status-title {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
-      margin-bottom: var(--space-sm);
-    }
-
-    .status-description {
-      color: var(--color-text-secondary);
-      margin-bottom: var(--space-lg);
-    }
-
-    /* Loading State */
-    .loading-spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top: 2px solid var(--color-accent-primary);
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Responsive Design */
-    @media (max-width: 1024px) {
-      .sidebar {
-        transform: translateX(-100%);
-        transition: transform var(--transition-normal);
-      }
-
-      .sidebar.open {
-        transform: translateX(0);
-      }
-
-      .main-content {
-        margin-left: 0;
-      }
-
-      .puzzle-game-area {
-        grid-template-columns: 1fr;
-        gap: var(--space-lg);
-      }
-
-      .puzzle-controls-panel {
-        order: -1;
-      }
-
-      .chessboard {
-        width: 90vw;
-        height: 90vw;
-        max-width: 450px;
-        max-height: 450px;
-      }
-
-      .puzzle-stats-bar {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 640px) {
-      .puzzle-header {
-        padding: var(--space-lg);
-      }
-
-      .puzzle-game-area {
-        padding: var(--space-lg);
-      }
-
-      .chessboard {
-        width: 85vw;
-        height: 85vw;
-      }
-
-      .puzzle-stats-bar {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Animations */
-    @keyframes slideInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .puzzle-board-section {
-      animation: slideInUp 0.6s ease-out;
-    }
-
-    .puzzle-controls-panel {
-      animation: slideInUp 0.6s ease-out 0.2s both;
-    }
-  </style>
-</head>
-<body>
-  <div class="puzzle-container">
-    <!-- Sidebar Navigation -->
-    <nav class="sidebar">
-      <div class="sidebar-header">
-        <a href="/lobby/" class="sidebar-logo">♟ Chess Platform</a>
-      </div>
-      
-      <div class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">Navigation</div>
-          <a href="/lobby/" class="nav-item">
-            <i>🏠</i> Lobby
-          </a>
-          <a href="/play/" class="nav-item">
-            <i>⚔️</i> Play Game
-          </a>
-          <a href="/puzzles/" class="nav-item active">
-            <i>🧩</i> Puzzles
-          </a>
-          <a href="/profile/" class="nav-item">
-            <i>👤</i> Profile
-          </a>
-        </div>
-        
-        <div class="nav-section">
-          <div class="nav-section-title">Puzzle Types</div>
-          <button class="nav-item" onclick="filterPuzzles('tactics')">
-            <i>⚡</i> Tactics
-          </button>
-          <button class="nav-item" onclick="filterPuzzles('endgame')">
-            <i>👑</i> Endgame
-          </button>
-          <button class="nav-item" onclick="filterPuzzles('opening')">
-            <i>📖</i> Opening
-          </button>
-          <button class="nav-item" onclick="filterPuzzles('strategy')">
-            <i>🎯</i> Strategy
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Header -->
-      <header class="puzzle-header">
-        <div class="puzzle-title-section">
-          <h1 class="puzzle-main-title" id="puzzleTitle">Chess Puzzles</h1>
-          <div class="puzzle-difficulty-badge" id="difficultyBadge">
-            <span id="puzzleDifficulty">Loading...</span>
-          </div>
-        </div>
-        
-        <div class="puzzle-stats-bar">
-          <div class="stat-card">
-            <span class="stat-value" id="puzzleRating">--</span>
-            <span class="stat-label">Rating</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="puzzlesSolved">--</span>
-            <span class="stat-label">Solved</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="accuracy">--%</span>
-            <span class="stat-label">Accuracy</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="streak">--</span>
-            <span class="stat-label">Streak</span>
-          </div>
-        </div>
-      </header>
-
-      <!-- Puzzle Game Area -->
-      <div class="puzzle-game-area">
-        <section class="puzzle-board-section">
-          <div class="puzzle-objective">
-            <div class="objective-title">
-              <span>🎯</span>
-              <span id="puzzleObjective">Loading puzzle...</span>
-            </div>
-            <p class="objective-description" id="puzzleDescription">
-              Please wait while we load your next challenge.
-            </p>
-          </div>
-          
-          <div class="chessboard-container">
-            <div class="chessboard" id="chessboard">
-              <!-- Chess squares will be generated by JavaScript -->
-            </div>
-          </div>
-        </section>
-
-        <aside class="puzzle-controls-panel">
-          <div class="controls-header">
-            <h2 class="controls-title">Puzzle Controls</h2>
-          </div>
-          
-          <div class="controls-section">
-            <h3 class="section-title">
-              <span>🎮</span>
-              Actions
-            </h3>
-            <button class="control-button primary" id="nextPuzzleBtn">
-              <span>➡️</span>
-              Next Puzzle
-            </button>
-            <button class="control-button" id="restartBtn">
-              <span>🔄</span>
-              Restart Puzzle
-            </button>
-            <button class="control-button" id="hintBtn">
-              <span>💡</span>
-              Get Hint
-            </button>
-            <button class="control-button danger" id="solutionBtn">
-              <span>🔍</span>
-              Show Solution
-            </button>
-          </div>
-          
-          <div class="controls-section">
-            <h3 class="section-title">
-              <span>📊</span>
-              Information
-            </h3>
-            <div class="puzzle-info-grid">
-              <div class="info-item">
-                <span class="info-label">Category</span>
-                <span class="info-value" id="puzzleCategory">--</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Attempts</span>
-                <span class="info-value" id="attempts">0</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Time</span>
-                <span class="info-value" id="timeElapsed">00:00</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Progress</span>
-                <span class="info-value" id="puzzleProgress">0%</span>
-              </div>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-            </div>
-          </div>
-          
-          <div class="controls-section">
-            <h3 class="section-title">
-              <span>📝</span>
-              Move History
-            </h3>
-            <div class="move-history" id="moveHistory">
-              <div class="move-item">Game will start soon...</div>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </main>
-  </div>
-
-  <!-- Status Messages -->
-  <div class="status-message" id="statusMessage">
-    <div class="status-icon" id="statusIcon"></div>
-    <div class="status-title" id="statusTitle"></div>
-    <div class="status-description" id="statusDescription"></div>
-    <button class="control-button primary" id="statusButton">Continue</button>
-  </div>
-
-  <script>
-    // Professional Chess Puzzle System
-    class ChessPuzzleSystem {
-      constructor() {
-        this.currentPuzzle = null;
-        this.gameState = null;
-        this.selectedSquare = null;
-        this.moveHistory = [];
-        this.startTime = null;
-        this.attempts = 0;
-        this.hintsUsed = 0;
-        this.timer = null;
-        
-        this.initializeBoard();
-        this.setupEventListeners();
-        this.loadPuzzle();
-      }
-
-      initializeBoard() {
-        const board = document.getElementById('chessboard');
-        board.innerHTML = '';
-        
-        for (let row = 0; row < 8; row++) {
-          for (let col = 0; col < 8; col++) {
-            const square = document.createElement('div');
-            square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
-            square.dataset.row = row;
-            square.dataset.col = col;
-            square.addEventListener('click', (e) => this.handleSquareClick(e));
-            board.appendChild(square);
-          }
-        }
-      }
-
-      setupEventListeners() {
-        document.getElementById('nextPuzzleBtn').addEventListener('click', () => this.nextPuzzle());
-        document.getElementById('restartBtn').addEventListener('click', () => this.restartPuzzle());
-        document.getElementById('hintBtn').addEventListener('click', () => this.getHint());
-        document.getElementById('solutionBtn').addEventListener('click', () => this.showSolution());
-        document.getElementById('statusButton').addEventListener('click', () => this.hideStatusMessage());
-      }
-
-      async loadPuzzle() {
-        try {
-          this.showLoading();
-          
-          // Example puzzle data - replace with actual API call
-          const puzzle = {
-            id: Math.floor(Math.random() * 1000) + 1,
-            fen: 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',
-            objective: 'White to play and win material',
-            description: 'Find the best move that wins material for White. Look for tactical opportunities.',
-            solution: ['Bxc6+', 'bxc6', 'Nxe5'],
-            category: 'Tactics',
-            rating: 1450,
-            difficulty: 'Intermediate'
-          };
-
-          this.currentPuzzle = puzzle;
-          this.startTime = Date.now();
-          this.attempts = 0;
-          this.hintsUsed = 0;
-          this.moveHistory = [];
-          
-          this.updatePuzzleDisplay();
-          this.loadPosition(puzzle.fen);
-          this.startTimer();
-          
-        } catch (error) {
-          console.error('Failed to load puzzle:', error);
-          this.showStatusMessage('error', 'Error', 'Failed to load puzzle. Please try again.');
-        }
-      }
-
-      updatePuzzleDisplay() {
-        const puzzle = this.currentPuzzle;
-        
-        document.getElementById('puzzleTitle').textContent = `Puzzle #${puzzle.id}`;
-        document.getElementById('puzzleDifficulty').textContent = puzzle.difficulty;
-        document.getElementById('puzzleObjective').textContent = puzzle.objective;
-        document.getElementById('puzzleDescription').textContent = puzzle.description;
-        document.getElementById('puzzleRating').textContent = puzzle.rating;
-        document.getElementById('puzzleCategory').textContent = puzzle.category;
-        document.getElementById('attempts').textContent = this.attempts;
-        
-        // Update difficulty badge color
-        const badge = document.getElementById('difficultyBadge');
-        badge.className = 'puzzle-difficulty-badge';
-        if (puzzle.difficulty === 'Beginner') badge.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
-        else if (puzzle.difficulty === 'Intermediate') badge.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-        else if (puzzle.difficulty === 'Advanced') badge.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-      }
-
-      loadPosition(fen) {
-        // Simple FEN parsing for display
-        const pieces = {
-          'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-          'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
-        };
-
-        const board = fen.split(' ')[0];
-        const rows = board.split('/');
-        
-        for (let row = 0; row < 8; row++) {
-          let col = 0;
-          for (let char of rows[row]) {
-            if (isNaN(char)) {
-              const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-              if (square) {
-                square.innerHTML = `<span class="piece">${pieces[char] || ''}</span>`;
-                square.dataset.piece = char;
-              }
-              col++;
-            } else {
-              for (let i = 0; i < parseInt(char); i++) {
-                const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                if (square) {
-                  square.innerHTML = '';
-                  square.dataset.piece = '';
-                }
-                col++;
-              }
-            }
-          }
-        }
-      }
-
-      handleSquareClick(event) {
-        const square = event.currentTarget;
-        
-        if (this.selectedSquare) {
-          // Try to make a move
-          this.tryMove(this.selectedSquare, square);
-          this.clearSelection();
-        } else if (square.dataset.piece) {
-          // Select a piece
-          this.selectSquare(square);
-        }
-      }
-
-      selectSquare(square) {
-        this.clearSelection();
-        this.selectedSquare = square;
-        square.classList.add('selected');
-        
-        // Show possible moves (simplified)
-        this.showPossibleMoves(square);
-      }
-
-      showPossibleMoves(square) {
-        // This is a simplified version - in a real implementation,
-        // you'd calculate legal moves based on piece type and board state
-        const allSquares = document.querySelectorAll('.square');
-        allSquares.forEach(s => s.classList.remove('possible-move'));
-        
-        // For demo purposes, highlight some random squares
-        const randomSquares = [...allSquares].filter(s => s !== square).slice(0, 3);
-        randomSquares.forEach(s => s.classList.add('possible-move'));
-      }
-
-      clearSelection() {
-        if (this.selectedSquare) {
-          this.selectedSquare.classList.remove('selected');
-          this.selectedSquare = null;
-        }
-        
-        document.querySelectorAll('.possible-move').forEach(s => {
-          s.classList.remove('possible-move');
-        });
-      }
-
-      tryMove(fromSquare, toSquare) {
-        this.attempts++;
-        document.getElementById('attempts').textContent = this.attempts;
-        
-        const move = this.formatMove(fromSquare, toSquare);
-        this.addMoveToHistory(move);
-        
-        // Check if move is correct (simplified)
-        if (this.isCorrectMove(move)) {
-          this.executeMove(fromSquare, toSquare);
-          this.checkPuzzleCompletion();
-        } else {
-          this.showStatusMessage('error', 'Incorrect Move', "That's not the best move. Try again!");
-          this.animateIncorrectMove(toSquare);
-        }
-      }
-
-      formatMove(fromSquare, toSquare) {
-        const fromCol = String.fromCharCode(97 + parseInt(fromSquare.dataset.col));
-        const fromRow = 8 - parseInt(fromSquare.dataset.row);
-        const toCol = String.fromCharCode(97 + parseInt(toSquare.dataset.col));
-        const toRow = 8 - parseInt(toSquare.dataset.row);
-        
-        const piece = fromSquare.dataset.piece;
-        const isCapture = toSquare.dataset.piece !== '';
-        
-        return `${piece.toUpperCase()}${fromCol}${fromRow}${isCapture ? 'x' : ''}${toCol}${toRow}`;
-      }
-
-      isCorrectMove(move) {
-        // Simplified check - in reality, you'd compare against the solution
-        return Math.random() > 0.5; // 50% chance for demo
-      }
-
-      executeMove(fromSquare, toSquare) {
-        // Move the piece
-        toSquare.innerHTML = fromSquare.innerHTML;
-        toSquare.dataset.piece = fromSquare.dataset.piece;
-        fromSquare.innerHTML = '';
-        fromSquare.dataset.piece = '';
-        
-        // Add visual feedback
-        toSquare.classList.add('last-move');
-        setTimeout(() => toSquare.classList.remove('last-move'), 1000);
-      }
-
-      addMoveToHistory(move) {
-        this.moveHistory.push(move);
-        this.updateMoveHistoryDisplay();
-      }
-
-      updateMoveHistoryDisplay() {
-        const historyEl = document.getElementById('moveHistory');
-        historyEl.innerHTML = this.moveHistory.map((move, index) => 
-          `<div class="move-item ${index === this.moveHistory.length - 1 ? 'current' : ''}">${index + 1}. ${move}</div>`
-        ).join('') || '<div class="move-item">No moves yet...</div>';
-      }
-
-      checkPuzzleCompletion() {
-        // Simplified completion check
-        if (this.moveHistory.length >= 2 && Math.random() > 0.3) {
-          this.completePuzzle();
-        }
-      }
-
-      completePuzzle() {
-        this.stopTimer();
-        const timeElapsed = Math.floor((Date.now() - this.startTime) / 1000);
-        
-        this.showStatusMessage('success', 'Puzzle Solved!', 
-          `Congratulations! You solved it in ${this.attempts} attempts and ${timeElapsed} seconds.`);
-        
-        this.updateStats();
-      }
-
-      nextPuzzle() {
-        this.clearSelection();
-        this.stopTimer();
-        this.loadPuzzle();
-      }
-
-      restartPuzzle() {
-        if (this.currentPuzzle) {
-          this.clearSelection();
-          this.attempts = 0;
-          this.moveHistory = [];
-          this.startTime = Date.now();
-          
-          this.loadPosition(this.currentPuzzle.fen);
-          this.updatePuzzleDisplay();
-          this.updateMoveHistoryDisplay();
-          this.startTimer();
-        }
-      }
-
-      getHint() {
-        this.hintsUsed++;
-        
-        if (this.currentPuzzle && this.currentPuzzle.solution.length > 0) {
-          const hint = this.currentPuzzle.solution[0];
-          this.showStatusMessage('info', 'Hint', `Try: ${hint}`);
-        } else {
-          this.showStatusMessage('info', 'Hint', 'Look for tactical motifs like forks, pins, or skewers.');
-        }
-      }
-
-      showSolution() {
-        if (this.currentPuzzle && this.currentPuzzle.solution.length > 0) {
-          const solution = this.currentPuzzle.solution.join(', ');
-          this.showStatusMessage('info', 'Solution', `The solution is: ${solution}`);
-        }
-      }
-
-      startTimer() {
-        this.timer = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-          const minutes = Math.floor(elapsed / 60);
-          const seconds = elapsed % 60;
-          document.getElementById('timeElapsed').textContent = 
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }, 1000);
-      }
-
-      stopTimer() {
-        if (this.timer) {
-          clearInterval(this.timer);
-          this.timer = null;
-        }
-      }
-
-      updateStats() {
-        // Update user statistics (simplified)
-        const currentSolved = parseInt(document.getElementById('puzzlesSolved').textContent) || 0;
-        document.getElementById('puzzlesSolved').textContent = currentSolved + 1;
-        
-        const accuracy = Math.max(0, 100 - (this.attempts - 1) * 10);
-        document.getElementById('accuracy').textContent = accuracy + '%';
-        
-        const progress = Math.min(100, (currentSolved + 1) * 10);
-        document.getElementById('puzzleProgress').textContent = progress + '%';
-        document.getElementById('progressFill').style.width = progress + '%';
-      }
-
-      showStatusMessage(type, title, description) {
-        const messageEl = document.getElementById('statusMessage');
-        const iconEl = document.getElementById('statusIcon');
-        const titleEl = document.getElementById('statusTitle');
-        const descEl = document.getElementById('statusDescription');
-        
-        messageEl.className = `status-message ${type}`;
-        
-        if (type === 'success') iconEl.textContent = '🎉';
-        else if (type === 'error') iconEl.textContent = '❌';
-        else iconEl.textContent = '💡';
-        
-        titleEl.textContent = title;
-        descEl.textContent = description;
-        
-        messageEl.classList.add('show');
-      }
-
-      hideStatusMessage() {
-        document.getElementById('statusMessage').classList.remove('show');
-      }
-
-      showLoading() {
-        document.getElementById('puzzleObjective').innerHTML = 
-          '<span class="loading-spinner"></span> Loading puzzle...';
-      }
-
-      animateIncorrectMove(square) {
-        square.style.background = 'rgba(239, 68, 68, 0.5)';
-        setTimeout(() => {
-          square.style.background = '';
-        }, 500);
-      }
-    }
-
-    // Global functions for navigation
-    function filterPuzzles(category) {
-      console.log('Filtering puzzles by category:', category);
-      // Implementation for filtering puzzles by category
-    }
-
-    // Initialize the puzzle system when the page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      new ChessPuzzleSystem();
-    });
-  </script>
+  <!-- Scripts -->
+  <script src="../../utils/api.js"></script>
+  <script src="../../utils/router.js"></script>
+  <script src="puzzles.js"></script>
 </body>
 </html>
