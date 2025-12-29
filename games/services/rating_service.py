@@ -82,6 +82,17 @@ class GlobalRatingService:
             Dictionary with rating changes and new ratings
         """
         
+        # PREVENT DOUBLE-COUNTING: Check if ratings were already updated for this game
+        if game_instance:
+            from accounts.models import RatingHistory
+            existing_history = RatingHistory.objects.filter(game=game_instance).exists()
+            if existing_history:
+                logger.warning(f"Ratings already updated for game {game_instance.id}, skipping to prevent double-counting")
+                return {
+                    'skipped': True,
+                    'reason': 'Ratings already updated for this game'
+                }
+        
         # Validate time control
         if time_control not in ['blitz', 'rapid', 'classical']:
             logger.warning(f"Invalid time control '{time_control}', defaulting to 'rapid'")

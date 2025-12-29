@@ -358,6 +358,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             is_white_bot = 'computer' in game.white_player.username.lower()
             is_black_bot = 'computer' in game.black_player.username.lower()
             
+            logger.info(f"Game {game.id} finished: {game.white_player.username} vs {game.black_player.username}, result={game.result}")
+            
             # Only update ratings if BOTH players are humans (not bots)
             if not is_white_bot and not is_black_bot:
                 from games.services.rating_service import update_game_ratings
@@ -366,6 +368,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     # so we call update_game_ratings synchronously (Django will handle it)
                     # Get time control string (category) from TimeControl model
                     time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    logger.info(f"Calling update_game_ratings for game {game.id}")
                     update_game_ratings(
                         white_player=game.white_player,
                         black_player=game.black_player,
@@ -373,6 +376,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                         time_control=time_control_str,
                         game_instance=game
                     )
+                    logger.info(f"Successfully updated ratings for game {game.id}")
                 except Exception as e:
                     logger.error(f"Failed to update ratings via WebSocket: {e}")
                     import traceback
