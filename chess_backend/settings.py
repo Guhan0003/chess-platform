@@ -203,7 +203,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "engine", "assets"),  # expose engine/assets
-    os.path.join(BASE_DIR, "frontend", "assets"),  # frontend assets
+    os.path.join(BASE_DIR, "frontend", "assets"),  # frontend assets (Logo.jpg, etc)
+    os.path.join(BASE_DIR, "frontend", "public"),  # frontend public (favicon.ico, etc)
 ]
 
 # Media files (user uploads like avatars)

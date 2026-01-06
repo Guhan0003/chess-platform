@@ -9,7 +9,7 @@
   <title>Puzzles - Chess Platform</title>
   
   <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -59,6 +59,9 @@
     }
 
     .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
       font-size: var(--font-size-xl);
       font-weight: var(--font-weight-bold);
       background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
@@ -67,7 +70,13 @@
       -webkit-text-fill-color: transparent;
       margin-bottom: var(--space-xs);
       text-decoration: none;
-      display: block;
+    }
+
+    .logo-image {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     .sidebar-subtitle {
@@ -811,7 +820,10 @@
       <!-- Sidebar Navigation - Matching Lobby -->
       <nav class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <a href="/lobby/" class="sidebar-logo">♟ Chess Platform</a>
+          <a href="/lobby/" class="sidebar-logo">
+            <img src="/static/Logo.jpg" alt="Chess Platform" class="logo-image">
+            <span>Chess Platform</span>
+          </a>
           <div class="sidebar-subtitle">Train & Improve</div>
         </div>
         

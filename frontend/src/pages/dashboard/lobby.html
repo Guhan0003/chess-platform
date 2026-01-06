@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lobby - Chess Platform</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
   <link rel="stylesheet" href="../../styles/global.css">
   <script src="../../utils/api.js"></script>
   <script src="../../utils/gameSessionGuard.js"></script>
@@ -46,6 +47,9 @@
     }
 
     .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
       font-size: var(--font-size-xl);
       font-weight: var(--font-weight-bold);
       background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
@@ -53,6 +57,13 @@
       background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: var(--space-xs);
+    }
+
+    .logo-image {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     .sidebar-subtitle {
@@ -937,7 +948,10 @@
       <!-- Sidebar Navigation -->
       <nav class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <h1 class="sidebar-logo">Chess Platform</h1>
+          <div class="sidebar-logo">
+            <img src="/static/Logo.jpg" alt="Chess Platform" class="logo-image">
+            <span>Chess Platform</span>
+          </div>
           <p class="sidebar-subtitle">Professional Chess</p>
         </div>
         
