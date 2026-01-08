@@ -22,41 +22,41 @@ interface AuthApi {
      * Login with username and password
      * Endpoint: POST /api/auth/login/
      */
-    @POST("auth/login/")
+    @POST("api/auth/login/")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
     
     /**
      * Register a new user
      * Endpoint: POST /api/auth/register/
      */
-    @POST("auth/register/")
+    @POST("api/auth/register/")
     suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
     
     /**
      * Refresh access token using refresh token
      * Endpoint: POST /api/auth/refresh/
      */
-    @POST("auth/refresh/")
+    @POST("api/auth/refresh/")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<RefreshTokenResponse>
     
     /**
      * Logout - invalidate tokens
      * Endpoint: POST /api/auth/logout/
      */
-    @POST("auth/logout/")
+    @POST("api/auth/logout/")
     suspend fun logout(): Response<Unit>
     
     /**
      * Get current user profile
      * Endpoint: GET /api/auth/profile/
      */
-    @GET("auth/profile/")
+    @GET("api/auth/profile/")
     suspend fun getProfile(): Response<UserProfileResponse>
     
     /**
      * Get available skill levels for registration
      * Endpoint: GET /api/auth/skill-levels/
      */
-    @GET("auth/skill-levels/")
+    @GET("api/auth/skill-levels/")
     suspend fun getSkillLevels(): Response<SkillLevelResponse>
 }

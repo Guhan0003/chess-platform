@@ -229,7 +229,7 @@ fun SecondaryButton(
             contentColor = TextPrimary,
             disabledContentColor = TextMuted
         ),
-        border = ButtonDefaults.outlinedButtonBorder
+        border = ButtonDefaults.outlinedButtonBorder(enabled = enabled)
     ) {
         Text(
             text = text,

@@ -1,51 +1,74 @@
 package com.example.chess_platform.ui.game.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.chess_platform.R
 import com.example.chess_platform.domain.model.LegalMoveInfo
-import com.example.chess_platform.domain.model.PlayerSide
-import com.example.chess_platform.ui.theme.ChessGreen
 
-// Board colors
-private val LightSquareColor = Color(0xFFF0D9B5)
-private val DarkSquareColor = Color(0xFFB58863)
-private val SelectedSquareColor = Color(0xFF829769)
-private val LastMoveColor = Color(0xFFCDD26A).copy(alpha = 0.7f)
-private val LegalMoveIndicator = Color(0xFF000000).copy(alpha = 0.2f)
-private val CheckColor = Color(0xFFE53935).copy(alpha = 0.8f)
+// ==================== Board Theme ====================
 
 /**
- * Chess board component
+ * Board color theme - can be changed via settings
+ */
+data class BoardTheme(
+    val lightSquare: Color,
+    val darkSquare: Color,
+    val selectedSquare: Color,
+    val lastMoveLight: Color,
+    val lastMoveDark: Color,
+    val legalMoveIndicator: Color,
+    val checkColor: Color,
+    val borderColor: Color
+)
+
+// Default classic wood theme
+val ClassicBoardTheme = BoardTheme(
+    lightSquare = Color(0xFFF0D9B5),
+    darkSquare = Color(0xFFB58863),
+    selectedSquare = Color(0xFF829769),
+    lastMoveLight = Color(0xFFCDD26A),
+    lastMoveDark = Color(0xFFAAA23A),
+    legalMoveIndicator = Color(0xFF000000).copy(alpha = 0.18f),
+    checkColor = Color(0xFFE53935).copy(alpha = 0.7f),
+    borderColor = Color(0xFF5D4037)
+)
+
+// ==================== Chess Board Composable ====================
+
+/**
+ * A clean and practical chess board component using piece images
  * 
- * @param fen The FEN string representing the board position
- * @param isFlipped Whether to flip the board (black's perspective)
+ * @param fen FEN string representing the board position
+ * @param isFlipped Whether the board is flipped (black's perspective)
  * @param selectedSquare Currently selected square (e.g., "e2")
  * @param legalMoves List of legal moves from selected square
  * @param lastMove The last move made (from and to squares)
  * @param isCheck Whether the current side to move is in check
  * @param onSquareClick Callback when a square is clicked
  * @param enabled Whether the board is interactive
+ * @param theme Board color theme
  */
 @Composable
 fun ChessBoard(
     fen: String,
+    modifier: Modifier = Modifier,
     isFlipped: Boolean = false,
     selectedSquare: String? = null,
     legalMoves: List<LegalMoveInfo> = emptyList(),
@@ -53,7 +76,7 @@ fun ChessBoard(
     isCheck: Boolean = false,
     onSquareClick: (String) -> Unit = {},
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
+    theme: BoardTheme = ClassicBoardTheme
 ) {
     val board = remember(fen) { parseFen(fen) }
     val kingSquare = remember(fen, isCheck) {
@@ -64,9 +87,10 @@ fun ChessBoard(
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(4.dp))
-            .border(2.dp, Color.DarkGray, RoundedCornerShape(4.dp))
+            .border(3.dp, theme.borderColor, RoundedCornerShape(4.dp))
+            .background(theme.borderColor)
     ) {
-        Column {
+        Column(modifier = Modifier.padding(2.dp)) {
             for (displayRow in 0 until 8) {
                 val row = if (isFlipped) displayRow else 7 - displayRow
                 Row(modifier = Modifier.weight(1f)) {
@@ -90,11 +114,13 @@ fun ChessBoard(
                             isLastMove = isLastMoveSquare,
                             isCheck = isKingInCheck,
                             legalMove = legalMove,
-                            showCoordinates = displayCol == 0 || displayRow == 7,
                             row = row,
                             col = col,
+                            displayRow = displayRow,
+                            displayCol = displayCol,
                             isFlipped = isFlipped,
                             onClick = { if (enabled) onSquareClick(squareName) },
+                            theme = theme,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -104,6 +130,8 @@ fun ChessBoard(
     }
 }
 
+// ==================== Chess Square ====================
+
 @Composable
 private fun ChessSquare(
     piece: Char?,
@@ -112,19 +140,22 @@ private fun ChessSquare(
     isLastMove: Boolean,
     isCheck: Boolean,
     legalMove: LegalMoveInfo?,
-    showCoordinates: Boolean,
     row: Int,
     col: Int,
+    displayRow: Int,
+    displayCol: Int,
     isFlipped: Boolean,
     onClick: () -> Unit,
+    theme: BoardTheme,
     modifier: Modifier = Modifier
 ) {
+    // Determine background color based on state
     val backgroundColor = when {
-        isCheck -> CheckColor
-        isSelected -> SelectedSquareColor
-        isLastMove -> LastMoveColor
-        isLightSquare -> LightSquareColor
-        else -> DarkSquareColor
+        isCheck -> theme.checkColor
+        isSelected -> theme.selectedSquare
+        isLastMove -> if (isLightSquare) theme.lastMoveLight else theme.lastMoveDark
+        isLightSquare -> theme.lightSquare
+        else -> theme.darkSquare
     }
     
     Box(
@@ -134,72 +165,118 @@ private fun ChessSquare(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Rank coordinate (numbers on left)
-        if (col == 0) {
-            val displayRow = if (isFlipped) row + 1 else 8 - row
+        // Rank coordinate (1-8 on left edge)
+        if (displayCol == 0) {
+            val rankNumber = if (isFlipped) displayRow + 1 else 8 - displayRow
             Text(
-                text = "$displayRow",
-                fontSize = 10.sp,
+                text = "$rankNumber",
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isLightSquare) DarkSquareColor else LightSquareColor,
+                color = if (isLightSquare) theme.darkSquare else theme.lightSquare,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(2.dp)
+                    .padding(1.dp)
             )
         }
         
-        // File coordinate (letters at bottom)
-        if (row == 0) {
-            val displayCol = if (isFlipped) 'h' - col else 'a' + col
+        // File coordinate (a-h at bottom edge)
+        if (displayRow == 7) {
+            val fileChar = if (isFlipped) 'h' - displayCol else 'a' + displayCol
             Text(
-                text = "$displayCol",
-                fontSize = 10.sp,
+                text = "$fileChar",
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isLightSquare) DarkSquareColor else LightSquareColor,
+                color = if (isLightSquare) theme.darkSquare else theme.lightSquare,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(2.dp)
+                    .padding(1.dp)
             )
         }
         
         // Legal move indicator
         if (legalMove != null) {
             if (piece != null) {
-                // Capture indicator - circle around the piece
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                // Capture indicator - ring around the piece
+                Canvas(modifier = Modifier.fillMaxSize(0.9f)) {
                     drawCircle(
-                        color = LegalMoveIndicator,
+                        color = theme.legalMoveIndicator,
                         radius = size.minDimension / 2,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 8f)
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f)
                     )
                 }
             } else {
-                // Move indicator - dot in center
+                // Move indicator - small dot in center
                 Box(
                     modifier = Modifier
-                        .size(12.dp)
+                        .size(14.dp)
                         .clip(CircleShape)
-                        .background(LegalMoveIndicator)
+                        .background(theme.legalMoveIndicator)
                 )
             }
         }
         
-        // Chess piece
+        // Chess piece image
         piece?.let {
-            Text(
-                text = getPieceSymbol(it),
-                fontSize = 32.sp,
-                textAlign = TextAlign.Center,
-                color = if (it.isUpperCase()) Color.White else Color.Black
-            )
+            val pieceResId = getPieceDrawable(it)
+            if (pieceResId != 0) {
+                Image(
+                    painter = painterResource(id = pieceResId),
+                    contentDescription = getPieceDescription(it),
+                    modifier = Modifier
+                        .fillMaxSize(0.85f)
+                        .padding(2.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
 }
 
-// ==================== Helper Functions ====================
+// ==================== Piece Image Mapping ====================
 
 /**
- * Parse FEN string to get board position
+ * Get drawable resource ID for a chess piece
+ * Uses the piece images copied from frontend/assets
+ */
+private fun getPieceDrawable(piece: Char): Int {
+    return when (piece) {
+        'K' -> R.drawable.piece_wk  // White King
+        'Q' -> R.drawable.piece_wq  // White Queen
+        'R' -> R.drawable.piece_wr  // White Rook
+        'B' -> R.drawable.piece_wb  // White Bishop
+        'N' -> R.drawable.piece_wn  // White Knight
+        'P' -> R.drawable.piece_wp  // White Pawn
+        'k' -> R.drawable.piece_bk  // Black King
+        'q' -> R.drawable.piece_bq  // Black Queen
+        'r' -> R.drawable.piece_br  // Black Rook
+        'b' -> R.drawable.piece_bb  // Black Bishop
+        'n' -> R.drawable.piece_bn  // Black Knight
+        'p' -> R.drawable.piece_bp  // Black Pawn
+        else -> 0
+    }
+}
+
+/**
+ * Get accessibility description for a piece
+ */
+private fun getPieceDescription(piece: Char): String {
+    val color = if (piece.isUpperCase()) "White" else "Black"
+    val pieceName = when (piece.lowercaseChar()) {
+        'k' -> "King"
+        'q' -> "Queen"
+        'r' -> "Rook"
+        'b' -> "Bishop"
+        'n' -> "Knight"
+        'p' -> "Pawn"
+        else -> "Piece"
+    }
+    return "$color $pieceName"
+}
+
+// ==================== FEN Parsing Utilities ====================
+
+/**
+ * Parse FEN string to get board position as 2D array
  */
 private fun parseFen(fen: String): Array<Array<Char?>> {
     val board = Array(8) { arrayOfNulls<Char>(8) }
@@ -223,7 +300,7 @@ private fun parseFen(fen: String): Array<Array<Char?>> {
 }
 
 /**
- * Check if it's white's turn from FEN
+ * Check if it's white's turn from FEN string
  */
 private fun isWhiteTurn(fen: String): Boolean {
     val parts = fen.split(" ")
@@ -246,7 +323,7 @@ private fun findKingSquare(board: Array<Array<Char?>>, isWhite: Boolean): String
 }
 
 /**
- * Convert row/col to square name (e.g., 0,0 -> "a1")
+ * Convert row/col indices to algebraic notation (e.g., 0,0 -> "a1")
  */
 private fun getSquareName(row: Int, col: Int): String {
     val file = 'a' + col
@@ -255,28 +332,7 @@ private fun getSquareName(row: Int, col: Int): String {
 }
 
 /**
- * Get Unicode chess piece symbol
- */
-private fun getPieceSymbol(piece: Char): String {
-    return when (piece) {
-        'K' -> "♔"
-        'Q' -> "♕"
-        'R' -> "♖"
-        'B' -> "♗"
-        'N' -> "♘"
-        'P' -> "♙"
-        'k' -> "♚"
-        'q' -> "♛"
-        'r' -> "♜"
-        'b' -> "♝"
-        'n' -> "♞"
-        'p' -> "♟"
-        else -> ""
-    }
-}
-
-/**
- * Parse square name to row/col (e.g., "e2" -> (1, 4))
+ * Parse algebraic square to row/col indices (e.g., "e2" -> (1, 4))
  */
 fun parseSquare(square: String): Pair<Int, Int>? {
     if (square.length != 2) return null

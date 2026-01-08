@@ -22,9 +22,9 @@ android {
         // Build config for API URL
         // For Emulator: use 10.0.2.2
         // For Physical Device: use your computer's IP (run 'ipconfig' to find it)
-        // Example: "http://192.168.1.105:8000/api/"
+        // Example: "http://192.168.1.105:8000/"
         val serverIp = project.findProperty("SERVER_IP") as String? ?: "10.0.2.2"
-        buildConfigField("String", "API_BASE_URL", "\"http://$serverIp:8000/api/\"")
+        buildConfigField("String", "API_BASE_URL", "\"http://$serverIp:8000/\"")
         buildConfigField("String", "WS_BASE_URL", "\"ws://$serverIp:8000/ws/\"")
     }
 
@@ -35,7 +35,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "API_BASE_URL", "\"https://your-production-url.com/api/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://your-production-url.com/\"")
             buildConfigField("String", "WS_BASE_URL", "\"wss://your-production-url.com/ws/\"")
         }
     }

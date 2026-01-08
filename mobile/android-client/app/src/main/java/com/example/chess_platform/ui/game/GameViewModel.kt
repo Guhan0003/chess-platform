@@ -1,5 +1,6 @@
 package com.example.chess_platform.ui.game
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "GameViewModel"
 
 @HiltViewModel
 class GameViewModel @Inject constructor(
@@ -42,6 +45,10 @@ class GameViewModel @Inject constructor(
             result.fold(
                 onSuccess = { game ->
                     val playerColor = determinePlayerColor(game)
+                    Log.d(TAG, "Game loaded: id=${game.id}, isComputerGame=${game.isComputerGame}, " +
+                              "whitePlayer=${game.whitePlayer?.username}, blackPlayer=${game.blackPlayer?.username}, " +
+                              "playerColor=$playerColor, currentTurn=${game.currentTurn}")
+                    
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
@@ -69,6 +76,7 @@ class GameViewModel @Inject constructor(
                     }
                 },
                 onFailure = { e ->
+                    Log.e(TAG, "Failed to load game: ${e.message}")
                     _uiState.update { 
                         it.copy(
                             isLoading = false,
@@ -238,10 +246,17 @@ class GameViewModel @Inject constructor(
         viewModelScope.launch {
             deselectSquare()
             
+            // Capture isComputerGame BEFORE state updates
+            val isComputerGame = _uiState.value.isComputerGame
+            Log.d(TAG, "makeMove: $from->$to, isComputerGame=$isComputerGame")
+            
             val result = gameRepository.makeMove(gameId, from, to, promotion)
             result.fold(
                 onSuccess = { (move, status) ->
                     val newFen = move.fenAfterMove ?: _uiState.value.fen
+                    val gameOver = status?.isGameOver ?: false
+                    
+                    Log.d(TAG, "Move success, newFen=${newFen.take(30)}, gameOver=$gameOver")
                     
                     _uiState.update { state ->
                         state.copy(
@@ -251,18 +266,22 @@ class GameViewModel @Inject constructor(
                             isCheck = status?.isCheck ?: false,
                             isCheckmate = status?.isCheckmate ?: false,
                             isStalemate = status?.isStalemate ?: false,
-                            isGameOver = status?.isGameOver ?: false,
+                            isGameOver = gameOver,
                             result = status?.result,
                             isMyTurn = false
                         )
                     }
                     
                     // If computer game and game isn't over, request computer move
-                    if (_uiState.value.isComputerGame && !(_uiState.value.isGameOver)) {
+                    if (isComputerGame && !gameOver) {
+                        Log.d(TAG, "Requesting computer move...")
                         requestComputerMove()
+                    } else {
+                        Log.d(TAG, "Not requesting computer move: isComputerGame=$isComputerGame, gameOver=$gameOver")
                     }
                 },
                 onFailure = { e ->
+                    Log.e(TAG, "Move failed: ${e.message}")
                     _uiState.update { it.copy(error = e.message ?: "Failed to make move") }
                 }
             )
@@ -291,7 +310,7 @@ class GameViewModel @Inject constructor(
             val result = gameRepository.makeComputerMove(gameId)
             result.fold(
                 onSuccess = { move ->
-                    if (move != null) {
+                    if (move != null && move.fromSquare.isNotEmpty()) {
                         val newFen = move.fenAfterMove ?: _uiState.value.fen
                         
                         _uiState.update { state ->
@@ -306,6 +325,10 @@ class GameViewModel @Inject constructor(
                         
                         // Reload to get updated game status
                         checkGameStatus()
+                    } else {
+                        // Move was null - reload game to get current state
+                        _uiState.update { it.copy(isWaitingForComputer = false) }
+                        loadGame()
                     }
                 },
                 onFailure = { e ->
@@ -325,11 +348,21 @@ class GameViewModel @Inject constructor(
             val result = gameRepository.getGameDetails(gameId)
             result.fold(
                 onSuccess = { game ->
+                    val playerColor = _uiState.value.playerColor
                     _uiState.update { state ->
                         state.copy(
+                            game = game,
+                            fen = game.fen,
+                            moves = game.moves,
                             isGameOver = game.isGameOver,
-                            game = game
+                            isMyTurn = game.currentTurn == playerColor,
+                            isCheck = game.fen.contains("+") // Simple check detection
                         )
+                    }
+                    
+                    // If game ended, show result dialog
+                    if (game.isGameOver) {
+                        _uiState.update { it.copy(showGameResultDialog = true) }
                     }
                 },
                 onFailure = { /* Ignore */ }
@@ -351,6 +384,53 @@ class GameViewModel @Inject constructor(
         _uiState.update { it.copy(showResignDialog = false) }
     }
     
+    // ==================== Draw Offer ====================
+    
+    fun showDrawOfferDialog() {
+        _uiState.update { it.copy(showDrawOfferDialog = true) }
+    }
+    
+    fun dismissDrawOfferDialog() {
+        _uiState.update { it.copy(showDrawOfferDialog = false) }
+    }
+    
+    fun offerDraw() {
+        _uiState.update { 
+            it.copy(
+                showDrawOfferDialog = false,
+                drawOfferPending = true,
+                drawOfferSentByMe = true
+            )
+        }
+        // TODO: Send draw offer via API/WebSocket
+    }
+    
+    fun acceptDraw() {
+        _uiState.update { 
+            it.copy(
+                showDrawReceivedDialog = false,
+                isGameOver = true,
+                isDraw = true,
+                result = "1/2-1/2",
+                showGameResultDialog = true
+            )
+        }
+        timerJob?.cancel()
+        // TODO: Send draw acceptance via API/WebSocket
+    }
+    
+    fun declineDraw() {
+        _uiState.update { it.copy(showDrawReceivedDialog = false) }
+        // TODO: Send draw decline via API/WebSocket
+    }
+    
+    // ==================== Rematch ====================
+    
+    fun requestRematch() {
+        // TODO: Implement rematch request via API
+        _uiState.update { it.copy(showGameResultDialog = false) }
+    }
+
     fun resignGame() {
         viewModelScope.launch {
             _uiState.update { it.copy(showResignDialog = false) }
@@ -363,7 +443,9 @@ class GameViewModel @Inject constructor(
                         it.copy(
                             game = game,
                             isGameOver = true,
-                            result = if (it.playerColor == PlayerSide.WHITE) "0-1" else "1-0"
+                            isResigned = true,
+                            result = if (it.playerColor == PlayerSide.WHITE) "0-1" else "1-0",
+                            showGameResultDialog = true
                         )
                     }
                 },

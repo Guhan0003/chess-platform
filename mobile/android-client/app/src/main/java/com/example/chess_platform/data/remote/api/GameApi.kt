@@ -71,7 +71,7 @@ interface GameApi {
     @POST("api/games/{id}/computer-move/")
     suspend fun makeComputerMove(
         @Path("id") gameId: Int,
-        @Body request: ComputerMoveRequest? = null
+        @Body request: ComputerMoveRequest
     ): Response<ComputerMoveResponse>
 
     /**
