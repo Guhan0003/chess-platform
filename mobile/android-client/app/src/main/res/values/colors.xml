@@ -1,5 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Chess Platform Color Palette -->
+    
+    <!-- Background Colors -->
+    <color name="bg_primary">#0A0A0A</color>
+    <color name="bg_secondary">#1A1A1A</color>
+    <color name="bg_tertiary">#2A2A2A</color>
+    <color name="bg_card">#1E1E1E</color>
+    
+    <!-- Accent Colors (Chess Green) -->
+    <color name="accent_primary">#769656</color>
+    <color name="accent_secondary">#5D7A42</color>
+    <color name="accent_dark">#4A5F35</color>
+    <color name="accent_light">#8FAD6B</color>
+    
+    <!-- Chess Board Colors -->
+    <color name="board_light">#F0D9B5</color>
+    <color name="board_dark">#B58863</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#F0D9B5</color>
+    <color name="text_secondary">#D4C5A6</color>
+    <color name="text_muted">#9A8F7E</color>
+    <color name="text_inverse">#2A2A2A</color>
+    
+    <!-- Status Colors -->
+    <color name="success">#22C55E</color>
+    <color name="error">#EF4444</color>
+    <color name="warning">#F59E0B</color>
+    <color name="info">#3B82F6</color>
+    
+    <!-- Border Colors -->
+    <color name="border_default">#3A3A3A</color>
+    
+    <!-- Legacy colors for compatibility -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

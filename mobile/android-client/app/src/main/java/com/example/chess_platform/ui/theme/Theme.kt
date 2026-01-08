@@ -9,35 +9,77 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// Chess Platform Dark Theme (Primary theme - matching web UI)
+private val ChessDarkColorScheme = darkColorScheme(
+    primary = AccentPrimary,
+    onPrimary = TextInverse,
+    primaryContainer = AccentDark,
+    onPrimaryContainer = TextPrimary,
+    
+    secondary = AccentSecondary,
+    onSecondary = TextInverse,
+    secondaryContainer = AccentDark,
+    onSecondaryContainer = TextPrimary,
+    
+    tertiary = AccentLight,
+    onTertiary = TextInverse,
+    tertiaryContainer = AccentSecondary,
+    onTertiaryContainer = TextPrimary,
+    
+    background = BgPrimary,
+    onBackground = TextPrimary,
+    
+    surface = BgSecondary,
+    onSurface = TextPrimary,
+    surfaceVariant = BgTertiary,
+    onSurfaceVariant = TextSecondary,
+    
+    error = Error,
+    onError = Color.White,
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    
+    outline = BorderDefault,
+    outlineVariant = BorderLight,
+    
+    inverseSurface = BoardLight,
+    inverseOnSurface = BgPrimary,
+    inversePrimary = AccentDark,
+    
+    scrim = Color.Black.copy(alpha = 0.7f)
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+// Optional Light Theme (for future use)
+private val ChessLightColorScheme = lightColorScheme(
+    primary = AccentPrimary,
     onPrimary = Color.White,
+    primaryContainer = AccentLight,
+    onPrimaryContainer = AccentDark,
+    
+    secondary = AccentSecondary,
     onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    
+    background = Color(0xFFFFFBFE),
+    onBackground = BgPrimary,
+    
+    surface = Color(0xFFFFFBFE),
+    onSurface = BgPrimary,
+    
+    error = Error,
+    onError = Color.White
 )
 
 @Composable
 fun ChessplatformTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,  // Default to dark theme for chess platform
+    dynamicColor: Boolean = false,  // Disabled to maintain consistent branding
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,9 +87,19 @@ fun ChessplatformTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> ChessDarkColorScheme
+        else -> ChessLightColorScheme
+    }
+    
+    // Update system bars to match theme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = BgPrimary.toArgb()
+            window.navigationBarColor = BgPrimary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
     }
 
     MaterialTheme(

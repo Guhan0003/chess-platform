@@ -1,3 +1,32 @@
 <resources>
-    <string name="app_name">chess-platform</string>
+    <string name="app_name">Chess Platform</string>
+    
+    <!-- Auth strings -->
+    <string name="login_title">Sign In</string>
+    <string name="register_title">Create Account</string>
+    <string name="username_hint">Username</string>
+    <string name="password_hint">Password</string>
+    <string name="email_hint">Email</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="create_account">Create New Account</string>
+    <string name="already_have_account">Already have an account?</string>
+    
+    <!-- Dashboard strings -->
+    <string name="play_online">Play Online</string>
+    <string name="play_bot">Play Bot</string>
+    <string name="over_the_board">Over the Board</string>
+    <string name="puzzles">Puzzles</string>
+    <string name="leaderboard">Leaderboard</string>
+    
+    <!-- Ratings -->
+    <string name="blitz">Blitz</string>
+    <string name="rapid">Rapid</string>
+    <string name="classical">Classical</string>
+    
+    <!-- General -->
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
 </resources>
