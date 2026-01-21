@@ -13,8 +13,8 @@ data class PlayUiState(
     val error: String? = null,
     val createdGame: Game? = null,
     
-    // Game configuration
-    val selectedTimeControl: TimeControlOption = TimeControlOption.RAPID,
+    // Game configuration - default to 10 min Rapid
+    val selectedTimeControl: TimeControlOption = TimeControlOption.RAPID_10,
     val selectedDifficulty: BotDifficulty = BotDifficulty.MEDIUM,
     val selectedColor: PlayerColor = PlayerColor.WHITE,
     

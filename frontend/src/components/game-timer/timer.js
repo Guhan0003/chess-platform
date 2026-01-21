@@ -353,18 +353,42 @@ class GameTimer {
 
 // Factory function to create timer with time control presets
 function createGameTimer(timeControlType, options = {}) {
+  // Professional time controls - Categories: Bullet (<3min), Blitz (3-10min), Rapid (10-30min), Classical (>30min)
   const timeControls = {
-    'bullet_1': { initial: 60, increment: 0 },
-    'bullet_2': { initial: 120, increment: 1 },
-    'blitz_3': { initial: 180, increment: 0 },
-    'blitz_5': { initial: 300, increment: 0 },
-    'blitz_5_3': { initial: 300, increment: 3 },
-    'rapid_10': { initial: 600, increment: 0 },
-    'rapid_15_10': { initial: 900, increment: 10 },
-    'rapid_30': { initial: 1800, increment: 0 },
-    'classical_30': { initial: 1800, increment: 0 },
-    'classical_60': { initial: 3600, increment: 0 },
-    'unlimited': { initial: null, increment: 0 }
+    // Ultra-Bullet & Bullet (30 sec - 2 min)
+    'bullet_30s': { initial: 30, increment: 0, category: 'bullet', display: '⚡ 30 sec' },
+    'bullet_1': { initial: 60, increment: 0, category: 'bullet', display: '⚡ 1 min' },
+    'bullet_1_1': { initial: 60, increment: 1, category: 'bullet', display: '⚡ 1|1' },
+    'bullet_2': { initial: 120, increment: 0, category: 'bullet', display: '⚡ 2 min' },
+    'bullet_2_1': { initial: 120, increment: 1, category: 'bullet', display: '⚡ 2|1' },
+    
+    // Blitz (3-10 minutes)
+    'blitz_3': { initial: 180, increment: 0, category: 'blitz', display: '🔥 3 min' },
+    'blitz_3_2': { initial: 180, increment: 2, category: 'blitz', display: '🔥 3|2' },
+    'blitz_5': { initial: 300, increment: 0, category: 'blitz', display: '🔥 5 min' },
+    'blitz_5_3': { initial: 300, increment: 3, category: 'blitz', display: '🔥 5|3' },
+    'blitz_5_5': { initial: 300, increment: 5, category: 'blitz', display: '🔥 5|5' },
+    
+    // Rapid (10-30 minutes)
+    'rapid_10': { initial: 600, increment: 0, category: 'rapid', display: '🏃 10 min' },
+    'rapid_10_5': { initial: 600, increment: 5, category: 'rapid', display: '🏃 10|5' },
+    'rapid_15': { initial: 900, increment: 0, category: 'rapid', display: '🏃 15 min' },
+    'rapid_15_10': { initial: 900, increment: 10, category: 'rapid', display: '🏃 15|10' },
+    
+    // Classical (30+ minutes)
+    'classical_30': { initial: 1800, increment: 0, category: 'classical', display: '♔ 30 min' },
+    'classical_30_20': { initial: 1800, increment: 20, category: 'classical', display: '♔ 30|20' },
+    'classical_60': { initial: 3600, increment: 0, category: 'classical', display: '♔ 60 min' },
+    'classical_90_30': { initial: 5400, increment: 30, category: 'classical', display: '♔ 90|30' },
+    
+    // Unlimited
+    'unlimited': { initial: null, increment: 0, category: 'unlimited', display: '∞ Unlimited' },
+    
+    // Simple category mappings for backward compatibility
+    'bullet': { initial: 120, increment: 0, category: 'bullet', display: '⚡ 2 min' },
+    'blitz': { initial: 300, increment: 0, category: 'blitz', display: '🔥 5 min' },
+    'rapid': { initial: 600, increment: 0, category: 'rapid', display: '🏃 10 min' },
+    'classical': { initial: 1800, increment: 0, category: 'classical', display: '♔ 30 min' }
   };
 
   const preset = timeControls[timeControlType] || timeControls['rapid_10'];

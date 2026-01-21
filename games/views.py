@@ -8,13 +8,16 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from datetime import timedelta
 import json
 import logging
 import random
+import re
+import time
 import traceback
 
-from .models import Game, Move
-from .serializers import GameSerializer, MoveSerializer
+from .models import Game, Move, GameInvitation, TimeControl
+from .serializers import GameSerializer, MoveSerializer, GameInvitationSerializer
 
 # Import chess engine
 from engine import get_computer_move, get_computer_move_legacy
@@ -134,18 +137,10 @@ def make_move(request, pk):
     
     logger.info(f"Move saved: {move_obj}")
 
-    # TODO: Re-enable timer logic after fixing the integration issue
-    # Temporarily disabled to allow moves to work
+    # Timer deduction disabled for now - causes database locking issues
+    # TODO: Re-enable timer deduction when database concurrency is fixed
     # player_color = 'white' if request.user == game.white_player else 'black'
-    # try:
-    #     logger.info(f"Attempting to update timer for {player_color}")
-    #     timer_state = game.make_timer_move(player_color)
-    #     logger.info(f"Timer updated for {player_color}: white={timer_state.get('white_time'):.1f}s, black={timer_state.get('black_time'):.1f}s")
-    # except Exception as e:
-    #     logger.error(f"Timer update failed: {e}")
-    #     # Continue with move processing even if timer fails
-    #     import traceback
-    #     logger.error(f"Timer error details: {traceback.format_exc()}")
+    # timer_state = game.make_timer_move(player_color)
 
     # Update game state
     game.fen = new_fen
@@ -227,25 +222,6 @@ def make_move(request, pk):
     game.save()
     logger.info(f"Game updated: status={game.status}, fen={game.fen}")
 
-    # TIMER LOGIC TEMPORARILY DISABLED - CAUSING 500 ERRORS
-    # Update timer after successful move with comprehensive error handling
-    # try:
-    #     timer_manager = game.get_timer_manager()
-    #     if timer_manager:
-    #         logger.info(f"Updating timer for game {pk} after move by {request.user.username}")
-    #         timer_manager.make_move(request.user.username)
-    #         
-    #         # Persist timer state to database
-    #         game.make_timer_move()
-    #         logger.info(f"Timer updated successfully for game {pk}")
-    #     else:
-    #         logger.warning(f"No timer manager found for game {pk}")
-    # except Exception as timer_error:
-    #     # Log the error but don't fail the move
-    #     logger.error(f"Timer update failed for game {pk}: {timer_error}")
-    #     logger.error(f"Timer error traceback: {traceback.format_exc()}")
-    #     # Move continues successfully even if timer fails
-
     # Notify players via WebSocket about the move - IMMEDIATE notification
     move_data = {
         'from_square': from_sq,
@@ -314,16 +290,44 @@ def create_game(request):
     # Get time control from request or use default
     time_control = request.data.get('time_control', 'rapid')
     
-    # Map time control to actual time values (in seconds)
+    # Professional time control mapping (in seconds)
+    # Categories: Bullet (<3min), Blitz (3-10min), Rapid (10-30min), Classical (>30min)
     time_control_map = {
-        'bullet': 120,      # 2 minutes
-        'blitz': 300,       # 5 minutes
-        'rapid': 600,       # 10 minutes
-        'classical': 1800,  # 30 minutes
-        'unlimited': 0      # No time limit
+        # Ultra-Bullet & Bullet
+        'bullet_30s': 30,       # 30 seconds
+        'bullet_1': 60,         # 1 minute
+        'bullet_1_1': 60,       # 1|1 (1 min + 1 sec increment)
+        'bullet_2': 120,        # 2 minutes
+        'bullet_2_1': 120,      # 2|1
+        'bullet': 120,          # Default bullet = 2 min
+        
+        # Blitz
+        'blitz_3': 180,         # 3 minutes
+        'blitz_3_2': 180,       # 3|2
+        'blitz_5': 300,         # 5 minutes
+        'blitz_5_3': 300,       # 5|3
+        'blitz_5_5': 300,       # 5|5
+        'blitz': 300,           # Default blitz = 5 min
+        
+        # Rapid
+        'rapid_10': 600,        # 10 minutes
+        'rapid_10_5': 600,      # 10|5
+        'rapid_15': 900,        # 15 minutes
+        'rapid_15_10': 900,     # 15|10
+        'rapid': 600,           # Default rapid = 10 min
+        
+        # Classical
+        'classical_30': 1800,   # 30 minutes
+        'classical_30_20': 1800, # 30|20
+        'classical_60': 3600,   # 60 minutes
+        'classical_90_30': 5400, # 90|30
+        'classical': 1800,      # Default classical = 30 min
+        
+        # Unlimited
+        'unlimited': 0          # No time limit
     }
     
-    initial_time = time_control_map.get(time_control, 600)  # Default to rapid
+    initial_time = time_control_map.get(time_control, 600)  # Default to rapid (10 min)
     
     game = Game.objects.create(
         white_player=request.user,
@@ -860,16 +864,44 @@ def create_computer_game(request):
         # Get time control from request or use default
         time_control = request.data.get('time_control', 'rapid')
         
-        # Map time control to actual time values (in seconds)
+        # Professional time control mapping (in seconds)
+        # Categories: Bullet (<3min), Blitz (3-10min), Rapid (10-30min), Classical (>30min)
         time_control_map = {
-            'bullet': 120,      # 2 minutes
-            'blitz': 300,       # 5 minutes
-            'rapid': 600,       # 10 minutes
-            'classical': 1800,  # 30 minutes
-            'unlimited': 0      # No time limit
+            # Ultra-Bullet & Bullet
+            'bullet_30s': 30,       # 30 seconds
+            'bullet_1': 60,         # 1 minute
+            'bullet_1_1': 60,       # 1|1 (1 min + 1 sec increment)
+            'bullet_2': 120,        # 2 minutes
+            'bullet_2_1': 120,      # 2|1
+            'bullet': 120,          # Default bullet = 2 min
+            
+            # Blitz
+            'blitz_3': 180,         # 3 minutes
+            'blitz_3_2': 180,       # 3|2
+            'blitz_5': 300,         # 5 minutes
+            'blitz_5_3': 300,       # 5|3
+            'blitz_5_5': 300,       # 5|5
+            'blitz': 300,           # Default blitz = 5 min
+            
+            # Rapid
+            'rapid_10': 600,        # 10 minutes
+            'rapid_10_5': 600,      # 10|5
+            'rapid_15': 900,        # 15 minutes
+            'rapid_15_10': 900,     # 15|10
+            'rapid': 600,           # Default rapid = 10 min
+            
+            # Classical
+            'classical_30': 1800,   # 30 minutes
+            'classical_30_20': 1800, # 30|20
+            'classical_60': 3600,   # 60 minutes
+            'classical_90_30': 5400, # 90|30
+            'classical': 1800,      # Default classical = 30 min
+            
+            # Unlimited
+            'unlimited': 0          # No time limit
         }
         
-        initial_time = time_control_map.get(time_control, 600)  # Default to rapid
+        initial_time = time_control_map.get(time_control, 600)  # Default to rapid (10 min)
         
         # Create computer username with difficulty/rating
         computer_suffix = difficulty if difficulty in valid_ratings else difficulty

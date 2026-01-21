@@ -128,7 +128,7 @@ if DB_ENGINE == 'sqlite' or os.getenv('TESTING', False):
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
-                'timeout': 20,
+                'timeout': 30,  # Increased timeout for concurrent access
             },
         }
     }

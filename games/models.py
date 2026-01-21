@@ -19,9 +19,15 @@ class ChessManager:
     def create_default_time_controls():
         """Create standard time controls used in professional chess"""
         defaults = [
-            # Bullet (< 3 minutes)
+            # Ultra-Bullet & Bullet (< 3 minutes)
+            {'name': '30 sec', 'category': 'bullet', 'initial_time': 30, 'increment': 0,
+             'description': 'Ultra-fast 30 second games'},
             {'name': 'Bullet 1+0', 'category': 'bullet', 'initial_time': 60, 'increment': 0, 
-             'description': 'Ultra-fast games for quick thinking'},
+             'description': 'Ultra-fast 1 minute games'},
+            {'name': 'Bullet 1+1', 'category': 'bullet', 'initial_time': 60, 'increment': 1,
+             'description': '1 minute with 1 second increment'},
+            {'name': 'Bullet 2+0', 'category': 'bullet', 'initial_time': 120, 'increment': 0,
+             'description': '2 minute bullet games'},
             {'name': 'Bullet 2+1', 'category': 'bullet', 'initial_time': 120, 'increment': 1,
              'description': 'Fast-paced games with small increment'},
 
@@ -34,22 +40,28 @@ class ChessManager:
              'description': 'Standard 5-minute blitz'},
             {'name': 'Blitz 5+3', 'category': 'blitz', 'initial_time': 300, 'increment': 3,
              'description': '5-minute blitz with increment'},
+            {'name': 'Blitz 5+5', 'category': 'blitz', 'initial_time': 300, 'increment': 5,
+             'description': '5-minute blitz with 5 second increment'},
 
-            # Rapid (10-60 minutes)
+            # Rapid (10-30 minutes)
             {'name': 'Rapid 10+0', 'category': 'rapid', 'initial_time': 600, 'increment': 0,
              'description': 'Quick rapid games'},
             {'name': 'Rapid 10+5', 'category': 'rapid', 'initial_time': 600, 'increment': 5,
              'description': 'Popular rapid format with increment'},
+            {'name': 'Rapid 15+0', 'category': 'rapid', 'initial_time': 900, 'increment': 0,
+             'description': '15-minute rapid games'},
             {'name': 'Rapid 15+10', 'category': 'rapid', 'initial_time': 900, 'increment': 10,
              'description': 'Tournament-style rapid'},
 
-            # Classical (> 60 minutes)
+            # Classical (30+ minutes)
             {'name': 'Classical 30+0', 'category': 'classical', 'initial_time': 1800, 'increment': 0,
              'description': 'Classical time control'},
-            {'name': 'Classical 30+30', 'category': 'classical', 'initial_time': 1800, 'increment': 30,
-             'description': 'FIDE-style classical with increment'},
+            {'name': 'Classical 30+20', 'category': 'classical', 'initial_time': 1800, 'increment': 20,
+             'description': 'Classical with 20 second increment'},
+            {'name': 'Classical 60+0', 'category': 'classical', 'initial_time': 3600, 'increment': 0,
+             'description': '60-minute classical games'},
             {'name': 'Classical 90+30', 'category': 'classical', 'initial_time': 5400, 'increment': 30,
-             'description': 'Long classical games'},
+             'description': 'FIDE-style long classical games'},
         ]
 
         created_count = 0
@@ -238,11 +250,34 @@ class Game(models.Model):
         """Get professional TimerManager instance for this game"""
         if not hasattr(self, '_timer_manager'):
             # Map time control string to TimerManager format
+            # Supports both category names and specific time controls
             time_control_map = {
-                'bullet': 'bullet_1',
+                # Category defaults
+                'bullet': 'bullet_2',
                 'blitz': 'blitz_5',
                 'rapid': 'rapid_10',
-                'classical': 'classical_60'
+                'classical': 'classical_30',
+                'unlimited': 'unlimited',
+                
+                # Specific time controls (pass through if already specific)
+                'bullet_30s': 'bullet_30s',
+                'bullet_1': 'bullet_1',
+                'bullet_1_1': 'bullet_1_1',
+                'bullet_2': 'bullet_2',
+                'bullet_2_1': 'bullet_2_1',
+                'blitz_3': 'blitz_3',
+                'blitz_3_2': 'blitz_3_2',
+                'blitz_5': 'blitz_5',
+                'blitz_5_3': 'blitz_5_3',
+                'blitz_5_5': 'blitz_5_5',
+                'rapid_10': 'rapid_10',
+                'rapid_10_5': 'rapid_10_5',
+                'rapid_15': 'rapid_15',
+                'rapid_15_10': 'rapid_15_10',
+                'classical_30': 'classical_30',
+                'classical_30_20': 'classical_30_20',
+                'classical_60': 'classical_60',
+                'classical_90_30': 'classical_90_30'
             }
             
             timer_control = time_control_map.get(self.time_control, 'rapid_10')
@@ -278,9 +313,11 @@ class Game(models.Model):
         timer = self.get_timer_manager()
         timer_state = timer.start_game()
         
-        # Update game model with timer state
-        self.white_time_left = timer_state['white_time'] or 600
-        self.black_time_left = timer_state['black_time'] or 600
+        # Update game model with timer state (convert to int for database storage)
+        white_time = timer_state.get('white_time')
+        black_time = timer_state.get('black_time')
+        self.white_time_left = int(white_time) if white_time is not None else 600
+        self.black_time_left = int(black_time) if black_time is not None else 600
         self.status = 'active'
         self.last_move_at = timezone.now()
         self.save()
@@ -292,9 +329,11 @@ class Game(models.Model):
         timer = self.get_timer_manager()
         timer_state = timer.make_move(player_color)
         
-        # Update model with new timer state
-        self.white_time_left = timer_state['white_time'] or 0
-        self.black_time_left = timer_state['black_time'] or 0
+        # Update model with new timer state (convert to int for database storage)
+        white_time = timer_state.get('white_time')
+        black_time = timer_state.get('black_time')
+        self.white_time_left = int(white_time) if white_time is not None else 0
+        self.black_time_left = int(black_time) if black_time is not None else 0
         self.last_move_at = timezone.now()
         
         # Check for timeout

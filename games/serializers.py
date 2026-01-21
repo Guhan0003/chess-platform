@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Game, Move
+from .models import Game, Move, GameInvitation, TimeControl
 
 
 class MoveSerializer(serializers.ModelSerializer):
@@ -54,4 +54,46 @@ class GameSerializer(serializers.ModelSerializer):
             'white_player', 'black_player',
             'white_player_username', 'black_player_username',
             'white_player_rating', 'black_player_rating'
+        ]
+
+
+class TimeControlSerializer(serializers.ModelSerializer):
+    """Serializer for TimeControl model"""
+    display_name = serializers.SerializerMethodField()
+    
+    def get_display_name(self, obj):
+        return obj.get_display_name()
+    
+    class Meta:
+        model = TimeControl
+        fields = ['id', 'name', 'category', 'initial_time', 'increment', 'description', 'display_name']
+        read_only_fields = ['id']
+
+
+class GameInvitationSerializer(serializers.ModelSerializer):
+    """Serializer for GameInvitation model"""
+    from_player_username = serializers.CharField(source='from_player.username', read_only=True)
+    to_player_username = serializers.CharField(source='to_player.username', read_only=True)
+    time_control_display = serializers.SerializerMethodField()
+    is_expired = serializers.SerializerMethodField()
+    
+    def get_time_control_display(self, obj):
+        return obj.time_control.get_display_name() if obj.time_control else None
+    
+    def get_is_expired(self, obj):
+        return obj.is_expired()
+    
+    class Meta:
+        model = GameInvitation
+        fields = [
+            'id', 'from_player', 'from_player_username', 
+            'to_player', 'to_player_username',
+            'time_control', 'time_control_display',
+            'message', 'status', 'is_expired',
+            'created_at', 'expires_at', 'responded_at'
+        ]
+        read_only_fields = [
+            'id', 'from_player_username', 'to_player_username',
+            'time_control_display', 'is_expired', 
+            'created_at', 'responded_at'
         ]

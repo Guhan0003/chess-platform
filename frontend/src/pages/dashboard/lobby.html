@@ -1506,22 +1506,11 @@
         
         // Create Game
         document.getElementById('createGameBtn').addEventListener('click', async () => {
-          try {
-            api.showToast('Creating game...', 'info');
-            const response = await api.createGame();
-            if (response.ok) {
-              api.showSuccess('Game created successfully!');
-              setTimeout(() => {
-                window.location.href = `/play/?game=${response.data.id}`;
-              }, 1000);
-            } else {
-              api.showError(api.formatError(response));
-            }
-          } catch (error) {
-            console.error('Create game error:', error);
-            api.showError('Failed to create game. Please try again.');
-          }
+          showCreateGameModal();
         });
+        
+        // Create game modal setup
+        setupCreateGameModal();
         
         // Browse Games
         document.getElementById('joinGameBtn').addEventListener('click', () => {
@@ -1780,10 +1769,11 @@
         try {
           const playerColor = modal.querySelector('input[name="playerColor"]:checked').value;
           const difficulty = modal.querySelector('input[name="difficulty"]:checked').value;
+          const timeControl = modal.querySelector('input[name="timeControl"]:checked')?.value || 'rapid_10';
           
           api.showToast('Creating computer game...', 'info');
           
-          const response = await api.createComputerGame(playerColor, difficulty);
+          const response = await api.createComputerGame(playerColor, difficulty, timeControl);
           
           if (response.ok) {
             hideComputerGameModal();
@@ -1801,6 +1791,61 @@
           api.showError('Failed to create computer game. Please try again.');
         }
       });
+      }
+
+      // ==================== CREATE ONLINE GAME MODAL ====================
+      function showCreateGameModal() {
+        const modal = document.getElementById('createGameModal');
+        modal.classList.add('show');
+      }
+
+      function hideCreateGameModal() {
+        const modal = document.getElementById('createGameModal');
+        modal.classList.remove('show');
+      }
+
+      function setupCreateGameModal() {
+        const modal = document.getElementById('createGameModal');
+        const closeBtn = modal.querySelector('.modal-close');
+        const cancelBtn = document.getElementById('cancelCreateGame');
+        const startBtn = document.getElementById('startOnlineGame');
+
+        // Close modal handlers
+        closeBtn.addEventListener('click', hideCreateGameModal);
+        cancelBtn.addEventListener('click', hideCreateGameModal);
+        
+        // Click outside to close
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            hideCreateGameModal();
+          }
+        });
+
+        // Start online game
+        startBtn.addEventListener('click', async () => {
+          try {
+            const timeControl = modal.querySelector('input[name="onlineTimeControl"]:checked')?.value || 'rapid_10';
+            
+            api.showToast('Creating game...', 'info');
+            
+            const response = await api.createGame(timeControl);
+            
+            if (response.ok) {
+              hideCreateGameModal();
+              api.showSuccess('Game created successfully!');
+              
+              // Navigate to game
+              setTimeout(() => {
+                window.location.href = `/play/?game=${response.data.id}`;
+              }, 1000);
+            } else {
+              api.showError(api.formatError(response));
+            }
+          } catch (error) {
+            console.error('Create game error:', error);
+            api.showError('Failed to create game. Please try again.');
+          }
+        });
       }
 
       // ==================== INVITE PLAYER MODAL ====================
@@ -1923,6 +1968,100 @@
             </label>
           </div>
         </div>
+        
+        <!-- Time Control Selection -->
+        <div class="setting-group">
+          <label class="setting-label">Time Control:</label>
+          <div class="time-control-categories">
+            <!-- Bullet Category -->
+            <div class="time-category">
+              <span class="category-label">⚡ Bullet</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="bullet_30s">
+                  <span class="time-option-text">30s</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="bullet_1">
+                  <span class="time-option-text">1 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="bullet_2">
+                  <span class="time-option-text">2 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="bullet_2_1">
+                  <span class="time-option-text">2|1</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Blitz Category -->
+            <div class="time-category">
+              <span class="category-label">🔥 Blitz</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="blitz_3">
+                  <span class="time-option-text">3 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="blitz_3_2">
+                  <span class="time-option-text">3|2</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="blitz_5">
+                  <span class="time-option-text">5 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="blitz_5_3">
+                  <span class="time-option-text">5|3</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Rapid Category -->
+            <div class="time-category">
+              <span class="category-label">🏃 Rapid</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="rapid_10" checked>
+                  <span class="time-option-text">10 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="rapid_10_5">
+                  <span class="time-option-text">10|5</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="rapid_15">
+                  <span class="time-option-text">15 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="rapid_15_10">
+                  <span class="time-option-text">15|10</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Classical Category -->
+            <div class="time-category">
+              <span class="category-label">♔ Classical</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="classical_30">
+                  <span class="time-option-text">30 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="classical_60">
+                  <span class="time-option-text">60 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="timeControl" value="unlimited">
+                  <span class="time-option-text">∞</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
       <div class="modal-footer">
@@ -1930,6 +2069,124 @@
         <button class="btn btn-primary" id="startComputerGame">
           <span class="btn-icon">🚀</span>
           Start Game
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Online Game Modal -->
+  <div class="modal-overlay" id="createGameModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🎮 Create Online Game</h3>
+        <button class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <p style="color: var(--color-text-secondary); margin-bottom: var(--space-lg); font-size: var(--font-size-sm);">
+          Create a new game and wait for an opponent to join, or share the game link with a friend.
+        </p>
+        
+        <!-- Time Control Selection -->
+        <div class="setting-group">
+          <label class="setting-label">Select Time Control:</label>
+          <div class="time-control-categories">
+            <!-- Bullet Category -->
+            <div class="time-category">
+              <span class="category-label">⚡ Bullet</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="bullet_30s">
+                  <span class="time-option-text">30s</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="bullet_1">
+                  <span class="time-option-text">1 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="bullet_2">
+                  <span class="time-option-text">2 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="bullet_2_1">
+                  <span class="time-option-text">2|1</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Blitz Category -->
+            <div class="time-category">
+              <span class="category-label">🔥 Blitz</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="blitz_3">
+                  <span class="time-option-text">3 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="blitz_3_2">
+                  <span class="time-option-text">3|2</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="blitz_5">
+                  <span class="time-option-text">5 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="blitz_5_3">
+                  <span class="time-option-text">5|3</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Rapid Category -->
+            <div class="time-category">
+              <span class="category-label">🏃 Rapid</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="rapid_10" checked>
+                  <span class="time-option-text">10 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="rapid_10_5">
+                  <span class="time-option-text">10|5</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="rapid_15">
+                  <span class="time-option-text">15 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="rapid_15_10">
+                  <span class="time-option-text">15|10</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Classical Category -->
+            <div class="time-category">
+              <span class="category-label">♔ Classical</span>
+              <div class="time-options-row">
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="classical_30">
+                  <span class="time-option-text">30 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="classical_60">
+                  <span class="time-option-text">60 min</span>
+                </label>
+                <label class="time-option-card">
+                  <input type="radio" name="onlineTimeControl" value="unlimited">
+                  <span class="time-option-text">∞</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelCreateGame">Cancel</button>
+        <button class="btn btn-primary" id="startOnlineGame">
+          <span class="btn-icon">🚀</span>
+          Create Game
         </button>
       </div>
     </div>
@@ -2181,6 +2438,77 @@
       }
       
       .btn {
+        justify-content: center;
+      }
+    }
+
+    /* Time Control Selection Styles */
+    .time-control-categories {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .time-category {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .category-label {
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .time-options-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+    }
+
+    .time-option-card {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .time-option-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .time-option-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-md);
+      border: 2px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      min-width: 50px;
+      transition: all var(--transition-fast);
+    }
+
+    .time-option-card:hover .time-option-text {
+      border-color: rgba(118, 150, 86, 0.3);
+      background: rgba(118, 150, 86, 0.05);
+    }
+
+    .time-option-card input[type="radio"]:checked + .time-option-text {
+      border-color: var(--color-accent-primary);
+      background: rgba(118, 150, 86, 0.15);
+      color: var(--color-accent-primary);
+      font-weight: var(--font-weight-bold);
+    }
+
+    @media (max-width: 768px) {
+      .time-options-row {
         justify-content: center;
       }
     }

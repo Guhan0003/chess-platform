@@ -31,18 +31,47 @@ class TimerManager:
     """
     
     # Standard time control formats (in seconds)
+    # Categories: Bullet (<3 min), Blitz (3-10 min), Rapid (10-30 min), Classical (>30 min)
     TIME_CONTROLS = {
-        'bullet_1': {'initial': 60, 'increment': 0, 'name': '1+0 Bullet'},
-        'bullet_2': {'initial': 120, 'increment': 1, 'name': '2+1 Bullet'},
-        'blitz_3': {'initial': 180, 'increment': 0, 'name': '3+0 Blitz'},
-        'blitz_5': {'initial': 300, 'increment': 0, 'name': '5+0 Blitz'},
-        'blitz_5_3': {'initial': 300, 'increment': 3, 'name': '5+3 Blitz'},
-        'rapid_10': {'initial': 600, 'increment': 0, 'name': '10+0 Rapid'},
-        'rapid_15_10': {'initial': 900, 'increment': 10, 'name': '15+10 Rapid'},
-        'rapid_30': {'initial': 1800, 'increment': 0, 'name': '30+0 Rapid'},
-        'classical_60': {'initial': 3600, 'increment': 0, 'name': '60+0 Classical'},
-        'classical_90_30': {'initial': 5400, 'increment': 30, 'name': '90+30 Classical'},
-        'unlimited': {'initial': None, 'increment': 0, 'name': 'Unlimited'}
+        # Ultra-Bullet (30 seconds - 1 minute)
+        'bullet_30s': {'initial': 30, 'increment': 0, 'name': '30 sec', 'category': 'bullet', 'display': '⚡ 30 sec'},
+        'bullet_1': {'initial': 60, 'increment': 0, 'name': '1+0 Bullet', 'category': 'bullet', 'display': '⚡ 1 min'},
+        'bullet_1_1': {'initial': 60, 'increment': 1, 'name': '1+1 Bullet', 'category': 'bullet', 'display': '⚡ 1|1'},
+        
+        # Bullet (1-2 minutes)
+        'bullet_2': {'initial': 120, 'increment': 0, 'name': '2+0 Bullet', 'category': 'bullet', 'display': '⚡ 2 min'},
+        'bullet_2_1': {'initial': 120, 'increment': 1, 'name': '2+1 Bullet', 'category': 'bullet', 'display': '⚡ 2|1'},
+        
+        # Blitz (3-10 minutes)
+        'blitz_3': {'initial': 180, 'increment': 0, 'name': '3+0 Blitz', 'category': 'blitz', 'display': '🔥 3 min'},
+        'blitz_3_2': {'initial': 180, 'increment': 2, 'name': '3+2 Blitz', 'category': 'blitz', 'display': '🔥 3|2'},
+        'blitz_5': {'initial': 300, 'increment': 0, 'name': '5+0 Blitz', 'category': 'blitz', 'display': '🔥 5 min'},
+        'blitz_5_3': {'initial': 300, 'increment': 3, 'name': '5+3 Blitz', 'category': 'blitz', 'display': '🔥 5|3'},
+        'blitz_5_5': {'initial': 300, 'increment': 5, 'name': '5+5 Blitz', 'category': 'blitz', 'display': '🔥 5|5'},
+        
+        # Rapid (10-30 minutes)
+        'rapid_10': {'initial': 600, 'increment': 0, 'name': '10+0 Rapid', 'category': 'rapid', 'display': '🏃 10 min'},
+        'rapid_10_5': {'initial': 600, 'increment': 5, 'name': '10+5 Rapid', 'category': 'rapid', 'display': '🏃 10|5'},
+        'rapid_15': {'initial': 900, 'increment': 0, 'name': '15+0 Rapid', 'category': 'rapid', 'display': '🏃 15 min'},
+        'rapid_15_10': {'initial': 900, 'increment': 10, 'name': '15+10 Rapid', 'category': 'rapid', 'display': '🏃 15|10'},
+        
+        # Classical (30+ minutes)
+        'classical_30': {'initial': 1800, 'increment': 0, 'name': '30+0 Classical', 'category': 'classical', 'display': '♔ 30 min'},
+        'classical_30_20': {'initial': 1800, 'increment': 20, 'name': '30+20 Classical', 'category': 'classical', 'display': '♔ 30|20'},
+        'classical_60': {'initial': 3600, 'increment': 0, 'name': '60+0 Classical', 'category': 'classical', 'display': '♔ 60 min'},
+        'classical_90_30': {'initial': 5400, 'increment': 30, 'name': '90+30 Classical', 'category': 'classical', 'display': '♔ 90|30'},
+        
+        # Unlimited
+        'unlimited': {'initial': None, 'increment': 0, 'name': 'Unlimited', 'category': 'unlimited', 'display': '∞ Unlimited'}
+    }
+    
+    # Category to simple time control mapping for API compatibility
+    CATEGORY_DEFAULTS = {
+        'bullet': 'bullet_2',
+        'blitz': 'blitz_5',
+        'rapid': 'rapid_10',
+        'classical': 'classical_30',
+        'unlimited': 'unlimited'
     }
     
     def __init__(self, time_control: str = 'rapid_10'):

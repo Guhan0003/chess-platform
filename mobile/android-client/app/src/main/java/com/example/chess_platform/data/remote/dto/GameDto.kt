@@ -175,12 +175,63 @@ data class TimePressure(
 
 // ==================== TIME CONTROL OPTIONS ====================
 
-enum class TimeControlOption(val value: String, val displayName: String, val initialTime: Int) {
-    BULLET("bullet", "Bullet (2 min)", 120),
-    BLITZ("blitz", "Blitz (5 min)", 300),
-    RAPID("rapid", "Rapid (10 min)", 600),
-    CLASSICAL("classical", "Classical (30 min)", 1800),
-    UNLIMITED("unlimited", "Unlimited", 0)
+/**
+ * Professional time control options for chess games
+ * Categories: Bullet (<3min), Blitz (3-10min), Rapid (10-30min), Classical (>30min)
+ */
+enum class TimeControlOption(
+    val value: String, 
+    val displayName: String, 
+    val initialTime: Int,
+    val increment: Int = 0,
+    val category: TimeControlCategory = TimeControlCategory.RAPID
+) {
+    // Ultra-Bullet & Bullet (30 sec - 2 min)
+    BULLET_30S("bullet_30s", "⚡ 30 sec", 30, 0, TimeControlCategory.BULLET),
+    BULLET_1("bullet_1", "⚡ 1 min", 60, 0, TimeControlCategory.BULLET),
+    BULLET_1_1("bullet_1_1", "⚡ 1|1", 60, 1, TimeControlCategory.BULLET),
+    BULLET_2("bullet_2", "⚡ 2 min", 120, 0, TimeControlCategory.BULLET),
+    BULLET_2_1("bullet_2_1", "⚡ 2|1", 120, 1, TimeControlCategory.BULLET),
+    
+    // Blitz (3-10 minutes)
+    BLITZ_3("blitz_3", "🔥 3 min", 180, 0, TimeControlCategory.BLITZ),
+    BLITZ_3_2("blitz_3_2", "🔥 3|2", 180, 2, TimeControlCategory.BLITZ),
+    BLITZ_5("blitz_5", "🔥 5 min", 300, 0, TimeControlCategory.BLITZ),
+    BLITZ_5_3("blitz_5_3", "🔥 5|3", 300, 3, TimeControlCategory.BLITZ),
+    BLITZ_5_5("blitz_5_5", "🔥 5|5", 300, 5, TimeControlCategory.BLITZ),
+    
+    // Rapid (10-30 minutes)
+    RAPID_10("rapid_10", "🏃 10 min", 600, 0, TimeControlCategory.RAPID),
+    RAPID_10_5("rapid_10_5", "🏃 10|5", 600, 5, TimeControlCategory.RAPID),
+    RAPID_15("rapid_15", "🏃 15 min", 900, 0, TimeControlCategory.RAPID),
+    RAPID_15_10("rapid_15_10", "🏃 15|10", 900, 10, TimeControlCategory.RAPID),
+    
+    // Classical (30+ minutes)
+    CLASSICAL_30("classical_30", "♔ 30 min", 1800, 0, TimeControlCategory.CLASSICAL),
+    CLASSICAL_30_20("classical_30_20", "♔ 30|20", 1800, 20, TimeControlCategory.CLASSICAL),
+    CLASSICAL_60("classical_60", "♔ 60 min", 3600, 0, TimeControlCategory.CLASSICAL),
+    CLASSICAL_90_30("classical_90_30", "♔ 90|30", 5400, 30, TimeControlCategory.CLASSICAL),
+    
+    // Unlimited
+    UNLIMITED("unlimited", "∞ Unlimited", 0, 0, TimeControlCategory.UNLIMITED);
+    
+    companion object {
+        fun fromValue(value: String): TimeControlOption {
+            return entries.find { it.value == value } ?: RAPID_10
+        }
+        
+        fun getByCategory(category: TimeControlCategory): List<TimeControlOption> {
+            return entries.filter { it.category == category }
+        }
+    }
+}
+
+enum class TimeControlCategory(val displayName: String, val icon: String) {
+    BULLET("Bullet", "⚡"),
+    BLITZ("Blitz", "🔥"),
+    RAPID("Rapid", "🏃"),
+    CLASSICAL("Classical", "♔"),
+    UNLIMITED("Unlimited", "∞")
 }
 
 enum class BotDifficulty(val value: String, val displayName: String, val rating: Int) {

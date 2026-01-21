@@ -325,8 +325,16 @@ class GameConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def update_game_state(self, game, board, move, from_square, to_square, promotion, san):
         """Update game state in database after move."""
+        from django.utils import timezone
+        
         # Update game FEN
         game.fen = board.fen()
+        game.last_move_at = timezone.now()  # Update timer reference point
+        
+        # Timer deduction disabled for now - causes database locking issues
+        # TODO: Re-enable timer deduction when database concurrency is fixed
+        # player_color = 'white' if self.user == game.white_player else 'black'
+        # timer_state = game.make_timer_move(player_color)
         
         # Check for game end conditions
         if board.is_checkmate():

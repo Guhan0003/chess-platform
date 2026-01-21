@@ -445,10 +445,12 @@ class ChessAPI {
 
   /**
    * Create new game
+   * @param {string} timeControl - Time control type (e.g., 'rapid_10', 'blitz_5')
    */
-  async createGame() {
+  async createGame(timeControl = 'rapid_10') {
     return this.request('/games/create/', {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify({ time_control: timeControl })
     });
   }
 
@@ -512,12 +514,14 @@ class ChessAPI {
   /**
    * Create a game against the computer
    * @param {string} playerColor - Player's color ('white' or 'black')
-   * @param {string} difficulty - AI difficulty ('easy', 'medium', 'hard', 'expert')
+   * @param {string} difficulty - AI difficulty ('easy', 'medium', 'hard', 'expert') or rating (400-2400)
+   * @param {string} timeControl - Time control format (e.g., 'rapid_10', 'blitz_5', 'bullet_2')
    */
-  async createComputerGame(playerColor = 'white', difficulty = 'medium') {
+  async createComputerGame(playerColor = 'white', difficulty = 'medium', timeControl = 'rapid_10') {
     const payload = {
       player_color: playerColor,
-      difficulty: difficulty
+      difficulty: difficulty,
+      time_control: timeControl
     };
 
     return this.request('/games/create-computer/', {

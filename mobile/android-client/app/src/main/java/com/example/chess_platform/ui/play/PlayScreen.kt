@@ -24,10 +24,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.chess_platform.data.remote.dto.BotDifficulty
 import com.example.chess_platform.data.remote.dto.PlayerColor
+import com.example.chess_platform.data.remote.dto.TimeControlCategory
 import com.example.chess_platform.data.remote.dto.TimeControlOption
 import com.example.chess_platform.ui.theme.ChessGreen
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PlayScreen(
     onNavigateBack: () -> Unit,
@@ -115,7 +116,7 @@ fun PlayScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Time Control Selection
+            // Time Control Selection - Organized by Category
             Text(
                 text = "Time Control",
                 style = MaterialTheme.typography.titleMedium,
@@ -123,13 +124,31 @@ fun PlayScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TimeControlOption.entries.forEach { timeControl ->
-                    TimeControlRow(
-                        timeControl = timeControl,
-                        isSelected = uiState.selectedTimeControl == timeControl,
-                        onClick = { viewModel.selectTimeControl(timeControl) }
+            // Group time controls by category for better UX
+            TimeControlCategory.entries.forEach { category ->
+                val categoryOptions = TimeControlOption.getByCategory(category)
+                if (categoryOptions.isNotEmpty()) {
+                    Text(
+                        text = "${category.icon} ${category.displayName}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
+                    
+                    // Display time controls in a flow/grid for this category
+                    androidx.compose.foundation.layout.FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categoryOptions.forEach { timeControl ->
+                            TimeControlChip(
+                                timeControl = timeControl,
+                                isSelected = uiState.selectedTimeControl == timeControl,
+                                onClick = { viewModel.selectTimeControl(timeControl) }
+                            )
+                        }
+                    }
                 }
             }
             
@@ -264,6 +283,41 @@ private fun GameModeCard(
             text = title,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = if (isSelected) ChessGreen else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun TimeControlChip(
+    timeControl: TimeControlOption,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) {
+        ChessGreen.copy(alpha = 0.2f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    }
+    val borderColor = if (isSelected) ChessGreen else Color.Transparent
+    val textColor = if (isSelected) ChessGreen else MaterialTheme.colorScheme.onSurfaceVariant
+    
+    // Extract just the time portion for compact display (remove emoji)
+    val displayText = timeControl.displayName.replace(Regex("^[⚡🔥🏃♔∞]\\s*"), "")
+    
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.5.dp, borderColor, RoundedCornerShape(20.dp))
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = displayText,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 14.sp,
+            color = textColor
         )
     }
 }
