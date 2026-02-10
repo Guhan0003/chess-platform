@@ -384,6 +384,199 @@
       box-shadow: var(--shadow-md);
     }
 
+    .games-section.games-category {
+      margin-bottom: var(--space-lg);
+    }
+
+    .games-section.games-category:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-header {
+      margin-bottom: var(--space-lg);
+    }
+
+    .section-header .section-title {
+      margin-bottom: var(--space-xs);
+    }
+
+    .section-description {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin: 0;
+    }
+
+    .games-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 var(--space-xs);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-bold);
+      background: rgba(118, 150, 86, 0.2);
+      color: var(--color-accent-primary);
+      border-radius: var(--radius-full);
+      margin-left: var(--space-sm);
+    }
+
+    /* Category-specific accent colors */
+    #openGamesSection .games-count-badge {
+      background: rgba(251, 191, 36, 0.2);
+      color: #f59e0b;
+    }
+
+    #inProgressGamesSection .games-count-badge {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    #completedGamesSection .games-count-badge {
+      background: rgba(156, 163, 175, 0.2);
+      color: #9ca3af;
+    }
+
+    /* View All Button */
+    .view-all-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      margin-top: var(--space-lg);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .view-all-btn:hover {
+      background: rgba(118, 150, 86, 0.1);
+      border-color: rgba(118, 150, 86, 0.3);
+      color: var(--color-accent-primary);
+    }
+
+    .view-all-arrow {
+      transition: transform var(--transition-fast);
+    }
+
+    .view-all-btn:hover .view-all-arrow {
+      transform: translateX(4px);
+    }
+
+    /* View All Modal */
+    .view-all-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .view-all-modal.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .view-all-modal-content {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      max-width: 700px;
+      width: 90vw;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      transform: scale(0.95) translateY(20px);
+      transition: transform var(--transition-normal);
+    }
+
+    .view-all-modal.show .view-all-modal-content {
+      transform: scale(1) translateY(0);
+    }
+
+    .view-all-modal-header {
+      padding: var(--space-lg);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .view-all-modal-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .view-all-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-lg);
+    }
+
+    .view-all-modal-body .games-list {
+      gap: var(--space-md);
+    }
+
+    .view-all-modal-close {
+      background: none;
+      border: none;
+      font-size: var(--font-size-xl);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: var(--space-xs);
+      line-height: 1;
+      transition: color var(--transition-fast);
+    }
+
+    .view-all-modal-close:hover {
+      color: var(--color-text-primary);
+    }
+
+    /* Empty state for categories */
+    .category-empty-state {
+      text-align: center;
+      padding: var(--space-xl) var(--space-lg);
+      color: var(--color-text-muted);
+    }
+
+    .category-empty-icon {
+      font-size: 2rem;
+      margin-bottom: var(--space-sm);
+      opacity: 0.5;
+    }
+
+    .category-empty-text {
+      font-size: var(--font-size-sm);
+    }
+
     .games-list {
       display: flex;
       flex-direction: column;
@@ -1072,19 +1265,64 @@
               </div>
             </section>
 
-            <!-- Active Games -->
-            <section class="games-section">
-              <h2 class="section-title">
-                <span class="section-icon">♟️</span>
-                Active Games
-              </h2>
+            <!-- Open Games - Waiting for players to join -->
+            <section class="games-section games-category" id="openGamesSection">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <span class="section-icon">🎯</span>
+                  Open Games
+                  <span class="games-count-badge" id="openGamesCount">0</span>
+                </h2>
+                <p class="section-description">Games waiting for players to join</p>
+              </div>
               
-              <div class="games-list" id="gamesList">
-                <!-- Games will be loaded here -->
-                <div class="loading-skeleton"></div>
-                <div class="loading-skeleton"></div>
+              <div class="games-list" id="openGamesList">
                 <div class="loading-skeleton"></div>
               </div>
+              
+              <button class="view-all-btn" id="viewAllOpenGames" style="display: none;">
+                View All Open Games <span class="view-all-arrow">→</span>
+              </button>
+            </section>
+
+            <!-- In-Progress Games - Currently being played -->
+            <section class="games-section games-category" id="inProgressGamesSection">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <span class="section-icon">⚔️</span>
+                  In-Progress Games
+                  <span class="games-count-badge" id="inProgressGamesCount">0</span>
+                </h2>
+                <p class="section-description">Games currently being played</p>
+              </div>
+              
+              <div class="games-list" id="inProgressGamesList">
+                <div class="loading-skeleton"></div>
+              </div>
+              
+              <button class="view-all-btn" id="viewAllInProgressGames" style="display: none;">
+                View All In-Progress Games <span class="view-all-arrow">→</span>
+              </button>
+            </section>
+
+            <!-- Completed Games - Finished games -->
+            <section class="games-section games-category" id="completedGamesSection">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <span class="section-icon">🏆</span>
+                  Completed Games
+                  <span class="games-count-badge" id="completedGamesCount">0</span>
+                </h2>
+                <p class="section-description">View replays and game results</p>
+              </div>
+              
+              <div class="games-list" id="completedGamesList">
+                <div class="loading-skeleton"></div>
+              </div>
+              
+              <button class="view-all-btn" id="viewAllCompletedGames" style="display: none;">
+                View All Completed Games <span class="view-all-arrow">→</span>
+              </button>
             </section>
           </div>
 
@@ -1325,15 +1563,104 @@
         }
       }
       
+      // Maximum games to show per category before "View All" is needed
+      const GAMES_DISPLAY_LIMIT = 3;
+      
+      // Store categorized games for View All modal
+      let categorizedGames = {
+        open: [],
+        inProgress: [],
+        completed: []
+      };
+      
       function updateGamesDisplay() {
-        const gamesListEl = document.getElementById('gamesList');
-        
         if (!games || games.length === 0) {
           showEmptyGames();
           return;
         }
         
-        gamesListEl.innerHTML = games.map(game => `
+        // Categorize games
+        categorizedGames = {
+          open: games.filter(game => game.status === 'waiting'),
+          inProgress: games.filter(game => game.status === 'active'),
+          completed: games.filter(game => game.status === 'finished')
+        };
+        
+        // Render each category
+        renderGameCategory('open', categorizedGames.open, 'openGamesList', 'openGamesCount', 'viewAllOpenGames');
+        renderGameCategory('inProgress', categorizedGames.inProgress, 'inProgressGamesList', 'inProgressGamesCount', 'viewAllInProgressGames');
+        renderGameCategory('completed', categorizedGames.completed, 'completedGamesList', 'completedGamesCount', 'viewAllCompletedGames');
+        
+        // Attach event handlers to all game action buttons
+        attachGameButtonHandlers();
+      }
+      
+      function renderGameCategory(category, gamesList, listElementId, countElementId, viewAllBtnId) {
+        const listEl = document.getElementById(listElementId);
+        const countEl = document.getElementById(countElementId);
+        const viewAllBtn = document.getElementById(viewAllBtnId);
+        
+        // Update count badge
+        countEl.textContent = gamesList.length;
+        
+        if (!gamesList || gamesList.length === 0) {
+          listEl.innerHTML = getCategoryEmptyState(category);
+          viewAllBtn.style.display = 'none';
+          return;
+        }
+        
+        // Render limited games
+        const gamesToShow = gamesList.slice(0, GAMES_DISPLAY_LIMIT);
+        listEl.innerHTML = gamesToShow.map(game => renderGameCard(game)).join('');
+        
+        // Show/hide View All button
+        if (gamesList.length > GAMES_DISPLAY_LIMIT) {
+          viewAllBtn.style.display = 'flex';
+          viewAllBtn.textContent = `View All ${gamesList.length} ${getCategoryLabel(category)} `;
+          const arrow = document.createElement('span');
+          arrow.className = 'view-all-arrow';
+          arrow.textContent = '→';
+          viewAllBtn.appendChild(arrow);
+        } else {
+          viewAllBtn.style.display = 'none';
+        }
+      }
+      
+      function getCategoryLabel(category) {
+        const labels = {
+          open: 'Open Games',
+          inProgress: 'In-Progress Games',
+          completed: 'Completed Games'
+        };
+        return labels[category] || 'Games';
+      }
+      
+      function getCategoryEmptyState(category) {
+        const emptyStates = {
+          open: {
+            icon: '🎯',
+            text: 'No open games available. Create a new game to get started!'
+          },
+          inProgress: {
+            icon: '⚔️',
+            text: 'No games in progress. Join an open game or start a new one!'
+          },
+          completed: {
+            icon: '🏆',
+            text: 'No completed games yet. Play some games to see your history!'
+          }
+        };
+        const state = emptyStates[category] || { icon: '♟️', text: 'No games available.' };
+        return `
+          <div class="category-empty-state">
+            <div class="category-empty-icon">${state.icon}</div>
+            <div class="category-empty-text">${state.text}</div>
+          </div>
+        `;
+      }
+      
+      function renderGameCard(game) {
+        return `
           <div class="game-card" data-game-id="${game.id}">
             <div class="game-players">
               <div class="player-info">
@@ -1369,49 +1696,88 @@
               }
             </div>
           </div>
-        `).join('');
-        
-        // Add click handlers to game cards and action buttons
-        document.querySelectorAll('.game-card').forEach(card => {
-          // Remove the default click handler for the entire card
-          // Instead, only specific buttons should trigger actions
-        });
-        
+        `;
+      }
+      
+      function attachGameButtonHandlers() {
         // Add handlers for join buttons
         document.querySelectorAll('.join-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const gameId = btn.dataset.gameId;
-            await joinGame(gameId);
-          });
+          btn.removeEventListener('click', handleJoinClick);
+          btn.addEventListener('click', handleJoinClick);
         });
         
         // Add handlers for spectate buttons
         document.querySelectorAll('.spectate-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const gameId = btn.dataset.gameId;
-            window.location.href = `/play/?game=${gameId}`;
-          });
+          btn.removeEventListener('click', handleSpectateClick);
+          btn.addEventListener('click', handleSpectateClick);
         });
 
         // Add handlers for resume buttons
         document.querySelectorAll('.resume-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const gameId = btn.dataset.gameId;
-            window.location.href = `/play/?game=${gameId}`;
-          });
+          btn.removeEventListener('click', handleResumeClick);
+          btn.addEventListener('click', handleResumeClick);
         });
 
         // Add handlers for replay buttons
         document.querySelectorAll('.replay-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const gameId = btn.dataset.gameId;
-            window.location.href = `/play/?game=${gameId}`;
-          });
+          btn.removeEventListener('click', handleReplayClick);
+          btn.addEventListener('click', handleReplayClick);
         });
+      }
+      
+      async function handleJoinClick(e) {
+        e.stopPropagation();
+        const gameId = e.currentTarget.dataset.gameId;
+        await joinGame(gameId);
+      }
+      
+      function handleSpectateClick(e) {
+        e.stopPropagation();
+        const gameId = e.currentTarget.dataset.gameId;
+        window.location.href = `/play/?game=${gameId}`;
+      }
+      
+      function handleResumeClick(e) {
+        e.stopPropagation();
+        const gameId = e.currentTarget.dataset.gameId;
+        window.location.href = `/play/?game=${gameId}`;
+      }
+      
+      function handleReplayClick(e) {
+        e.stopPropagation();
+        const gameId = e.currentTarget.dataset.gameId;
+        window.location.href = `/play/?game=${gameId}`;
+      }
+      
+      // View All Modal Functions
+      function showViewAllModal(category) {
+        const modal = document.getElementById('viewAllGamesModal');
+        const titleEl = document.getElementById('viewAllModalTitle');
+        const bodyEl = document.getElementById('viewAllModalBody');
+        
+        const categoryLabels = {
+          open: { title: '🎯 Open Games', games: categorizedGames.open },
+          inProgress: { title: '⚔️ In-Progress Games', games: categorizedGames.inProgress },
+          completed: { title: '🏆 Completed Games', games: categorizedGames.completed }
+        };
+        
+        const info = categoryLabels[category];
+        titleEl.innerHTML = info.title;
+        
+        if (info.games.length === 0) {
+          bodyEl.innerHTML = getCategoryEmptyState(category);
+        } else {
+          bodyEl.innerHTML = `<div class="games-list">${info.games.map(game => renderGameCard(game)).join('')}</div>`;
+          // Attach handlers for buttons in modal
+          attachGameButtonHandlers();
+        }
+        
+        modal.classList.add('show');
+      }
+      
+      function hideViewAllModal() {
+        const modal = document.getElementById('viewAllGamesModal');
+        modal.classList.remove('show');
       }
       
       async function joinGame(gameId) {
@@ -1450,14 +1816,18 @@
       }
       
       function showEmptyGames() {
-        const gamesListEl = document.getElementById('gamesList');
-        gamesListEl.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">♟️</div>
-            <div class="empty-title">No Active Games</div>
-            <div class="empty-description">Create a new game or browse available games to get started!</div>
-          </div>
-        `;
+        // Show empty state for all categories
+        const categories = [
+          { list: 'openGamesList', count: 'openGamesCount', btn: 'viewAllOpenGames', category: 'open' },
+          { list: 'inProgressGamesList', count: 'inProgressGamesCount', btn: 'viewAllInProgressGames', category: 'inProgress' },
+          { list: 'completedGamesList', count: 'completedGamesCount', btn: 'viewAllCompletedGames', category: 'completed' }
+        ];
+        
+        categories.forEach(cat => {
+          document.getElementById(cat.list).innerHTML = getCategoryEmptyState(cat.category);
+          document.getElementById(cat.count).textContent = '0';
+          document.getElementById(cat.btn).style.display = 'none';
+        });
       }
       
       function loadOnlinePlayers() {
@@ -1583,6 +1953,43 @@
               console.log('No route found for nav item');
             }
           });
+        });
+        
+        // View All Games button handlers
+        document.getElementById('viewAllOpenGames').addEventListener('click', () => {
+          showViewAllModal('open');
+        });
+        
+        document.getElementById('viewAllInProgressGames').addEventListener('click', () => {
+          showViewAllModal('inProgress');
+        });
+        
+        document.getElementById('viewAllCompletedGames').addEventListener('click', () => {
+          showViewAllModal('completed');
+        });
+        
+        // View All Modal setup
+        setupViewAllModal();
+      }
+      
+      function setupViewAllModal() {
+        const modal = document.getElementById('viewAllGamesModal');
+        const closeBtn = modal.querySelector('.view-all-modal-close');
+        
+        closeBtn.addEventListener('click', hideViewAllModal);
+        
+        // Click outside to close
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            hideViewAllModal();
+          }
+        });
+        
+        // Escape key to close
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && modal.classList.contains('show')) {
+            hideViewAllModal();
+          }
         });
       }
       
@@ -1873,6 +2280,19 @@
       }
 
   </script>
+
+  <!-- View All Games Modal -->
+  <div class="view-all-modal" id="viewAllGamesModal">
+    <div class="view-all-modal-content">
+      <div class="view-all-modal-header">
+        <h3 class="view-all-modal-title" id="viewAllModalTitle">Games</h3>
+        <button class="view-all-modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="view-all-modal-body" id="viewAllModalBody">
+        <!-- Games will be loaded here -->
+      </div>
+    </div>
+  </div>
 
   <!-- Computer Game Settings Modal -->
   <div class="modal-overlay" id="computerGameModal">

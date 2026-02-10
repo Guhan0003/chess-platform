@@ -309,6 +309,65 @@ class ChessGameController {
     return (isWhitePlayer && isWhiteMove) || (!isWhitePlayer && !isWhiteMove);
   }
 
+  /**
+   * Check if the current user is a player in this game (not a spectator)
+   * @returns {boolean} True if user is white or black player
+   */
+  isCurrentUserPlayer() {
+    if (!this.currentUser || !this.gameData) return false;
+    
+    const userId = this.currentUser.id;
+    return userId === this.gameData.white_player || userId === this.gameData.black_player;
+  }
+
+  /**
+   * Check if the game is completed (no longer active)
+   * @returns {boolean} True if game has ended
+   */
+  isGameCompleted() {
+    if (!this.gameData) return false;
+    
+    const completedStatuses = ['finished', 'checkmate', 'stalemate', 'resigned', 'timeout', 'draw', 'abandoned'];
+    return completedStatuses.includes(this.gameData.status);
+  }
+
+  /**
+   * Update the visibility of game controls based on game state and user role
+   * - Player in active game: Show all controls (Offer Draw, Resign, Flip Board, Analysis)
+   * - Player in completed game: Show only Flip Board and Analysis
+   * - Spectator (any state): Show only Flip Board and Analysis
+   */
+  updateGameControlsVisibility() {
+    const offerDrawBtn = document.getElementById('offerDrawBtn');
+    const resignBtn = document.getElementById('resignBtn');
+    const flipBoardBtn = document.getElementById('flipBoardBtn');
+    const analysisBtn = document.getElementById('analysisBtn');
+    
+    // Determine visibility conditions
+    const isPlayer = this.isCurrentUserPlayer();
+    const isCompleted = this.isGameCompleted();
+    const isActivePlayer = isPlayer && !isCompleted && this.gameData?.status === 'active';
+    
+    // Player-only action buttons (Offer Draw, Resign)
+    // Only visible for players in an active, ongoing game
+    if (offerDrawBtn) {
+      offerDrawBtn.style.display = isActivePlayer ? '' : 'none';
+    }
+    if (resignBtn) {
+      resignBtn.style.display = isActivePlayer ? '' : 'none';
+    }
+    
+    // Universal controls (Flip Board, Analysis) - always visible
+    if (flipBoardBtn) {
+      flipBoardBtn.style.display = '';
+    }
+    if (analysisBtn) {
+      analysisBtn.style.display = '';
+    }
+    
+    console.log(`Game controls updated - isPlayer: ${isPlayer}, isCompleted: ${isCompleted}, isActivePlayer: ${isActivePlayer}`);
+  }
+
   // ===========================================
   // ROUTING AND NAVIGATION
   // ===========================================
@@ -484,6 +543,9 @@ class ChessGameController {
     this.updateTurnIndicator();
     this.updateMoveHistory();
     this.updateGameStatus();
+    
+    // Ensure controls visibility is always in sync with game state
+    this.updateGameControlsVisibility();
   }
 
   updateGameHeader() {
@@ -594,6 +656,9 @@ class ChessGameController {
     
     const status = this.gameData.status;
     
+    // Update game controls visibility based on current state
+    this.updateGameControlsVisibility();
+    
     if (status === 'waiting') {
       statusMessageEl.textContent = 'Waiting for opponent';
       statusDetailsEl.textContent = 'Game will start when black player joins';
@@ -630,6 +695,9 @@ class ChessGameController {
       statusDetailsEl.textContent = 'Game ended in a draw';
       this.api.showSuccess('Game ended in a draw!', 6000);
     }
+    
+    // Ensure controls are updated when game ends
+    this.updateGameControlsVisibility();
   }
 
   // ===========================================
@@ -1384,6 +1452,9 @@ class ChessGameController {
       if (statusDetailsEl) statusDetailsEl.textContent = details;
     }
     
+    // Update controls visibility when game is over
+    this.updateGameControlsVisibility();
+    
     console.log('Game Over:', { message, details, gameStatus });
   }
 
@@ -1438,6 +1509,9 @@ class ChessGameController {
       const element = document.getElementById(id);
       if (element) element.addEventListener('click', handler);
     });
+    
+    // Update control visibility based on game state and user role
+    this.updateGameControlsVisibility();
     
     // Move history clicks
     document.addEventListener('click', (e) => {
