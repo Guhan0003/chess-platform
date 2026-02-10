@@ -10,13 +10,9 @@ A full-stack multiplayer chess platform with real-time gameplay, puzzles, rating
 
 ## 📸 Screenshots
 
-| Dashboard | Game Board | Puzzles |
-|:---------:|:----------:|:-------:|
-| ![Dashboard](screenshots/dashboard.png) | ![Game](screenshots/game.png) | ![Puzzles](screenshots/puzzles.png) |
-
-| Profile | Mobile App |
-|:-------:|:----------:|
-| ![Profile](screenshots/profile.png) | ![Mobile](screenshots/mobile.png) |
+| Dashboard | Play | Puzzles | Profile |
+|:---------:|:----:|:-------:|:-------:|
+| ![Dashboard](screenshots/dashboard.png) | ![Play](screenshots/play.png) | ![Puzzles](screenshots/puzzles.png) | ![Profile](screenshots/profile.png) |
 
 ---
 
