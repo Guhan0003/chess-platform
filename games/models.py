@@ -283,20 +283,19 @@ class Game(models.Model):
             timer_control = time_control_map.get(self.time_control, 'rapid_10')
             self._timer_manager = TimerManager(timer_control)
             
-            # Initialize with current game state
+            # Initialize TimerManager with current game state from database
+            # This is critical: use DATABASE values, not TimerManager defaults!
             if self.status == 'active':
                 self._timer_manager.white_time = self.white_time_left
                 self._timer_manager.black_time = self.black_time_left
                 self._timer_manager.current_turn = self.get_current_player_color()
                 self._timer_manager.game_started = True
                 
-                # CRITICAL FIX: Set last_move_time for existing active games
-                # Use the most recent move time or current time if no moves
-                if self.moves.exists():
-                    latest_move = self.moves.latest('created_at')
-                    self._timer_manager.last_move_time = latest_move.created_at.timestamp()
+                # Use last_move_at from database for accurate elapsed time calculation
+                if self.last_move_at:
+                    self._timer_manager.last_move_time = self.last_move_at.timestamp()
                 else:
-                    # No moves yet, use current time to start countdown
+                    # No last_move_at set - use game creation time or current time
                     import time
                     self._timer_manager.last_move_time = time.time()
                 
@@ -309,20 +308,27 @@ class Game(models.Model):
         return self._bot_time_manager
 
     def start_professional_timer(self):
-        """Start the professional timer system"""
-        timer = self.get_timer_manager()
-        timer_state = timer.start_game()
+        """
+        Start the professional timer system when game becomes active.
         
-        # Update game model with timer state (convert to int for database storage)
-        white_time = timer_state.get('white_time')
-        black_time = timer_state.get('black_time')
-        self.white_time_left = int(white_time) if white_time is not None else 600
-        self.black_time_left = int(black_time) if black_time is not None else 600
+        IMPORTANT: This method should only SET last_move_at to mark the game start.
+        It should NOT overwrite white_time_left/black_time_left which were already
+        set correctly when the game was created.
+        """
+        # CRITICAL: Only set last_move_at to mark the start of the game
+        # Do NOT overwrite time values - they were correctly set in create_game
         self.status = 'active'
         self.last_move_at = timezone.now()
         self.save()
         
-        return timer_state
+        logger.info(f"Game {self.id} started: white={self.white_time_left}s, black={self.black_time_left}s, time_control={self.time_control}")
+        
+        return {
+            'white_time': self.white_time_left,
+            'black_time': self.black_time_left,
+            'game_started': True,
+            'time_control': self.time_control
+        }
 
     def make_timer_move(self, player_color):
         """Professional move timing with TimerManager"""

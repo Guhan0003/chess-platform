@@ -19,6 +19,58 @@ import traceback
 from .models import Game, Move, GameInvitation, TimeControl
 from .serializers import GameSerializer, MoveSerializer, GameInvitationSerializer
 
+
+# ================== PROFESSIONAL TIMER CONFIGURATION ==================
+# Time control configurations with initial time (seconds) and increment (seconds)
+TIME_CONTROL_CONFIG = {
+    # Ultra-Bullet & Bullet
+    'bullet_30s': {'initial': 30, 'increment': 0},
+    'bullet_1': {'initial': 60, 'increment': 0},
+    'bullet_1_1': {'initial': 60, 'increment': 1},
+    'bullet_2': {'initial': 120, 'increment': 0},
+    'bullet_2_1': {'initial': 120, 'increment': 1},
+    'bullet': {'initial': 120, 'increment': 0},  # Default bullet
+    
+    # Blitz
+    'blitz_3': {'initial': 180, 'increment': 0},
+    'blitz_3_2': {'initial': 180, 'increment': 2},
+    'blitz_5': {'initial': 300, 'increment': 0},
+    'blitz_5_3': {'initial': 300, 'increment': 3},
+    'blitz_5_5': {'initial': 300, 'increment': 5},
+    'blitz': {'initial': 300, 'increment': 0},  # Default blitz
+    
+    # Rapid
+    'rapid_10': {'initial': 600, 'increment': 0},
+    'rapid_10_5': {'initial': 600, 'increment': 5},
+    'rapid_15': {'initial': 900, 'increment': 0},
+    'rapid_15_10': {'initial': 900, 'increment': 10},
+    'rapid': {'initial': 600, 'increment': 0},  # Default rapid
+    
+    # Classical
+    'classical_30': {'initial': 1800, 'increment': 0},
+    'classical_30_20': {'initial': 1800, 'increment': 20},
+    'classical_60': {'initial': 3600, 'increment': 0},
+    'classical_90_30': {'initial': 5400, 'increment': 30},
+    'classical': {'initial': 1800, 'increment': 0},  # Default classical
+    
+    # Unlimited
+    'unlimited': {'initial': None, 'increment': 0}
+}
+
+
+def get_time_control_config(time_control_str):
+    """
+    Get timer configuration for a time control string.
+    
+    Args:
+        time_control_str: Time control identifier (e.g., 'rapid', 'blitz_5_3')
+        
+    Returns:
+        Dict with 'initial' (seconds) and 'increment' (seconds)
+    """
+    return TIME_CONTROL_CONFIG.get(time_control_str, {'initial': 600, 'increment': 0})
+# ================== END TIMER CONFIGURATION ==================
+
 # Import chess engine
 from engine import get_computer_move, get_computer_move_legacy
 
@@ -122,7 +174,67 @@ def make_move(request, pk):
     new_fen = board.fen()
     logger.info(f"New FEN after move: {new_fen}")
 
-    # Save move record
+    # ================== PROFESSIONAL TIMER MANAGEMENT ==================
+    # Calculate elapsed time and deduct from the player who made the move
+    player_color = 'white' if request.user == game.white_player else 'black'
+    current_time = timezone.now()
+    time_taken = 0
+    time_left_after_move = 0
+    
+    # Get time control configuration for this game
+    tc_config = get_time_control_config(game.time_control)
+    increment = tc_config.get('increment', 0)
+    
+    # Only process timer for active games with valid time controls (not unlimited)
+    if game.status == 'active' and tc_config.get('initial') is not None:
+        # Calculate time elapsed since last move
+        if game.last_move_at:
+            time_elapsed = (current_time - game.last_move_at).total_seconds()
+            # Sanity check: cap at 1 hour to prevent database issues
+            time_taken = min(max(0, time_elapsed), 3600)
+        else:
+            # First move of the game - no time deduction
+            time_taken = 0
+        
+        # Deduct time from the player who made the move and add increment
+        if player_color == 'white':
+            # Deduct time spent on this move
+            game.white_time_left = max(0, game.white_time_left - time_taken)
+            # Add increment after successful move (only if time > 0)
+            if game.white_time_left > 0:
+                game.white_time_left += increment
+            time_left_after_move = game.white_time_left
+            logger.info(f"White timer: -{time_taken:.1f}s + {increment}s increment = {game.white_time_left:.1f}s left")
+        else:
+            # Deduct time spent on this move
+            game.black_time_left = max(0, game.black_time_left - time_taken)
+            # Add increment after successful move (only if time > 0)
+            if game.black_time_left > 0:
+                game.black_time_left += increment
+            time_left_after_move = game.black_time_left
+            logger.info(f"Black timer: -{time_taken:.1f}s + {increment}s increment = {game.black_time_left:.1f}s left")
+        
+        # Check for timeout BEFORE the game continues
+        if game.white_time_left <= 0:
+            game.status = 'finished'
+            game.result = '0-1'  # Black wins on time
+            game.termination = 'timeout'
+            game.winner = game.black_player
+            logger.info(f"Game {pk}: White ran out of time, Black wins")
+        elif game.black_time_left <= 0:
+            game.status = 'finished'
+            game.result = '1-0'  # White wins on time
+            game.termination = 'timeout'
+            game.winner = game.white_player
+            logger.info(f"Game {pk}: Black ran out of time, White wins")
+    else:
+        # For unlimited games or waiting games, just track but don't deduct
+        if game.last_move_at:
+            time_taken = (current_time - game.last_move_at).total_seconds()
+        time_left_after_move = game.white_time_left if player_color == 'white' else game.black_time_left
+    # ================== END TIMER MANAGEMENT ==================
+
+    # Save move record with timing data
     move_number = game.moves.count() + 1
     
     move_obj = Move.objects.create(
@@ -132,20 +244,19 @@ def make_move(request, pk):
         from_square=from_sq,
         to_square=to_sq,
         notation=san,
-        fen_after_move=new_fen
+        fen_after_move=new_fen,
+        time_taken=int(time_taken),
+        time_left=int(time_left_after_move)
     )
     
-    logger.info(f"Move saved: {move_obj}")
-
-    # Timer deduction disabled for now - causes database locking issues
-    # TODO: Re-enable timer deduction when database concurrency is fixed
-    # player_color = 'white' if request.user == game.white_player else 'black'
-    # timer_state = game.make_timer_move(player_color)
+    logger.info(f"Move saved: {move_obj} (took {time_taken:.1f}s, {time_left_after_move:.1f}s remaining)")
 
     # Update game state
     game.fen = new_fen
-    game.last_move_at = timezone.now()  # Update timer reference point
-    if board.is_game_over():
+    game.last_move_at = current_time  # Update timer reference point
+    
+    # Check for checkmate/stalemate (if not already ended by timeout)
+    if game.status != 'finished' and board.is_game_over():
         game.status = 'finished'
         result = board.result()
         if result == '1-0':
@@ -741,7 +852,46 @@ def make_computer_move(request, pk):
             return Response({"detail": "Invalid computer move generated."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Create move record
+        # ================== COMPUTER TIMER MANAGEMENT ==================
+        # Calculate elapsed time and deduct from computer's clock
+        computer_color = 'white' if computer_player == game.white_player else 'black'
+        current_time = timezone.now()
+        time_taken = 0
+        time_left_after_move = 0
+        
+        # Get time control configuration
+        tc_config = get_time_control_config(game.time_control)
+        increment = tc_config.get('increment', 0)
+        
+        # Process timer for active games with valid time controls
+        if game.status == 'active' and tc_config.get('initial') is not None:
+            # Calculate time elapsed since last move (this is computer's "thinking time")
+            if game.last_move_at:
+                time_elapsed = (current_time - game.last_move_at).total_seconds()
+                time_taken = min(max(0, time_elapsed), 3600)  # Cap at 1 hour
+            else:
+                time_taken = 0
+            
+            # Deduct time from computer and add increment
+            if computer_color == 'white':
+                game.white_time_left = max(0, game.white_time_left - time_taken)
+                if game.white_time_left > 0:
+                    game.white_time_left += increment
+                time_left_after_move = game.white_time_left
+                logger.info(f"Computer (white) timer: -{time_taken:.1f}s + {increment}s = {game.white_time_left:.1f}s left")
+            else:
+                game.black_time_left = max(0, game.black_time_left - time_taken)
+                if game.black_time_left > 0:
+                    game.black_time_left += increment
+                time_left_after_move = game.black_time_left
+                logger.info(f"Computer (black) timer: -{time_taken:.1f}s + {increment}s = {game.black_time_left:.1f}s left")
+        else:
+            if game.last_move_at:
+                time_taken = (current_time - game.last_move_at).total_seconds()
+            time_left_after_move = game.white_time_left if computer_color == 'white' else game.black_time_left
+        # ================== END COMPUTER TIMER MANAGEMENT ==================
+        
+        # Create move record with timing data
         move_number = game.moves.count() + 1
         
         move_obj = Move.objects.create(
@@ -751,14 +901,16 @@ def make_computer_move(request, pk):
             from_square=move_info['from_square'],
             to_square=move_info['to_square'],
             notation=san,
-            fen_after_move=new_fen
+            fen_after_move=new_fen,
+            time_taken=int(time_taken),
+            time_left=int(time_left_after_move)
         )
         
-        logger.info(f"Computer move saved: {move_obj}")
+        logger.info(f"Computer move saved: {move_obj} (took {time_taken:.1f}s)")
         
         # Update game state
         game.fen = new_fen
-        game.last_move_at = timezone.now()  # Update timer reference point
+        game.last_move_at = current_time  # Update timer reference point
         
         # Check if game is over
         new_board = chess.Board(new_fen)
@@ -923,7 +1075,8 @@ def create_computer_game(request):
                 status='active',
                 time_control=time_control,
                 white_time_left=initial_time,
-                black_time_left=initial_time
+                black_time_left=initial_time,
+                last_move_at=timezone.now()  # Set timer start point
             )
         else:
             computer_user, created = User.objects.get_or_create(
@@ -941,7 +1094,8 @@ def create_computer_game(request):
                 status='active',
                 time_control=time_control,
                 white_time_left=initial_time,
-                black_time_left=initial_time
+                black_time_left=initial_time,
+                last_move_at=timezone.now()  # Set timer start point
             )
         
         # Store difficulty in game metadata (you might want to add this field to the model)

@@ -9,12 +9,14 @@ class MoveSerializer(serializers.ModelSerializer):
         model = Move
         fields = [
             'id', 'game', 'move_number', 'player', 'player_username',
-            'from_square', 'to_square', 'notation', 'fen_after_move', 'created_at'
+            'from_square', 'to_square', 'notation', 'fen_after_move', 'created_at',
+            'time_taken', 'time_left'
         ]
         # Mark all auto-filled fields as read-only so they aren't required in input
         read_only_fields = [
             'id', 'created_at', 'player_username',
-            'game', 'player', 'move_number', 'notation', 'fen_after_move'
+            'game', 'player', 'move_number', 'notation', 'fen_after_move',
+            'time_taken', 'time_left'
         ]
 
 
@@ -24,6 +26,7 @@ class GameSerializer(serializers.ModelSerializer):
     white_player_rating = serializers.SerializerMethodField()
     black_player_rating = serializers.SerializerMethodField()
     moves = MoveSerializer(many=True, read_only=True)
+    increment = serializers.SerializerMethodField()
     
     def get_white_player_rating(self, obj):
         """Extract rating from white player username if it's a computer"""
@@ -40,20 +43,33 @@ class GameSerializer(serializers.ModelSerializer):
             if len(parts) >= 3 and parts[-1].isdigit():
                 return int(parts[-1])
         return None
+    
+    def get_increment(self, obj):
+        """Get increment value from time control configuration"""
+        TIME_CONTROL_CONFIG = {
+            'bullet_30s': 0, 'bullet_1': 0, 'bullet_1_1': 1, 'bullet_2': 0, 'bullet_2_1': 1, 'bullet': 0,
+            'blitz_3': 0, 'blitz_3_2': 2, 'blitz_5': 0, 'blitz_5_3': 3, 'blitz_5_5': 5, 'blitz': 0,
+            'rapid_10': 0, 'rapid_10_5': 5, 'rapid_15': 0, 'rapid_15_10': 10, 'rapid': 0,
+            'classical_30': 0, 'classical_30_20': 20, 'classical_60': 0, 'classical_90_30': 30, 'classical': 0,
+            'unlimited': 0
+        }
+        return TIME_CONTROL_CONFIG.get(obj.time_control, 0)
 
     class Meta:
         model = Game
         fields = [
             'id', 'white_player', 'white_player_username', 'white_player_rating',
             'black_player', 'black_player_username', 'black_player_rating',
-            'status', 'fen', 'winner',
+            'status', 'fen', 'winner', 'result', 'termination',
+            'time_control', 'white_time_left', 'black_time_left', 'increment', 'last_move_at',
             'created_at', 'updated_at', 'moves'
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at', 'moves',
             'white_player', 'black_player',
             'white_player_username', 'black_player_username',
-            'white_player_rating', 'black_player_rating'
+            'white_player_rating', 'black_player_rating',
+            'increment'
         ]
 
 
