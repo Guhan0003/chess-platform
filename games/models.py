@@ -562,8 +562,11 @@ class Game(models.Model):
                 if not is_white_bot and not is_black_bot:
                     try:
                         from games.services import update_game_ratings
-                        # Get time control string (category) from TimeControl model
-                        time_control_str = self.time_control.category if self.time_control else 'rapid'
+                        # Extract category from time_control string (e.g., 'rapid_10' -> 'rapid')
+                        time_control_str = self.time_control.split('_')[0] if self.time_control else 'rapid'
+                        # Map bullet to blitz for rating purposes
+                        if time_control_str == 'bullet':
+                            time_control_str = 'blitz'
                         rating_result = update_game_ratings(
                             white_player=self.white_player,
                             black_player=self.black_player,

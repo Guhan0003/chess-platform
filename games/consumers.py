@@ -374,8 +374,11 @@ class GameConsumer(AsyncWebsocketConsumer):
                 try:
                     # Note: We're already in a @database_sync_to_async function,
                     # so we call update_game_ratings synchronously (Django will handle it)
-                    # Get time control string (category) from TimeControl model
-                    time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    # Extract category from time_control string (e.g., 'rapid_10' -> 'rapid')
+                    time_control_str = game.time_control.split('_')[0] if game.time_control else 'rapid'
+                    # Map bullet to blitz for rating purposes
+                    if time_control_str == 'bullet':
+                        time_control_str = 'blitz'
                     logger.info(f"Calling update_game_ratings for game {game.id}")
                     update_game_ratings(
                         white_player=game.white_player,

@@ -16,11 +16,17 @@ Features:
 - Integration with all game endpoints
 """
 
+from __future__ import annotations
+
 import logging
 import math
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any, Optional, TYPE_CHECKING
+
 from django.db import transaction
 from django.contrib.auth import get_user_model
+
+if TYPE_CHECKING:
+    from accounts.models import CustomUser
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -60,8 +66,8 @@ class GlobalRatingService:
     @transaction.atomic
     def update_ratings_after_game(
         cls,
-        white_player: 'User',
-        black_player: 'User',
+        white_player: CustomUser,
+        black_player: CustomUser,
         game_result: str,
         time_control: str = 'rapid',
         game_instance: Optional[Any] = None
@@ -82,9 +88,22 @@ class GlobalRatingService:
             Dictionary with rating changes and new ratings
         """
         
-        # PREVENT DOUBLE-COUNTING: Check if ratings were already updated for this game
+        # PREVENT DOUBLE-COUNTING: Use database lock to prevent race conditions
+        # Lock the game record FIRST before checking history to prevent concurrent updates
         if game_instance:
+            from games.models import Game
             from accounts.models import RatingHistory
+            
+            # Acquire exclusive lock on the game row to serialize concurrent updates
+            # This prevents the race condition where both WebSocket and REST API
+            # try to update stats simultaneously
+            try:
+                Game.objects.select_for_update(nowait=False).get(id=game_instance.id)
+            except Exception as e:
+                logger.warning(f"Could not lock game {game_instance.id}: {e}")
+                # Continue anyway - the history check will still catch duplicates
+            
+            # Now safely check if ratings were already updated for this game
             existing_history = RatingHistory.objects.filter(game=game_instance).exists()
             if existing_history:
                 logger.warning(f"Ratings already updated for game {game_instance.id}, skipping to prevent double-counting")
@@ -97,6 +116,11 @@ class GlobalRatingService:
         if time_control not in ['blitz', 'rapid', 'classical']:
             logger.warning(f"Invalid time control '{time_control}', defaulting to 'rapid'")
             time_control = 'rapid'
+        
+        # Refresh player objects from database to ensure we have latest stats
+        # This prevents issues with stale data when multiple processes are updating
+        white_player.refresh_from_db()
+        black_player.refresh_from_db()
         
         # Get rating field names
         rating_field = f'{time_control}_rating'
@@ -234,7 +258,7 @@ class GlobalRatingService:
     @classmethod
     def _create_rating_history(
         cls,
-        user: 'User',
+        user: CustomUser,
         time_control: str,
         old_rating: int,
         new_rating: int,
@@ -340,7 +364,7 @@ class GlobalRatingService:
         }
     
     @classmethod
-    def get_player_rating_info(cls, user: 'User', time_control: str = 'rapid') -> Dict[str, Any]:
+    def get_player_rating_info(cls, user: CustomUser, time_control: str = 'rapid') -> Dict[str, Any]:
         """
         Get comprehensive rating information for a player.
         
@@ -530,7 +554,7 @@ class GlobalRatingService:
         }
     
     @classmethod
-    def get_rating_trends(cls, user: 'User', time_control: str = 'rapid', last_n_games: int = 10) -> Dict[str, Any]:
+    def get_rating_trends(cls, user: CustomUser, time_control: str = 'rapid', last_n_games: int = 10) -> Dict[str, Any]:
         """
         Analyze rating trends for a player.
         
@@ -600,7 +624,7 @@ class GlobalRatingService:
         }
     
     @classmethod
-    def compare_players(cls, player1: 'User', player2: 'User', time_control: str = 'rapid') -> Dict[str, Any]:
+    def compare_players(cls, player1: CustomUser, player2: CustomUser, time_control: str = 'rapid') -> Dict[str, Any]:
         """
         Compare two players' ratings and predict match outcome.
         

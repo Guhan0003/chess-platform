@@ -21,8 +21,8 @@ class MoveSerializer(serializers.ModelSerializer):
 
 
 class GameSerializer(serializers.ModelSerializer):
-    white_player_username = serializers.CharField(source='white_player.username', read_only=True)
-    black_player_username = serializers.CharField(source='black_player.username', read_only=True)
+    white_player_username = serializers.CharField(source='white_player.username', read_only=True, allow_null=True)
+    black_player_username = serializers.CharField(source='black_player.username', read_only=True, allow_null=True)
     white_player_rating = serializers.SerializerMethodField()
     black_player_rating = serializers.SerializerMethodField()
     moves = MoveSerializer(many=True, read_only=True)

@@ -100,6 +100,12 @@ def make_move(request, pk):
         return Response({"detail": "You are not a player in this game."},
                         status=status.HTTP_403_FORBIDDEN)
 
+    # Game must have both players (not waiting for opponent)
+    if game.status == 'waiting' or game.black_player is None:
+        logger.error(f"Game {pk} is still waiting for an opponent")
+        return Response({"detail": "Game is waiting for an opponent to join."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
     # Load board from FEN
     try:
         # Handle "startpos" FEN
@@ -264,6 +270,7 @@ def make_move(request, pk):
         elif result == '0-1':
             game.winner = game.black_player
         logger.info(f"Game finished with result: {result}")
+        print(f"🏁 GAME OVER: Game {pk} finished with result: {result}")
         
         # Store result for rating update
         game.result = result
@@ -275,12 +282,18 @@ def make_move(request, pk):
             is_white_bot = 'computer' in game.white_player.username.lower()
             is_black_bot = 'computer' in game.black_player.username.lower()
             
+            print(f"📊 Rating update check: white_bot={is_white_bot}, black_bot={is_black_bot}")
+            
             # Only update ratings if BOTH players are humans (not bots)
             if not is_white_bot and not is_black_bot:
                 try:
                     from games.services import update_game_ratings
-                    # Get time control string (category) from TimeControl model
-                    time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    # Extract category from time_control string (e.g., 'rapid_10' -> 'rapid')
+                    time_control_str = game.time_control.split('_')[0] if game.time_control else 'rapid'
+                    # Map bullet to blitz for rating purposes
+                    if time_control_str == 'bullet':
+                        time_control_str = 'blitz'
+                    print(f"📈 Calling update_game_ratings: result={result}, time_control={time_control_str}")
                     rating_result = update_game_ratings(
                         white_player=game.white_player,
                         black_player=game.black_player,
@@ -289,12 +302,16 @@ def make_move(request, pk):
                         game_instance=game
                     )
                     logger.info(f"Ratings updated for PvP game: {rating_result}")
+                    print(f"✅ Rating update successful: {rating_result.get('success', rating_result.get('skipped'))}")
                 except Exception as e:
                     logger.error(f"Failed to update ratings: {e}")
+                    print(f"❌ RATING UPDATE FAILED: {e}")
                     import traceback
                     logger.error(traceback.format_exc())
+                    print(traceback.format_exc())
             else:
                 logger.info(f"Skipping rating update - bot game (white_bot={is_white_bot}, black_bot={is_black_bot})")
+                print(f"⏭️ Skipping rating update - bot game")
         
         # CHECK AND UNLOCK ACHIEVEMENTS after game completion
         try:
@@ -1416,8 +1433,11 @@ def resign_game(request, game_id):
             if not is_white_bot and not is_black_bot:
                 try:
                     from games.services import update_game_ratings
-                    # Get time control string (category) from TimeControl model
-                    time_control_str = game.time_control.category if game.time_control else 'rapid'
+                    # Extract category from time_control string (e.g., 'rapid_10' -> 'rapid')
+                    time_control_str = game.time_control.split('_')[0] if game.time_control else 'rapid'
+                    # Map bullet to blitz for rating purposes
+                    if time_control_str == 'bullet':
+                        time_control_str = 'blitz'
                     rating_result = update_game_ratings(
                         white_player=game.white_player,
                         black_player=game.black_player,

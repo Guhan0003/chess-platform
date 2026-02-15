@@ -1579,10 +1579,18 @@
           return;
         }
         
-        // Categorize games
+        // Categorize games - ensure correct categorization based on status AND player presence
+        // Open: waiting status OR active but missing black player (shouldn't happen, but safety check)
+        // In Progress: active status AND has both players
+        // Completed: finished status
         categorizedGames = {
-          open: games.filter(game => game.status === 'waiting'),
-          inProgress: games.filter(game => game.status === 'active'),
+          open: games.filter(game => 
+            game.status === 'waiting' || 
+            (game.status === 'active' && !game.black_player_username)
+          ),
+          inProgress: games.filter(game => 
+            game.status === 'active' && game.black_player_username
+          ),
           completed: games.filter(game => game.status === 'finished')
         };
         
@@ -1688,12 +1696,23 @@
             </div>
             
             <div class="game-actions">
-              ${game.status === 'waiting' && !game.black_player_username ? 
-                `<button class="btn btn-primary join-btn" data-game-id="${game.id}">
-                  <span>⚡</span> Join Game
-                </button>` : 
-                getGameActionButton(game, currentUser)
-              }
+              ${(() => {
+                // Show Join button only if:
+                // 1. Game needs a second player (waiting OR active without black player)
+                // 2. No black player yet  
+                // 3. Current user is NOT the white player (creator)
+                const needsSecondPlayer = game.status === 'waiting' || !game.black_player_username;
+                const hasNoBlackPlayer = !game.black_player_username;
+                const isNotCreator = !currentUser || game.white_player_username !== currentUser.username;
+                
+                if (needsSecondPlayer && hasNoBlackPlayer && isNotCreator) {
+                  return `<button class="btn btn-primary join-btn" data-game-id="${game.id}">
+                    <span>⚡</span> Join Game
+                  </button>`;
+                } else {
+                  return getGameActionButton(game, currentUser);
+                }
+              })()}
             </div>
           </div>
         `;
@@ -2050,10 +2069,17 @@
 
         const isPlayerInGame = (game.white_player_username === currentUser.username) || 
                               (game.black_player_username === currentUser.username);
+        const isCreatorWaitingForOpponent = 
+          game.white_player_username === currentUser.username && !game.black_player_username;
 
         if (game.status === 'finished') {
           return `<button class="btn btn-info replay-btn" data-game-id="${game.id}">
             <span>📺</span> View Replay
+          </button>`;
+        } else if (isCreatorWaitingForOpponent) {
+          // Creator waiting for opponent (covers both 'waiting' and edge case 'active' without black)
+          return `<button class="btn btn-warning resume-btn" data-game-id="${game.id}" disabled style="opacity: 0.7; cursor: default;">
+            <span>⏳</span> Waiting...
           </button>`;
         } else if (isPlayerInGame) {
           return `<button class="btn btn-success resume-btn" data-game-id="${game.id}">
