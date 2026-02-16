@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="Friends - Chess Platform">
+  
+  <title>Friends - Chess Platform</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="../../styles/global.css">
+  
+  <style>
+    /* ================================
+       Friends Page Styles
+       Matching Global Design System
+       ================================ */
+
+    /* Page Container */
+    .friends-container {
+      display: flex;
+      min-height: 100vh;
+      background: 
+        radial-gradient(ellipse at top left, rgba(118, 150, 86, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(240, 217, 181, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+      background-attachment: fixed;
+    }
+
+    /* Sidebar Navigation - Matching Lobby */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-right: 1px solid var(--glass-border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      left: 0;
+      top: 0;
+      z-index: 100;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: var(--space-xl) var(--space-lg);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: var(--space-xs);
+      text-decoration: none;
+    }
+
+    .logo-image {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .sidebar-subtitle {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: var(--space-lg);
+    }
+
+    .nav-section {
+      margin-bottom: var(--space-xl);
+    }
+
+    .nav-section-title {
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--space-sm);
+    }
+
+    .nav-items {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      transition: all var(--transition-normal);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover {
+      background: rgba(118, 150, 86, 0.1);
+      color: var(--color-accent-primary);
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      background: rgba(118, 150, 86, 0.15);
+      color: var(--color-accent-primary);
+      border: 1px solid rgba(118, 150, 86, 0.2);
+    }
+
+    .nav-icon {
+      font-size: var(--font-size-lg);
+      width: 20px;
+      text-align: center;
+    }
+
+    /* User Profile Section in Sidebar */
+    .sidebar-footer {
+      padding: var(--space-lg);
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .user-profile:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-light) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-inverse);
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-lg);
+      overflow: hidden;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: var(--radius-full);
+    }
+
+    .user-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .user-name {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .user-rating {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .rating-badge {
+      background: rgba(118, 150, 86, 0.2);
+      color: var(--color-accent-primary);
+      padding: 2px var(--space-xs);
+      border-radius: var(--radius-sm);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .friends-header {
+      height: var(--header-height);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-xl);
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+    }
+
+    .header-title {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+    }
+
+    .header-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    /* Mobile Menu Button */
+    .mobile-menu-btn {
+      display: none;
+      flex-direction: column;
+      justify-content: space-around;
+      width: 24px;
+      height: 20px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      z-index: 101;
+    }
+
+    .hamburger-line {
+      width: 100%;
+      height: 2px;
+      background: var(--color-text-primary);
+      border-radius: 2px;
+      transition: all var(--transition-normal);
+    }
+
+    /* Content Area */
+    .content {
+      flex: 1;
+      padding: var(--space-xl);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xl);
+    }
+
+    /* Content Grid */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: var(--space-xl);
+    }
+
+    .content-main {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xl);
+    }
+
+    .content-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xl);
+    }
+
+    /* Section Card */
+    .section-card {
+      padding: var(--space-xl);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .section-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .section-icon {
+      font-size: var(--font-size-xl);
+    }
+
+    /* Your Profile ID Section */
+    .profile-id-section {
+      background: linear-gradient(135deg, rgba(118, 150, 86, 0.1) 0%, rgba(118, 150, 86, 0.05) 100%);
+      border: 1px solid rgba(118, 150, 86, 0.2);
+    }
+
+    .unique-id-container {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-md);
+    }
+
+    .unique-id-label {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .unique-id-value {
+      flex: 1;
+      font-family: var(--font-family-mono);
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-accent-primary);
+      letter-spacing: 1px;
+    }
+
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-accent-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .copy-btn:hover {
+      background: var(--color-accent-light);
+      transform: translateY(-1px);
+    }
+
+    .copy-btn.copied {
+      background: var(--color-success);
+    }
+
+    .qr-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-primary);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .qr-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--color-accent-primary);
+    }
+
+    .profile-id-actions {
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    /* Add Friend Section */
+    .add-friend-tabs {
+      display: flex;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-lg);
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--space-xs);
+      border-radius: var(--radius-md);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: var(--space-sm) var(--space-md);
+      background: transparent;
+      color: var(--color-text-muted);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .tab-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .tab-btn.active {
+      background: var(--color-accent-primary);
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .search-form {
+      display: flex;
+      gap: var(--space-md);
+    }
+
+    .search-input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      padding-left: calc(var(--space-lg) + 20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+      transition: all var(--transition-normal);
+    }
+
+    .search-input:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 3px rgba(118, 150, 86, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .search-input::placeholder {
+      color: var(--color-text-muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: var(--space-md);
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+    }
+
+    .search-btn {
+      padding: var(--space-md) var(--space-xl);
+      background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .search-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .search-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Search Results */
+    .search-results {
+      margin-top: var(--space-lg);
+    }
+
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-sm);
+      transition: all var(--transition-normal);
+    }
+
+    .search-result-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--color-accent-primary);
+    }
+
+    .result-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: var(--font-weight-bold);
+      color: white;
+      font-size: var(--font-size-lg);
+      flex-shrink: 0;
+    }
+
+    .result-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .result-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .result-name {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .result-details {
+      display: flex;
+      gap: var(--space-md);
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .result-rating {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--color-success);
+    }
+
+    .status-dot.offline {
+      background: var(--color-text-muted);
+    }
+
+    .status-dot.playing {
+      background: var(--color-warning);
+    }
+
+    .add-friend-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-accent-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      white-space: nowrap;
+    }
+
+    .add-friend-btn:hover {
+      background: var(--color-accent-light);
+    }
+
+    .add-friend-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .add-friend-btn.pending {
+      background: var(--color-warning);
+    }
+
+    .add-friend-btn.friends {
+      background: var(--color-success);
+    }
+
+    /* Pending Requests Section */
+    .requests-section {
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    }
+
+    .request-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-sm);
+    }
+
+    .request-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-info), #60a5fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: var(--font-weight-bold);
+      color: white;
+      font-size: var(--font-size-lg);
+      flex-shrink: 0;
+    }
+
+    .request-info {
+      flex: 1;
+    }
+
+    .request-name {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .request-time {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .request-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .accept-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-success);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .accept-btn:hover {
+      background: #16a34a;
+    }
+
+    .decline-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-error);
+      border: 1px solid var(--color-error);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .decline-btn:hover {
+      background: var(--color-error);
+      color: white;
+    }
+
+    /* Friends List Section */
+    .friends-list-section {
+      flex: 1;
+    }
+
+    .friends-filter {
+      display: flex;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+    }
+
+    .filter-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--color-text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .filter-btn:hover {
+      color: var(--color-text-primary);
+      border-color: var(--color-accent-primary);
+    }
+
+    .filter-btn.active {
+      background: var(--color-accent-primary);
+      color: white;
+      border-color: var(--color-accent-primary);
+    }
+
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-full);
+      padding: 0 var(--space-xs);
+      font-size: var(--font-size-xs);
+      min-width: 18px;
+      height: 18px;
+      margin-left: var(--space-xs);
+    }
+
+    .friends-search {
+      margin-bottom: var(--space-lg);
+    }
+
+    .friends-search-input {
+      width: 100%;
+      padding: var(--space-md) var(--space-lg);
+      padding-left: calc(var(--space-lg) + 20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+      transition: all var(--transition-normal);
+    }
+
+    .friends-search-input:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 3px rgba(118, 150, 86, 0.1);
+    }
+
+    /* Friends Category */
+    .friends-category {
+      margin-bottom: var(--space-xl);
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .category-icon {
+      font-size: var(--font-size-base);
+    }
+
+    .category-count {
+      background: rgba(255, 255, 255, 0.1);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs);
+    }
+
+    /* Friend Card */
+    .friend-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-sm);
+      transition: all var(--transition-normal);
+      cursor: pointer;
+    }
+
+    .friend-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--color-accent-primary);
+      transform: translateX(2px);
+    }
+
+    .friend-card.online {
+      border-left: 3px solid var(--color-success);
+    }
+
+    .friend-card.playing {
+      border-left: 3px solid var(--color-warning);
+    }
+
+    .friend-card.offline {
+      opacity: 0.7;
+    }
+
+    .friend-avatar {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      min-height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: var(--font-weight-bold);
+      color: white;
+      font-size: var(--font-size-lg);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .friend-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .friend-status-indicator {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--color-bg-primary);
+    }
+
+    .friend-status-indicator.online {
+      background: var(--color-success);
+    }
+
+    .friend-status-indicator.offline {
+      background: var(--color-text-muted);
+    }
+
+    .friend-status-indicator.playing {
+      background: var(--color-warning);
+    }
+
+    .friend-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .friend-name {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .friend-details {
+      display: flex;
+      gap: var(--space-md);
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .friend-rating {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .friend-status-text {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .playing-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm);
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--color-warning);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .friend-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .watch-btn {
+      padding: var(--space-xs) var(--space-md);
+      background: var(--color-info);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .watch-btn:hover {
+      background: #2563eb;
+    }
+
+    .challenge-btn {
+      padding: var(--space-xs) var(--space-md);
+      background: var(--color-accent-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .challenge-btn:hover {
+      background: var(--color-accent-light);
+    }
+
+    .more-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-muted);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .more-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--color-text-primary);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-3xl) var(--space-xl);
+    }
+
+    .empty-icon {
+      font-size: 4rem;
+      margin-bottom: var(--space-lg);
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .empty-description {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-lg);
+    }
+
+    .empty-action {
+      padding: var(--space-md) var(--space-xl);
+      background: var(--color-accent-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .empty-action:hover {
+      background: var(--color-accent-light);
+    }
+
+    /* Skeleton Loaders */
+    .skeleton {
+      background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.05) 0%, 
+        rgba(255, 255, 255, 0.1) 50%, 
+        rgba(255, 255, 255, 0.05) 100%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: var(--radius-md);
+    }
+
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      margin-bottom: var(--space-sm);
+    }
+
+    .skeleton-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+    }
+
+    .skeleton-content {
+      flex: 1;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      margin-bottom: var(--space-xs);
+    }
+
+    .skeleton-line:last-child {
+      width: 60%;
+      margin-bottom: 0;
+    }
+
+    /* QR Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      max-width: 400px;
+      width: 90%;
+      transform: scale(0.9);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-lg);
+    }
+
+    .modal-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-muted);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .modal-close:hover {
+      background: var(--color-error);
+      color: white;
+    }
+
+    .qr-container {
+      background: white;
+      padding: var(--space-lg);
+      border-radius: var(--radius-md);
+      text-align: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .qr-container canvas,
+    .qr-container img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .qr-info {
+      text-align: center;
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .qr-id {
+      font-family: var(--font-family-mono);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-accent-primary);
+      margin-top: var(--space-xs);
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: var(--space-xl);
+      right: var(--space-xl);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .toast {
+      padding: var(--space-md) var(--space-lg);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s ease;
+      max-width: 400px;
+    }
+
+    .toast.success {
+      border-color: var(--color-success);
+    }
+
+    .toast.error {
+      border-color: var(--color-error);
+    }
+
+    .toast.info {
+      border-color: var(--color-info);
+    }
+
+    .toast-icon {
+      font-size: var(--font-size-lg);
+    }
+
+    .toast-message {
+      flex: 1;
+      font-size: var(--font-size-sm);
+      color: var(--color-text-primary);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .content-sidebar {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+      }
+      
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .mobile-menu-btn {
+        display: flex;
+      }
+      
+      .content {
+        padding: var(--space-md);
+      }
+      
+      .friends-filter {
+        flex-wrap: wrap;
+      }
+      
+      .friend-actions {
+        flex-direction: column;
+      }
+      
+      .search-form {
+        flex-direction: column;
+      }
+      
+      .profile-id-actions {
+        flex-direction: column;
+      }
+      
+      .request-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="friends-container">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="/static/Logo.jpg" alt="Chess Platform" class="logo-image">
+          <span>Chess Platform</span>
+        </div>
+        <p class="sidebar-subtitle">Professional Chess</p>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Play</div>
+          <div class="nav-items">
+            <a href="/lobby/" class="nav-item" data-route="/lobby">
+              <span class="nav-icon">🏠</span>
+              <span>Lobby</span>
+            </a>
+            <a href="#" class="nav-item" data-route="/game/new">
+              <span class="nav-icon">⚡</span>
+              <span>Quick Play</span>
+            </a>
+            <a href="/puzzles/" class="nav-item" data-route="/puzzles">
+              <span class="nav-icon">🧩</span>
+              <span>Puzzles</span>
+            </a>
+          </div>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Account</div>
+          <div class="nav-items">
+            <a href="/profile/" class="nav-item" data-route="/profile">
+              <span class="nav-icon">👤</span>
+              <span>Profile</span>
+            </a>
+            <a href="/friends/" class="nav-item active" data-route="/friends">
+              <span class="nav-icon">👥</span>
+              <span>Friends</span>
+            </a>
+            <a href="/settings/" class="nav-item" data-route="/settings">
+              <span class="nav-icon">⚙️</span>
+              <span>Settings</span>
+            </a>
+            <a href="#" class="nav-item" id="logout-btn">
+              <span class="nav-icon">🚪</span>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile" data-route="/profile">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-rating">
+              Rating: <span class="rating-badge" id="userRating">----</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="friends-header">
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+        <div class="header-left">
+          <div>
+            <div class="header-title">Friends</div>
+            <div class="header-subtitle">Connect, challenge, and compete</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="search-btn" id="headerAddFriend">
+            <span>➕</span> Add Friend
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Area -->
+      <div class="content">
+        <div class="content-grid">
+          <div class="content-main">
+            <!-- Your Unique ID Section -->
+            <section class="section-card profile-id-section" id="profileIdSection">
+              <h2 class="section-title">
+                <span class="section-icon">🆔</span>
+                Your Unique ID
+              </h2>
+              <p style="color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: var(--space-md);">
+                Share this ID with friends so they can add you
+              </p>
+              <div class="unique-id-container">
+                <div class="unique-id-value" id="uniqueIdValue">Loading...</div>
+              </div>
+              <div class="profile-id-actions">
+                <button class="copy-btn" id="copyIdBtn">
+                  <span>📋</span> Copy ID
+                </button>
+                <button class="qr-btn" id="showQrBtn">
+                  <span>📱</span> Show QR Code
+                </button>
+              </div>
+            </section>
+
+            <!-- Add Friend Section -->
+            <section class="section-card" id="addFriendSection">
+              <h2 class="section-title">
+                <span class="section-icon">➕</span>
+                Add Friend
+              </h2>
+              
+              <div class="add-friend-tabs">
+                <button class="tab-btn active" data-tab="username">By Username</button>
+                <button class="tab-btn" data-tab="uniqueid">By Unique ID</button>
+              </div>
+              
+              <!-- By Username Tab -->
+              <div class="tab-content active" id="tab-username">
+                <form class="search-form" id="usernameSearchForm">
+                  <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                      type="text" 
+                      class="search-input" 
+                      id="usernameInput" 
+                      placeholder="Enter username to search..." 
+                      autocomplete="off"
+                    >
+                  </div>
+                  <button type="submit" class="search-btn" id="usernameSearchBtn">Search</button>
+                </form>
+                <div class="search-results" id="usernameSearchResults"></div>
+              </div>
+              
+              <!-- By Unique ID Tab -->
+              <div class="tab-content" id="tab-uniqueid">
+                <form class="search-form" id="idSearchForm">
+                  <div class="search-input-wrapper">
+                    <span class="search-icon">🔢</span>
+                    <input 
+                      type="text" 
+                      class="search-input" 
+                      id="uniqueIdInput" 
+                      placeholder="Enter unique ID (e.g., ABC123XY)" 
+                      autocomplete="off"
+                    >
+                  </div>
+                  <button type="submit" class="search-btn" id="idSearchBtn">Find User</button>
+                </form>
+                <div class="search-results" id="idSearchResults"></div>
+              </div>
+            </section>
+
+            <!-- Pending Requests Section -->
+            <section class="section-card requests-section" id="pendingRequestsSection" style="display: none;">
+              <h2 class="section-title">
+                <span class="section-icon">📬</span>
+                Friend Requests
+                <span class="filter-count" id="requestCount">0</span>
+              </h2>
+              <div id="pendingRequestsList">
+                <!-- Pending requests will be loaded here -->
+              </div>
+            </section>
+
+            <!-- Friends List Section -->
+            <section class="section-card friends-list-section">
+              <h2 class="section-title">
+                <span class="section-icon">👥</span>
+                My Friends
+              </h2>
+              
+              <div class="friends-filter">
+                <button class="filter-btn active" data-filter="all">
+                  All<span class="filter-count" id="allCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="online">
+                  Online<span class="filter-count" id="onlineCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="playing">
+                  Playing<span class="filter-count" id="playingCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="offline">
+                  Offline<span class="filter-count" id="offlineCount">0</span>
+                </button>
+              </div>
+              
+              <div class="friends-search">
+                <div class="search-input-wrapper">
+                  <span class="search-icon">🔍</span>
+                  <input 
+                    type="text" 
+                    class="friends-search-input" 
+                    id="friendsFilterInput" 
+                    placeholder="Search friends..."
+                  >
+                </div>
+              </div>
+
+              <div id="friendsList">
+                <!-- Friends will be loaded here -->
+                <div class="skeleton-card skeleton">
+                  <div class="skeleton-avatar skeleton"></div>
+                  <div class="skeleton-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line skeleton"></div>
+                  </div>
+                </div>
+                <div class="skeleton-card skeleton">
+                  <div class="skeleton-avatar skeleton"></div>
+                  <div class="skeleton-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line skeleton"></div>
+                  </div>
+                </div>
+                <div class="skeleton-card skeleton">
+                  <div class="skeleton-avatar skeleton"></div>
+                  <div class="skeleton-content">
+                    <div class="skeleton-line skeleton"></div>
+                    <div class="skeleton-line skeleton"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="content-sidebar">
+            <!-- Sent Requests Section -->
+            <section class="section-card" id="sentRequestsSection" style="display: none;">
+              <h2 class="section-title">
+                <span class="section-icon">📤</span>
+                Sent Requests
+                <span class="filter-count" id="sentCount">0</span>
+              </h2>
+              <div id="sentRequestsList">
+                <!-- Sent requests will be loaded here -->
+              </div>
+            </section>
+
+            <!-- Online Players Quick View -->
+            <section class="section-card">
+              <h2 class="section-title">
+                <span class="section-icon">🟢</span>
+                Online Friends
+              </h2>
+              <div id="onlineFriendsQuick">
+                <!-- Quick view of online friends -->
+                <div class="empty-state" style="padding: var(--space-lg);">
+                  <div class="empty-icon" style="font-size: 2rem;">👥</div>
+                  <div class="empty-description">No friends online</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Your QR Code</h3>
+        <button class="modal-close" id="closeQrModal">✕</button>
+      </div>
+      <div class="qr-container" id="qrContainer">
+        <!-- QR code will be generated here -->
+      </div>
+      <div class="qr-info">
+        <p>Scan this code to add me as a friend</p>
+        <div class="qr-id" id="qrIdDisplay">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="../../utils/api.js"></script>
+  <script src="friends.js"></script>
+</body>
+</html>

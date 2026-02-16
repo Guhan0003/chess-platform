@@ -21,6 +21,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
 import games.routing
+import accounts.routing
 
 # Get the Django ASGI application early
 django_asgi_app = get_asgi_application()
@@ -28,6 +29,6 @@ django_asgi_app = get_asgi_application()
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": URLRouter(
-        games.routing.websocket_urlpatterns
+        games.routing.websocket_urlpatterns + accounts.routing.websocket_urlpatterns
     ),
 })

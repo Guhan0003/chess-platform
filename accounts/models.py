@@ -4,6 +4,26 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from PIL import Image
 import os
+import uuid
+import string
+import random
+
+
+def generate_unique_id():
+    """Generate a unique 8-character ID for friend sharing"""
+    chars = string.ascii_uppercase + string.digits
+    # Remove easily confused characters
+    chars = chars.replace('0', '').replace('O', '').replace('I', '').replace('1', '').replace('L', '')
+    while True:
+        code = ''.join(random.choices(chars, k=8))
+        formatted_code = f"{code[:4]}-{code[4:]}"
+        # Check if this code already exists
+        from django.db import connection
+        if connection.vendor:  # Database is available
+            if not CustomUser.objects.filter(unique_id=formatted_code).exists():
+                return formatted_code
+        else:
+            return formatted_code
 
 
 class CustomUser(AbstractUser):
@@ -14,6 +34,9 @@ class CustomUser(AbstractUser):
     bio = models.TextField(max_length=500, blank=True, null=True)
     country = models.CharField(max_length=2, blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    
+    # Unique Friend ID for easy sharing
+    unique_id = models.CharField(max_length=9, unique=True, null=True, blank=True)
     
     # Chess Ratings (different time controls)
     blitz_rating = models.IntegerField(default=1200, validators=[MinValueValidator(100), MaxValueValidator(3500)])
@@ -78,6 +101,7 @@ class CustomUser(AbstractUser):
             models.Index(fields=['classical_rating']),
             models.Index(fields=['is_online']),
             models.Index(fields=['last_activity']),
+            models.Index(fields=['unique_id']),
         ]
 
     def __str__(self):
@@ -316,3 +340,167 @@ class UserSettings(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Settings"
+
+
+class Friendship(models.Model):
+    """
+    Represents a bidirectional friendship between two users.
+    When a friendship is created, it represents both directions (user1 <-> user2).
+    """
+    
+    user1 = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='friendships_as_user1'
+    )
+    user2 = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='friendships_as_user2'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'friendships'
+        unique_together = ['user1', 'user2']
+        indexes = [
+            models.Index(fields=['user1', 'user2']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user1.username} <-> {self.user2.username}"
+    
+    def save(self, *args, **kwargs):
+        # Always store with lower ID first for consistency
+        if self.user1_id > self.user2_id:
+            self.user1_id, self.user2_id = self.user2_id, self.user1_id
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def are_friends(cls, user1, user2):
+        """Check if two users are friends"""
+        if user1.id > user2.id:
+            user1, user2 = user2, user1
+        return cls.objects.filter(user1=user1, user2=user2).exists()
+    
+    @classmethod
+    def get_friends(cls, user):
+        """Get all friends of a user"""
+        from django.db.models import Q
+        friend_ids_1 = cls.objects.filter(user1=user).values_list('user2_id', flat=True)
+        friend_ids_2 = cls.objects.filter(user2=user).values_list('user1_id', flat=True)
+        all_friend_ids = list(friend_ids_1) + list(friend_ids_2)
+        return CustomUser.objects.filter(id__in=all_friend_ids)
+    
+    @classmethod
+    def create_friendship(cls, user1, user2):
+        """Create a friendship between two users"""
+        if user1.id == user2.id:
+            raise ValueError("Cannot be friends with yourself")
+        if cls.are_friends(user1, user2):
+            raise ValueError("Already friends")
+        return cls.objects.create(user1=user1, user2=user2)
+    
+    @classmethod
+    def remove_friendship(cls, user1, user2):
+        """Remove friendship between two users"""
+        if user1.id > user2.id:
+            user1, user2 = user2, user1
+        return cls.objects.filter(user1=user1, user2=user2).delete()
+
+
+class FriendRequest(models.Model):
+    """
+    Represents a friend request from one user to another.
+    """
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    from_user = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='sent_friend_requests'
+    )
+    to_user = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='received_friend_requests'
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    message = models.CharField(max_length=200, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'friend_requests'
+        indexes = [
+            models.Index(fields=['from_user', 'status']),
+            models.Index(fields=['to_user', 'status']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
+    
+    def accept(self):
+        """Accept the friend request and create friendship"""
+        if self.status != 'pending':
+            raise ValueError(f"Cannot accept request with status: {self.status}")
+        
+        # Create the friendship
+        Friendship.create_friendship(self.from_user, self.to_user)
+        
+        # Update request status
+        self.status = 'accepted'
+        self.save()
+        
+        return True
+    
+    def reject(self):
+        """Reject the friend request"""
+        if self.status != 'pending':
+            raise ValueError(f"Cannot reject request with status: {self.status}")
+        
+        self.status = 'rejected'
+        self.save()
+        
+        return True
+    
+    def cancel(self):
+        """Cancel the friend request (by sender)"""
+        if self.status != 'pending':
+            raise ValueError(f"Cannot cancel request with status: {self.status}")
+        
+        self.status = 'cancelled'
+        self.save()
+        
+        return True
+    
+    @classmethod
+    def get_pending_for_user(cls, user):
+        """Get all pending requests for a user (received)"""
+        return cls.objects.filter(to_user=user, status='pending')
+    
+    @classmethod
+    def get_sent_by_user(cls, user):
+        """Get all pending requests sent by a user"""
+        return cls.objects.filter(from_user=user, status='pending')
+    
+    @classmethod
+    def has_pending_request(cls, from_user, to_user):
+        """Check if there's a pending request between users"""
+        return cls.objects.filter(
+            from_user=from_user, 
+            to_user=to_user, 
+            status='pending'
+        ).exists() or cls.objects.filter(
+            from_user=to_user, 
+            to_user=from_user, 
+            status='pending'
+        ).exists()

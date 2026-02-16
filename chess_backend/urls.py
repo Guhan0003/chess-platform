@@ -22,6 +22,15 @@ def serve_frontend_static(request, path=""):
     else:
         raise Http404("File not found")
 
+def serve_static_file(request, path=""):
+    """Custom view to serve static files from STATICFILES_DIRS"""
+    # Check each directory in STATICFILES_DIRS
+    for static_dir in settings.STATICFILES_DIRS:
+        file_path = os.path.join(static_dir, path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(open(file_path, 'rb'))
+    raise Http404(f"Static file not found: {path}")
+
 def serve_professional_frontend(request, page_path=""):
     """Serve professional frontend pages"""
     # Map routes to actual files
@@ -34,7 +43,8 @@ def serve_professional_frontend(request, page_path=""):
         'forgot-password': 'src/pages/auth/forgot-password.html',
         'profile': 'src/pages/profile/profile.html',
         'settings': 'src/pages/settings/settings.html',
-        'puzzles': 'src/pages/puzzles/puzzles.html'
+        'puzzles': 'src/pages/puzzles/puzzles.html',
+        'friends': 'src/pages/friends/friends.html'
     }
     
     # Get the file path
@@ -79,6 +89,7 @@ urlpatterns = [
     path('profile/', serve_professional_frontend, {'page_path': 'profile'}, name='profile'),
     path('settings/', serve_professional_frontend, {'page_path': 'settings'}, name='settings'),
     path('puzzles/', serve_professional_frontend, {'page_path': 'puzzles'}, name='puzzles'),
+    path('friends/', serve_professional_frontend, {'page_path': 'friends'}, name='friends'),
     
     # Settings page resources
     path('settings/settings.js', lambda request: serve_frontend_static(request, 'src/pages/settings/settings.js')),
@@ -87,6 +98,10 @@ urlpatterns = [
     # Profile page resources
     path('profile/profile.js', lambda request: serve_frontend_static(request, 'src/pages/profile/profile.js')),
     path('src/pages/profile/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/pages/profile/{filename}')),
+    
+    # Friends page resources
+    path('friends/friends.js', lambda request: serve_frontend_static(request, 'src/pages/friends/friends.js')),
+    path('src/pages/friends/<str:filename>', lambda request, filename: serve_frontend_static(request, f'src/pages/friends/{filename}')),
     
     # Test WebSocket connection
     path('test_websocket_connection.html', lambda request: serve_frontend_static(request, '../test_websocket_connection.html')),
@@ -97,5 +112,8 @@ urlpatterns = [
 
 # Serve static and media files during development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Use custom static file handler for STATICFILES_DIRS
+    urlpatterns += [
+        path('static/<path:path>', serve_static_file, name='serve_static'),
+    ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

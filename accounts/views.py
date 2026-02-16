@@ -89,6 +89,12 @@ class UserProfileView(APIView):
         """Get comprehensive user profile with chess-specific data"""
         user = request.user
         
+        # Ensure user has a unique_id
+        unique_id = user.unique_id
+        if not unique_id:
+            from .friends_views import generate_unique_id_for_user
+            unique_id = generate_unique_id_for_user(user)
+        
         # Get user settings if they exist
         try:
             settings = user.settings
@@ -131,10 +137,14 @@ class UserProfileView(APIView):
             "last_name": user.last_name,
             "date_joined": user.date_joined,
             
+            # Unique ID for friend sharing
+            "unique_id": unique_id,
+            
             # Chess-specific profile data
             "bio": user.bio,
             "country": user.country,
             "avatar": user.avatar.url if user.avatar else None,
+            "avatar_url": user.avatar.url if user.avatar else None,  # Alias for frontend
             "is_online": user.is_online,
             "last_activity": user.last_activity,
             "preferred_time_control": user.preferred_time_control,

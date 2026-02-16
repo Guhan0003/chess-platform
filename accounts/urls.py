@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import settings_views
 from . import achievement_views
+from . import friends_views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 app_name = 'accounts'
@@ -51,6 +52,19 @@ urlpatterns = [
     path('achievements/check/', achievement_views.check_and_unlock_achievements, name='check-achievements'),  # Check & unlock
     path('achievements/progress/', achievement_views.get_achievement_progress, name='achievement-progress'),  # Progress tracking
     path('achievements/initialize/', achievement_views.initialize_default_achievements, name='initialize-achievements'),  # Admin only
+    
+    # Friends endpoints
+    path('friends/', friends_views.get_friends_list, name='friends-list'),  # Get friends list
+    path('friends/status/', friends_views.get_friends_status, name='friends-status'),  # Get friends status (for polling)
+    path('friends/request/', friends_views.send_friend_request, name='send-friend-request'),  # Send friend request
+    path('friends/requests/pending/', friends_views.get_pending_requests, name='pending-requests'),  # Get pending requests
+    path('friends/requests/sent/', friends_views.get_sent_requests, name='sent-requests'),  # Get sent requests
+    path('friends/request/<int:request_id>/accept/', friends_views.accept_friend_request, name='accept-request'),  # Accept request
+    path('friends/request/<int:request_id>/reject/', friends_views.reject_friend_request, name='reject-request'),  # Reject request
+    path('friends/request/<int:request_id>/cancel/', friends_views.cancel_friend_request, name='cancel-request'),  # Cancel request
+    path('friends/<int:friend_id>/remove/', friends_views.remove_friend, name='remove-friend'),  # Remove friend
+    path('friends/find-by-id/', friends_views.find_user_by_unique_id, name='find-by-id'),  # Find user by unique ID
+    path('friends/online/', friends_views.get_online_players, name='online-players'),  # Get online players
 ]
 
 # URL Pattern Examples for Frontend Integration:
