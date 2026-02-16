@@ -564,8 +564,8 @@ async function searchByUsername() {
   try {
     const response = await api.request(`/auth/search/?q=${encodeURIComponent(query)}&limit=10`);
     
-    if (response.ok && response.data) {
-      displaySearchResults(response.data, resultsContainer);
+    if (response.ok && response.data && response.data.results) {
+      displaySearchResults(response.data.results, resultsContainer);
     } else {
       resultsContainer.innerHTML = `
         <div class="empty-state" style="padding: var(--space-lg);">
@@ -644,7 +644,7 @@ function displaySearchResults(users, container) {
     
     let buttonHtml = '';
     if (isSelf) {
-      buttonHtml = `<span class="add-friend-btn" style="background: var(--color-text-muted); cursor: default;">You</span>`;
+      buttonHtml = `<span class="add-friend-btn self">You</span>`;
     } else if (isFriend) {
       buttonHtml = `<span class="add-friend-btn friends">Friends ✓</span>`;
     } else if (hasPendingRequest) {

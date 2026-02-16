@@ -621,6 +621,7 @@
 
     .add-friend-btn:hover {
       background: var(--color-accent-light);
+      transform: translateY(-1px);
     }
 
     .add-friend-btn:disabled {
@@ -629,11 +630,42 @@
     }
 
     .add-friend-btn.pending {
-      background: var(--color-warning);
+      background: rgba(234, 179, 8, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      cursor: default;
     }
 
     .add-friend-btn.friends {
-      background: var(--color-success);
+      background: rgba(118, 150, 86, 0.2);
+      color: var(--color-accent-primary);
+      border: 1px solid rgba(118, 150, 86, 0.3);
+      cursor: default;
+    }
+
+    .add-friend-btn.self {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: default;
+    }
+
+    .accept-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-accent-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      white-space: nowrap;
+    }
+
+    .accept-btn:hover {
+      background: var(--color-accent-light);
+      transform: translateY(-1px);
     }
 
     /* Pending Requests Section */
