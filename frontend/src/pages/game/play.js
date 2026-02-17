@@ -49,12 +49,66 @@ class ChessGameController {
     // Captured pieces tracking
     this.capturedPieces = { white: [], black: [] };
     
+    // Theme settings
+    this.boardTheme = 'classic';
+    this.pieceSet = 'unicode';
+    this.loadThemeSettings();
+    
     // Bind methods
     this.handleSquareClick = this.handleSquareClick.bind(this);
     this.updateTimerDisplay = this.updateTimerDisplay.bind(this);
     this.handleWebSocketMove = this.handleWebSocketMove.bind(this);
     this.handleWebSocketTimer = this.handleWebSocketTimer.bind(this);
     this.handleWebSocketConnection = this.handleWebSocketConnection.bind(this);
+  }
+  
+  /**
+   * Load theme settings from localStorage
+   */
+  loadThemeSettings() {
+    this.boardTheme = localStorage.getItem('chess_board_theme') || 'classic';
+    this.pieceSet = localStorage.getItem('chess_piece_set') || 'unicode';
+    
+    // Apply board theme CSS variables immediately
+    this.applyBoardTheme();
+  }
+  
+  /**
+   * Apply board theme CSS variables
+   */
+  applyBoardTheme() {
+    const themes = {
+      'classic': { light: '#f0d9b5', dark: '#769656' },
+      'blue': { light: '#dee3e6', dark: '#5d8aa8' },
+      'brown': { light: '#f0dab5', dark: '#b58863' },
+      'gray': { light: '#ffffff', dark: '#9e9e9e' },
+      'purple': { light: '#e8e0f0', dark: '#7c4daf' },
+      'tournament': { light: '#eeeed2', dark: '#769656' },
+      'wood': { light: '#deb887', dark: '#8b4513' },
+      'marble': { light: '#f5f5f5', dark: '#505050' }
+    };
+    
+    const theme = themes[this.boardTheme] || themes['classic'];
+    const root = document.documentElement;
+    root.style.setProperty('--board-light-color', theme.light);
+    root.style.setProperty('--board-dark-color', theme.dark);
+  }
+  
+  /**
+   * Get the piece set configuration
+   */
+  getPieceSetConfig() {
+    const pieceSets = {
+      'unicode': { folder: null },
+      'classic': { folder: 'classic' },
+      'modern': { folder: 'modern' },
+      'staunton': { folder: 'staunton' },
+      'neo': { folder: 'neo' },
+      'alpha': { folder: 'alpha' },
+      'cburnett': { folder: 'cburnett' }
+    };
+    return pieceSets[this.pieceSet] || pieceSets['unicode'];
+  }
   }
 
   /**
@@ -850,8 +904,37 @@ class ChessGameController {
     const pieceEl = document.createElement('div');
     const isWhitePiece = piece === piece.toUpperCase();
     pieceEl.className = `chess-piece ${isWhitePiece ? 'white-piece' : 'black-piece'}`;
-    pieceEl.textContent = this.getPieceUnicode(piece);
     pieceEl.dataset.piece = piece;
+    
+    const pieceSetConfig = this.getPieceSetConfig();
+    
+    if (pieceSetConfig.folder) {
+      // Use image piece
+      const color = isWhitePiece ? 'w' : 'b';
+      const pieceLetter = piece.toUpperCase();
+      const imageUrl = `/static/images/pieces/${pieceSetConfig.folder}/${color}${pieceLetter}.png`;
+      
+      pieceEl.classList.add('piece-image');
+      pieceEl.style.backgroundImage = `url('${imageUrl}')`;
+      pieceEl.style.backgroundSize = 'contain';
+      pieceEl.style.backgroundRepeat = 'no-repeat';
+      pieceEl.style.backgroundPosition = 'center';
+      
+      // Fallback to unicode on image error
+      const img = new Image();
+      img.onerror = () => {
+        pieceEl.classList.remove('piece-image');
+        pieceEl.classList.add('piece-unicode');
+        pieceEl.style.backgroundImage = '';
+        pieceEl.textContent = this.getPieceUnicode(piece);
+      };
+      img.src = imageUrl;
+    } else {
+      // Use Unicode piece
+      pieceEl.classList.add('piece-unicode');
+      pieceEl.textContent = this.getPieceUnicode(piece);
+    }
+    
     return pieceEl;
   }
 
@@ -1938,7 +2021,7 @@ class ChessGameController {
     const piecePlacement = fenParts[0];
     const rows = piecePlacement.split('/');
     
-    // Build position map
+    // Build position map (using FEN character directly)
     const position = {};
     const files = 'abcdefgh';
     
@@ -1952,26 +2035,30 @@ class ChessGameController {
         } else {
           const file = files[fileIndex];
           const square = file + rank;
-          position[square] = this.fenCharToPiece(char);
+          position[square] = char; // Store FEN char directly
           fileIndex++;
         }
       }
     });
     
     // Update board display
-    const squares = chessBoard.querySelectorAll('.square');
+    const squares = chessBoard.querySelectorAll('.chess-square');
     squares.forEach(square => {
       const squareId = square.dataset.square;
       const piece = position[squareId];
-      const pieceEl = square.querySelector('.piece');
+      let pieceEl = square.querySelector('.chess-piece');
       
-      if (pieceEl) {
-        if (piece) {
-          pieceEl.textContent = this.getPieceSymbol(piece);
-          pieceEl.style.display = '';
-        } else {
-          pieceEl.style.display = 'none';
+      if (piece) {
+        // Remove existing piece if any
+        if (pieceEl) {
+          pieceEl.remove();
         }
+        // Create new piece element
+        const newPieceEl = this.createPieceElement(piece);
+        square.appendChild(newPieceEl);
+      } else if (pieceEl) {
+        // Hide or remove piece if square is empty
+        pieceEl.remove();
       }
     });
     

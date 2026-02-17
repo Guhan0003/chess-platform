@@ -300,6 +300,147 @@
       color: var(--color-text-muted);
     }
 
+    /* Board Theme Grid */
+    .theme-grid, .piece-set-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--space-md);
+      width: 100%;
+    }
+
+    .theme-option, .piece-set-option {
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .theme-option:hover, .piece-set-option:hover {
+      border-color: var(--color-accent-primary);
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .theme-option.selected, .piece-set-option.selected {
+      border-color: var(--color-accent-primary);
+      background: rgba(118, 150, 86, 0.15);
+      box-shadow: 0 0 0 1px var(--color-accent-primary);
+    }
+
+    .theme-option .board-mini-preview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      width: 60px;
+      height: 60px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .board-mini-preview .sq {
+      width: 100%;
+      height: 100%;
+    }
+
+    .theme-option .theme-label,
+    .piece-set-option .set-label {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-primary);
+      margin-top: var(--space-xs);
+    }
+
+    .piece-set-option .piece-preview {
+      display: flex;
+      gap: 4px;
+      font-size: 20px;
+      min-height: 32px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .piece-set-option .piece-preview img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .piece-set-option .piece-preview .unicode-white {
+      color: #ffffff;
+      text-shadow: 0 0 2px #000, 1px 1px 0 #000;
+    }
+
+    .piece-set-option .piece-preview .unicode-black {
+      color: #1a1a1a;
+    }
+
+    /* Preview Board Container */
+    .preview-board-container {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .preview-chess-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      width: 200px;
+      height: 200px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .preview-chess-board .preview-square {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      position: relative;
+    }
+
+    .preview-chess-board .preview-square.light {
+      background-color: var(--board-light-color, #f0d9b5);
+    }
+
+    .preview-chess-board .preview-square.dark {
+      background-color: var(--board-dark-color, #769656);
+    }
+
+    .preview-chess-board .preview-piece {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .preview-chess-board .preview-piece.white {
+      color: #ffffff;
+      text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    }
+
+    .preview-chess-board .preview-piece.black {
+      color: #1a1a1a;
+    }
+
+    .preview-chess-board .preview-piece.piece-img {
+      width: 36px;
+      height: 36px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
     /* Action Buttons - Matching Chess Theme */
     .settings-actions {
       display: flex;
@@ -684,34 +825,40 @@
         <span class="section-title-icon">🎨</span>
         Board Appearance
       </h2>
-      <p class="section-description">Customize the look of your chessboard</p>
+      <p class="section-description">Customize the look of your chessboard and pieces</p>
 
-      <div class="setting-item">
-        <div class="setting-info">
+      <!-- Board Theme Selection -->
+      <div class="setting-item" style="flex-direction: column; align-items: flex-start;">
+        <div class="setting-info" style="margin-bottom: var(--space-md);">
           <label class="setting-label">Board Theme</label>
-          <p class="setting-description">Choose your preferred board style</p>
+          <p class="setting-description">Choose your preferred board colors</p>
         </div>
-        <div class="setting-control">
-          <select id="board_theme" class="select-dropdown">
-            <option value="classic">Classic</option>
-            <option value="modern">Modern</option>
-            <option value="wood">Wood</option>
-            <option value="marble">Marble</option>
-          </select>
+        <div class="theme-grid" id="boardThemeGrid">
+          <!-- Board themes will be populated by JavaScript -->
         </div>
       </div>
 
-      <div class="setting-item">
-        <div class="setting-info">
+      <!-- Piece Set Selection -->
+      <div class="setting-item" style="flex-direction: column; align-items: flex-start; margin-top: var(--space-lg);">
+        <div class="setting-info" style="margin-bottom: var(--space-md);">
           <label class="setting-label">Piece Set</label>
-          <p class="setting-description">Choose your piece design</p>
+          <p class="setting-description">Choose your piece design style</p>
         </div>
-        <div class="setting-control">
-          <select id="piece_set" class="select-dropdown">
-            <option value="classic">Classic</option>
-            <option value="modern">Modern</option>
-            <option value="staunton">Staunton</option>
-          </select>
+        <div class="piece-set-grid" id="pieceSetGrid">
+          <!-- Piece sets will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Live Preview Board -->
+      <div class="setting-item" style="flex-direction: column; align-items: flex-start; margin-top: var(--space-lg);">
+        <div class="setting-info" style="margin-bottom: var(--space-md);">
+          <label class="setting-label">Preview</label>
+          <p class="setting-description">See how your board will look</p>
+        </div>
+        <div class="preview-board-container" id="previewBoardContainer">
+          <div class="preview-chess-board" id="previewBoard">
+            <!-- 4x4 preview board will be populated by JavaScript -->
+          </div>
         </div>
       </div>
     </div>
