@@ -23,6 +23,8 @@ urlpatterns = [
     # ================== GAME SESSION GUARD ENDPOINTS ==================
     path("active-constraints/", views.check_active_game_constraints, name="check-active-constraints"),
     path("<int:game_id>/resign/", views.resign_game, name="resign-game"),
+    path("<int:game_id>/draw-offer/", views.offer_draw, name="offer-draw"),
+    path("<int:game_id>/draw-respond/", views.respond_draw, name="respond-draw"),
     # ================== END GAME SESSION GUARD ENDPOINTS ==================
     
     # ================== RATING SYSTEM ENDPOINTS ==================

@@ -134,6 +134,21 @@
                   </div>
                 </div>
               </div>
+              <!-- Move Navigation Controls -->
+              <div class="move-navigation">
+                <button class="nav-btn" id="moveFirst" title="First move">
+                  <span>⏮</span>
+                </button>
+                <button class="nav-btn" id="movePrev" title="Previous move">
+                  <span>◀</span>
+                </button>
+                <button class="nav-btn" id="moveNext" title="Next move">
+                  <span>▶</span>
+                </button>
+                <button class="nav-btn" id="moveLast" title="Current position">
+                  <span>⏭</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -162,10 +177,22 @@
               </h3>
             </div>
             <div class="panel-content">
-              <div class="captured-pieces" id="capturedPieces">
-                <!-- Captured pieces will be shown here -->
-                <div style="text-align: center; color: var(--color-text-muted); font-size: var(--font-size-sm);">
-                  No captures yet
+              <div class="captured-pieces-container" id="capturedPieces">
+                <!-- White's captures (black pieces taken) -->
+                <div class="captured-group">
+                  <div class="captured-label">White captured:</div>
+                  <div class="captured-row" id="whiteCaptured">
+                    <span class="no-captures">—</span>
+                  </div>
+                  <div class="captured-advantage" id="whiteAdvantage"></div>
+                </div>
+                <!-- Black's captures (white pieces taken) -->
+                <div class="captured-group">
+                  <div class="captured-label">Black captured:</div>
+                  <div class="captured-row" id="blackCaptured">
+                    <span class="no-captures">—</span>
+                  </div>
+                  <div class="captured-advantage" id="blackAdvantage"></div>
                 </div>
               </div>
             </div>
@@ -229,6 +256,54 @@
   </div>
 
   
+  <!-- Resign Confirmation Modal -->
+  <div class="modal-overlay" id="resignModal" style="display: none;">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h2>🏳️ Resign Game?</h2>
+      </div>
+      <div class="modal-body">
+        <p class="modal-text">Are you sure you want to resign? This will end the game and count as a loss.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="resignCancelBtn">Cancel</button>
+        <button class="btn btn-danger" id="resignConfirmBtn">Yes, Resign</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Draw Offer Modal -->
+  <div class="modal-overlay" id="drawOfferModal" style="display: none;">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h2>🤝 Offer Draw?</h2>
+      </div>
+      <div class="modal-body">
+        <p class="modal-text">Would you like to offer a draw to your opponent? They can accept or decline.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="drawOfferCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="drawOfferConfirmBtn">Offer Draw</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Draw Received Modal -->
+  <div class="modal-overlay" id="drawReceivedModal" style="display: none;">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h2>🤝 Draw Offered</h2>
+      </div>
+      <div class="modal-body">
+        <p class="modal-text">Your opponent has offered a draw. Do you accept?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="drawDeclineBtn">Decline</button>
+        <button class="btn btn-primary" id="drawAcceptBtn">Accept Draw</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Error Toast -->
   <div class="toast-container" id="toastContainer"></div>
 

@@ -222,6 +222,16 @@ class Game(models.Model):
         blank=True,
         related_name='won_games'
     )
+    
+    # Draw offer tracking
+    draw_offered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='draw_offers_made',
+        help_text="User who offered a draw (null if no pending offer)"
+    )
 
     # Timers
     time_control = models.CharField(max_length=20, default='rapid', help_text="Time control format")

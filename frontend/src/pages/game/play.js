@@ -37,6 +37,18 @@ class ChessGameController {
     this.MAX_COMPUTER_MOVE_RETRIES = 3;
     this.lastComputerMoveAttempt = 0; // Timestamp to prevent rapid duplicate calls
     
+    // Move navigation state
+    this.viewingMoveIndex = -1; // -1 means viewing current position
+    this.isViewingHistory = false;
+    
+    // Draw offer state
+    this.drawOfferPending = false;
+    this.drawOfferSentByMe = false;
+    this.drawOfferShownForId = null; // Track which draw offer was already shown
+    
+    // Captured pieces tracking
+    this.capturedPieces = { white: [], black: [] };
+    
     // Bind methods
     this.handleSquareClick = this.handleSquareClick.bind(this);
     this.updateTimerDisplay = this.updateTimerDisplay.bind(this);
@@ -512,6 +524,9 @@ class ChessGameController {
         this.updateGameDisplay();
         this.renderBoard();
         
+        // Check for incoming draw offers
+        this.checkForDrawOffer();
+        
         // Start timer for active games
         if (this.gameData.status === 'active') {
           // For active games, just start polling the existing timer
@@ -528,6 +543,19 @@ class ChessGameController {
       this.api.showError('Failed to load game data');
     } finally {
       this.showBoardLoading(false);
+    }
+  }
+
+  checkForDrawOffer() {
+    // Check if there's an active draw offer from opponent
+    const currentUsername = this.currentUser?.username;
+    const drawOfferedBy = this.gameData?.draw_offered_by_username;
+    
+    if (drawOfferedBy && drawOfferedBy !== currentUsername && !this.drawOfferShownForId) {
+      // Show draw offer received modal
+      this.drawOfferPending = true;
+      this.drawOfferShownForId = this.gameData.id + '_' + drawOfferedBy;
+      this.showDrawReceivedModal();
     }
   }
 
@@ -621,6 +649,8 @@ class ChessGameController {
           No moves yet. Game starting...
         </div>
       `;
+      this.updateNavigationButtons();
+      this.updateCapturedPiecesDisplay();
       return;
     }
     
@@ -630,11 +660,15 @@ class ChessGameController {
       const whiteMove = moves[i];
       const blackMove = moves[i + 1];
       
+      // Determine if this move is currently being viewed
+      const whiteIsCurrent = this.viewingMoveIndex === i;
+      const blackIsCurrent = this.viewingMoveIndex === i + 1;
+      
       html += `
         <div class="move-pair">
           <span class="move-number">${moveNumber}.</span>
-          <span class="move-white" data-move-index="${i}">${whiteMove.notation}</span>
-          <span class="move-black" data-move-index="${i + 1}">
+          <span class="move-white${whiteIsCurrent ? ' move-current' : ''}" data-move-index="${i}">${whiteMove.notation}</span>
+          <span class="move-black${blackIsCurrent ? ' move-current' : ''}" data-move-index="${i + 1}">
             ${blackMove ? blackMove.notation : ''}
           </span>
         </div>
@@ -643,9 +677,20 @@ class ChessGameController {
     
     moveListEl.innerHTML = html;
     
-    // Scroll to bottom
-    const historyEl = document.getElementById('moveHistory');
-    if (historyEl) historyEl.scrollTop = historyEl.scrollHeight;
+    // Update viewing state if we're at the latest position
+    if (!this.isViewingHistory) {
+      this.viewingMoveIndex = moves.length - 1;
+    }
+    
+    // Scroll to bottom (only if viewing current position)
+    if (!this.isViewingHistory) {
+      const historyEl = document.getElementById('moveHistory');
+      if (historyEl) historyEl.scrollTop = historyEl.scrollHeight;
+    }
+    
+    // Update navigation buttons and captured pieces
+    this.updateNavigationButtons();
+    this.updateCapturedPiecesDisplay();
   }
 
   updateGameStatus() {
@@ -666,7 +711,7 @@ class ChessGameController {
       const currentTurn = this.getCurrentTurn();
       statusMessageEl.textContent = 'Game in progress';
       statusDetailsEl.textContent = `${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)} to move`;
-    } else if (['finished', 'checkmate', 'stalemate'].includes(status)) {
+    } else if (['finished', 'checkmate', 'stalemate', 'resigned', 'timeout', 'draw', 'abandoned'].includes(status)) {
       this.stopTimerUpdates();
       this.handleGameEndStatus(status);
     }
@@ -676,17 +721,44 @@ class ChessGameController {
     const statusMessageEl = document.getElementById('statusMessage');
     const statusDetailsEl = document.getElementById('statusDetails');
     
-    if (status === 'checkmate' || (status === 'finished' && this.gameData.winner)) {
-      const winnerColor = this.gameData.winner === this.gameData.white_player ? 'White' : 'Black';
+    const termination = this.gameData.termination;
+    const winnerColor = this.gameData.winner === this.gameData.white_player ? 'White' : 'Black';
+    const loserColor = winnerColor === 'White' ? 'Black' : 'White';
+    
+    // Check termination reason first for accurate messages
+    if (termination === 'resignation') {
+      statusMessageEl.textContent = `${winnerColor} wins by resignation!`;
+      statusDetailsEl.textContent = `${loserColor} resigned the game`;
+      this.api.showSuccess(`${winnerColor} wins - ${loserColor} resigned!`, 8000);
+    } else if (termination === 'timeout') {
+      statusMessageEl.textContent = `${winnerColor} wins on time!`;
+      statusDetailsEl.textContent = `${loserColor} ran out of time`;
+      this.api.showSuccess(`${winnerColor} wins on time!`, 8000);
+    } else if (termination === 'agreement' || termination === 'draw_agreement') {
+      statusMessageEl.textContent = 'Game drawn by agreement!';
+      statusDetailsEl.textContent = 'Both players agreed to a draw';
+      this.api.showSuccess('Game ended in a draw by agreement!', 6000);
+    } else if (termination === 'checkmate' || status === 'checkmate') {
       statusMessageEl.textContent = `Checkmate! ${winnerColor} wins!`;
-      statusDetailsEl.textContent = `${winnerColor} player achieved checkmate`;
-      this.api.showSuccess(`Checkmate! ${winnerColor} wins the game!`, 8000);
-    } else if (status === 'stalemate') {
+      statusDetailsEl.textContent = `${winnerColor} achieved checkmate`;
+      this.api.showSuccess(`Checkmate! ${winnerColor} wins!`, 8000);
+    } else if (termination === 'stalemate' || status === 'stalemate') {
       statusMessageEl.textContent = 'Stalemate!';
       statusDetailsEl.textContent = 'Game ended in a stalemate (draw)';
       this.api.showSuccess('Game ended in stalemate - it\'s a draw!', 6000);
+    } else if (termination === 'insufficient_material') {
+      statusMessageEl.textContent = 'Draw - Insufficient material!';
+      statusDetailsEl.textContent = 'Neither player has enough pieces to checkmate';
+      this.api.showSuccess('Game drawn - insufficient material!', 6000);
+    } else if (termination === 'threefold_repetition') {
+      statusMessageEl.textContent = 'Draw - Threefold repetition!';
+      statusDetailsEl.textContent = 'Same position occurred three times';
+      this.api.showSuccess('Game drawn by threefold repetition!', 6000);
+    } else if (termination === 'fifty_move_rule') {
+      statusMessageEl.textContent = 'Draw - Fifty move rule!';
+      statusDetailsEl.textContent = '50 moves without pawn move or capture';
+      this.api.showSuccess('Game drawn by fifty-move rule!', 6000);
     } else if (this.gameData.winner) {
-      const winnerColor = this.gameData.winner === this.gameData.white_player ? 'White' : 'Black';
       statusMessageEl.textContent = `${winnerColor} wins!`;
       statusDetailsEl.textContent = 'Game completed';
       this.api.showSuccess(`${winnerColor} wins the game!`, 8000);
@@ -712,6 +784,9 @@ class ChessGameController {
     }
     
     console.log('Rendering board with FEN:', this.gameData?.fen);
+    
+    // Remove viewing-history class when rendering current position
+    boardEl.classList.remove('viewing-history');
     
     // Preserve the loading overlay before clearing
     const loadingOverlay = boardEl.querySelector('#boardLoading');
@@ -979,6 +1054,10 @@ class ChessGameController {
       console.log(`Making move: ${from} → ${to}`);
       this.clearSelection();
       this.showBoardLoading(true);
+      
+      // Reset viewing history state - we're making a new move
+      this.isViewingHistory = false;
+      this.viewingMoveIndex = -1;
       
       // Handle promotion
       let promotion = null;
@@ -1493,32 +1572,594 @@ class ChessGameController {
       });
     }
     
-    // Game control buttons
-    const gameControls = {
-      'offerDrawBtn': () => this.api.showToast('Draw offer feature coming soon!', 'info'),
-      'resignBtn': () => {
-        if (confirm('Are you sure you want to resign?')) {
-          this.api.showToast('Resignation feature coming soon!', 'info');
-        }
-      },
-      'flipBoardBtn': () => this.api.showToast('Board flip feature coming soon!', 'info'),
-      'analysisBtn': () => this.api.showToast('Analysis feature coming soon!', 'info')
-    };
+    // Resign button - show modal
+    const resignBtn = document.getElementById('resignBtn');
+    if (resignBtn) {
+      resignBtn.addEventListener('click', () => this.showResignModal());
+    }
     
-    Object.entries(gameControls).forEach(([id, handler]) => {
-      const element = document.getElementById(id);
-      if (element) element.addEventListener('click', handler);
-    });
+    // Resign modal buttons
+    const resignCancelBtn = document.getElementById('resignCancelBtn');
+    const resignConfirmBtn = document.getElementById('resignConfirmBtn');
+    if (resignCancelBtn) {
+      resignCancelBtn.addEventListener('click', () => this.hideResignModal());
+    }
+    if (resignConfirmBtn) {
+      resignConfirmBtn.addEventListener('click', () => this.handleResign());
+    }
+    
+    // Draw offer button - show modal
+    const offerDrawBtn = document.getElementById('offerDrawBtn');
+    if (offerDrawBtn) {
+      offerDrawBtn.addEventListener('click', () => this.showDrawOfferModal());
+    }
+    
+    // Draw offer modal buttons
+    const drawOfferCancelBtn = document.getElementById('drawOfferCancelBtn');
+    const drawOfferConfirmBtn = document.getElementById('drawOfferConfirmBtn');
+    if (drawOfferCancelBtn) {
+      drawOfferCancelBtn.addEventListener('click', () => this.hideDrawOfferModal());
+    }
+    if (drawOfferConfirmBtn) {
+      drawOfferConfirmBtn.addEventListener('click', () => this.handleDrawOffer());
+    }
+    
+    // Draw received modal buttons
+    const drawAcceptBtn = document.getElementById('drawAcceptBtn');
+    const drawDeclineBtn = document.getElementById('drawDeclineBtn');
+    if (drawAcceptBtn) {
+      drawAcceptBtn.addEventListener('click', () => this.handleDrawAccept());
+    }
+    if (drawDeclineBtn) {
+      drawDeclineBtn.addEventListener('click', () => this.handleDrawDecline());
+    }
+    
+    // Other game control buttons
+    const flipBoardBtn = document.getElementById('flipBoardBtn');
+    const analysisBtn = document.getElementById('analysisBtn');
+    if (flipBoardBtn) {
+      flipBoardBtn.addEventListener('click', () => this.flipBoard());
+    }
+    if (analysisBtn) {
+      analysisBtn.addEventListener('click', () => this.openAnalysis());
+    }
+    
+    // Move navigation buttons
+    const moveFirst = document.getElementById('moveFirst');
+    const movePrev = document.getElementById('movePrev');
+    const moveNext = document.getElementById('moveNext');
+    const moveLast = document.getElementById('moveLast');
+    
+    if (moveFirst) moveFirst.addEventListener('click', () => this.navigateToMove(0));
+    if (movePrev) movePrev.addEventListener('click', () => this.navigateToPrevMove());
+    if (moveNext) moveNext.addEventListener('click', () => this.navigateToNextMove());
+    if (moveLast) moveLast.addEventListener('click', () => this.navigateToCurrentPosition());
     
     // Update control visibility based on game state and user role
     this.updateGameControlsVisibility();
     
-    // Move history clicks
+    // Move history clicks - navigate to that position
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('move-white') || e.target.classList.contains('move-black')) {
-        this.api.showToast('Move navigation coming soon!', 'info');
+        const moveIndex = parseInt(e.target.dataset.moveIndex);
+        if (!isNaN(moveIndex)) {
+          this.navigateToMove(moveIndex);
+        }
       }
     });
+    
+    // Keyboard navigation for moves
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      // Escape key closes modals
+      if (e.key === 'Escape') {
+        this.hideResignModal();
+        this.hideDrawOfferModal();
+        this.hideDrawReceivedModal();
+        return;
+      }
+      
+      switch(e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          this.navigateToPrevMove();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          this.navigateToNextMove();
+          break;
+        case 'Home':
+          e.preventDefault();
+          this.navigateToMove(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          this.navigateToCurrentPosition();
+          break;
+      }
+    });
+    
+    // Click outside modal to close
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        this.hideResignModal();
+        this.hideDrawOfferModal();
+        this.hideDrawReceivedModal();
+      }
+    });
+  }
+
+  // ===========================================
+  // RESIGN FUNCTIONALITY
+  // ===========================================
+
+  showResignModal() {
+    const modal = document.getElementById('resignModal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  hideResignModal() {
+    const modal = document.getElementById('resignModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleResign() {
+    this.hideResignModal();
+    
+    try {
+      const response = await this.api.resignGame(this.gameId);
+      
+      if (response.ok) {
+        this.api.showSuccess('You have resigned from the game');
+        // Reload game data to get final state
+        await this.loadGameData();
+        this.updateGameStatus();
+        this.updateGameControlsVisibility();
+      } else {
+        this.api.showError(response.error || 'Failed to resign');
+      }
+    } catch (error) {
+      console.error('Resign error:', error);
+      this.api.showError('Failed to resign from game');
+    }
+  }
+
+  // ===========================================
+  // DRAW OFFER FUNCTIONALITY
+  // ===========================================
+
+  showDrawOfferModal() {
+    const modal = document.getElementById('drawOfferModal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  hideDrawOfferModal() {
+    const modal = document.getElementById('drawOfferModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleDrawOffer() {
+    this.hideDrawOfferModal();
+    
+    try {
+      const response = await this.api.offerDraw(this.gameId);
+      
+      if (response.ok) {
+        if (response.data.status === 'declined') {
+          // Bot declined
+          this.api.showToast(response.data.message || 'Draw offer declined', 'info');
+        } else {
+          // Offer sent successfully
+          this.drawOfferSentByMe = true;
+          this.drawOfferPending = true;
+          this.api.showSuccess('Draw offer sent to opponent');
+          this.updateDrawOfferButton();
+        }
+      } else {
+        this.api.showError(response.error || 'Failed to send draw offer');
+      }
+    } catch (error) {
+      console.error('Failed to send draw offer:', error);
+      this.api.showError('Failed to send draw offer');
+    }
+  }
+
+  showDrawReceivedModal() {
+    const modal = document.getElementById('drawReceivedModal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  hideDrawReceivedModal() {
+    const modal = document.getElementById('drawReceivedModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleDrawAccept() {
+    this.hideDrawReceivedModal();
+    
+    try {
+      const response = await this.api.respondDraw(this.gameId, 'accept');
+      
+      if (response.ok) {
+        this.api.showSuccess('Draw accepted - game ended');
+        this.drawOfferPending = false;
+        this.drawOfferShownForId = null;
+        // Reload game data
+        await this.loadGameData();
+        this.updateGameStatus();
+        this.updateGameControlsVisibility();
+      } else {
+        this.api.showError(response.error || 'Failed to accept draw');
+      }
+    } catch (error) {
+      console.error('Failed to accept draw:', error);
+      this.api.showError('Failed to accept draw');
+    }
+  }
+
+  async handleDrawDecline() {
+    this.hideDrawReceivedModal();
+    
+    try {
+      const response = await this.api.respondDraw(this.gameId, 'decline');
+      
+      if (response.ok) {
+        this.api.showToast('Draw offer declined', 'info');
+        this.drawOfferPending = false;
+        this.drawOfferShownForId = null;
+      } else {
+        this.api.showError(response.error || 'Failed to decline draw');
+      }
+    } catch (error) {
+      console.error('Failed to decline draw:', error);
+      this.api.showError('Failed to decline draw');
+    }
+  }
+
+  updateDrawOfferButton() {
+    const btn = document.getElementById('offerDrawBtn');
+    if (!btn) return;
+    
+    if (this.drawOfferSentByMe && this.drawOfferPending) {
+      btn.textContent = '⏳ Draw Pending...';
+      btn.disabled = true;
+    } else {
+      btn.textContent = '🤝 Offer Draw';
+      btn.disabled = false;
+    }
+  }
+
+  // ===========================================
+  // FLIP BOARD & ANALYSIS
+  // ===========================================
+
+  flipBoard() {
+    const board = document.getElementById('chessBoard');
+    if (!board) return;
+    
+    board.classList.toggle('flipped');
+    this.api.showToast('Board flipped', 'info');
+  }
+
+  openAnalysis() {
+    // For now, show a toast - can be expanded to open analysis page
+    this.api.showToast('Opening analysis mode...', 'info');
+    // Future: window.open(`/analysis/${this.gameId}/`, '_blank');
+  }
+
+  // ===========================================
+  // MOVE NAVIGATION
+  // ===========================================
+
+  navigateToMove(moveIndex) {
+    const moves = this.gameData?.moves || [];
+    if (moves.length === 0) return;
+    
+    // Clamp to valid range
+    moveIndex = Math.max(-1, Math.min(moveIndex, moves.length - 1));
+    
+    this.viewingMoveIndex = moveIndex;
+    this.isViewingHistory = moveIndex < moves.length - 1;
+    
+    // Render board at this position
+    this.renderBoardAtMove(moveIndex);
+    
+    // Update move list highlighting
+    this.updateMoveHighlighting();
+    
+    // Update navigation button states
+    this.updateNavigationButtons();
+  }
+
+  navigateToPrevMove() {
+    const moves = this.gameData?.moves || [];
+    if (moves.length === 0) return;
+    
+    const currentIndex = this.viewingMoveIndex === -1 ? moves.length - 1 : this.viewingMoveIndex;
+    if (currentIndex > 0) {
+      this.navigateToMove(currentIndex - 1);
+    } else if (currentIndex === 0) {
+      // Go to starting position
+      this.navigateToMove(-1);
+    }
+  }
+
+  navigateToNextMove() {
+    const moves = this.gameData?.moves || [];
+    if (moves.length === 0) return;
+    
+    const currentIndex = this.viewingMoveIndex;
+    if (currentIndex < moves.length - 1) {
+      this.navigateToMove(currentIndex + 1);
+    }
+  }
+
+  navigateToCurrentPosition() {
+    const moves = this.gameData?.moves || [];
+    this.viewingMoveIndex = moves.length - 1;
+    this.isViewingHistory = false;
+    
+    // Render current position
+    this.renderBoard();
+    
+    // Update UI
+    this.updateMoveHighlighting();
+    this.updateNavigationButtons();
+  }
+
+  renderBoardAtMove(moveIndex) {
+    const moves = this.gameData?.moves || [];
+    
+    // Get board state at this move
+    // If moveIndex is -1, show starting position
+    if (moveIndex === -1) {
+      // Starting position FEN
+      this.renderBoardFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR');
+      return;
+    }
+    
+    // Otherwise, get the FEN from the move data
+    const move = moves[moveIndex];
+    if (move && move.fen_after_move) {
+      this.renderBoardFromFEN(move.fen_after_move);
+    } else if (moveIndex === moves.length - 1) {
+      // Last move - use current board state
+      this.renderBoard();
+    }
+  }
+
+  renderBoardFromFEN(fen) {
+    const chessBoard = document.getElementById('chessBoard');
+    if (!chessBoard) return;
+    
+    // Parse FEN to get piece positions
+    const fenParts = fen.split(' ');
+    const piecePlacement = fenParts[0];
+    const rows = piecePlacement.split('/');
+    
+    // Build position map
+    const position = {};
+    const files = 'abcdefgh';
+    
+    rows.forEach((row, rowIndex) => {
+      const rank = 8 - rowIndex;
+      let fileIndex = 0;
+      
+      for (const char of row) {
+        if (/[1-8]/.test(char)) {
+          fileIndex += parseInt(char);
+        } else {
+          const file = files[fileIndex];
+          const square = file + rank;
+          position[square] = this.fenCharToPiece(char);
+          fileIndex++;
+        }
+      }
+    });
+    
+    // Update board display
+    const squares = chessBoard.querySelectorAll('.square');
+    squares.forEach(square => {
+      const squareId = square.dataset.square;
+      const piece = position[squareId];
+      const pieceEl = square.querySelector('.piece');
+      
+      if (pieceEl) {
+        if (piece) {
+          pieceEl.textContent = this.getPieceSymbol(piece);
+          pieceEl.style.display = '';
+        } else {
+          pieceEl.style.display = 'none';
+        }
+      }
+    });
+    
+    // Add visual indicator that we're viewing history
+    if (this.isViewingHistory) {
+      chessBoard.classList.add('viewing-history');
+    } else {
+      chessBoard.classList.remove('viewing-history');
+    }
+  }
+
+  fenCharToPiece(char) {
+    const pieceMap = {
+      'K': 'white_king', 'Q': 'white_queen', 'R': 'white_rook',
+      'B': 'white_bishop', 'N': 'white_knight', 'P': 'white_pawn',
+      'k': 'black_king', 'q': 'black_queen', 'r': 'black_rook',
+      'b': 'black_bishop', 'n': 'black_knight', 'p': 'black_pawn'
+    };
+    return pieceMap[char] || null;
+  }
+
+  updateMoveHighlighting() {
+    const moveList = document.getElementById('moveList');
+    if (!moveList) return;
+    
+    // Remove all current highlights
+    moveList.querySelectorAll('.move-current').forEach(el => {
+      el.classList.remove('move-current');
+    });
+    
+    // Add highlight to current viewed move
+    if (this.viewingMoveIndex >= 0) {
+      const moveEl = moveList.querySelector(`[data-move-index="${this.viewingMoveIndex}"]`);
+      if (moveEl) {
+        moveEl.classList.add('move-current');
+        // Scroll into view
+        moveEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }
+
+  updateNavigationButtons() {
+    const moves = this.gameData?.moves || [];
+    const totalMoves = moves.length;
+    const currentIndex = this.viewingMoveIndex;
+    
+    const firstBtn = document.getElementById('moveFirst');
+    const prevBtn = document.getElementById('movePrev');
+    const nextBtn = document.getElementById('moveNext');
+    const lastBtn = document.getElementById('moveLast');
+    
+    // First and Prev disabled at start
+    if (firstBtn) firstBtn.disabled = currentIndex <= -1 || totalMoves === 0;
+    if (prevBtn) prevBtn.disabled = currentIndex <= -1 || totalMoves === 0;
+    
+    // Next and Last disabled at end
+    if (nextBtn) nextBtn.disabled = currentIndex >= totalMoves - 1 || totalMoves === 0;
+    if (lastBtn) {
+      lastBtn.disabled = currentIndex >= totalMoves - 1 || totalMoves === 0;
+      lastBtn.classList.toggle('active', !this.isViewingHistory && totalMoves > 0);
+    }
+  }
+
+  // ===========================================
+  // CAPTURED PIECES TRACKING
+  // ===========================================
+
+  calculateCapturedPieces() {
+    // Standard starting pieces for each side
+    const startingPieces = {
+      white: { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 },
+      black: { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 }
+    };
+    
+    // Count current pieces on board from FEN
+    const currentPieces = { white: {}, black: {} };
+    const fen = this.gameData?.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+    const piecePlacement = fen.split(' ')[0];
+    
+    for (const char of piecePlacement) {
+      if (/[a-zA-Z]/.test(char)) {
+        const isWhite = char === char.toUpperCase();
+        const pieceType = char.toLowerCase();
+        const side = isWhite ? 'white' : 'black';
+        currentPieces[side][pieceType] = (currentPieces[side][pieceType] || 0) + 1;
+      }
+    }
+    
+    // Calculate captured pieces (what's missing from starting position)
+    const captured = {
+      byWhite: [], // Black pieces captured by white
+      byBlack: []  // White pieces captured by black
+    };
+    
+    // Piece values for material calculation
+    const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+    let whiteMaterial = 0;
+    let blackMaterial = 0;
+    
+    // Black pieces captured by white
+    for (const [piece, startCount] of Object.entries(startingPieces.black)) {
+      const currentCount = currentPieces.black[piece] || 0;
+      const capturedCount = startCount - currentCount;
+      for (let i = 0; i < capturedCount; i++) {
+        captured.byWhite.push({ type: piece, color: 'black' });
+        whiteMaterial += pieceValues[piece] || 0;
+      }
+    }
+    
+    // White pieces captured by black
+    for (const [piece, startCount] of Object.entries(startingPieces.white)) {
+      const currentCount = currentPieces.white[piece] || 0;
+      const capturedCount = startCount - currentCount;
+      for (let i = 0; i < capturedCount; i++) {
+        captured.byBlack.push({ type: piece, color: 'white' });
+        blackMaterial += pieceValues[piece] || 0;
+      }
+    }
+    
+    // Sort captures by value (most valuable first)
+    const sortByValue = (a, b) => (pieceValues[b.type] || 0) - (pieceValues[a.type] || 0);
+    captured.byWhite.sort(sortByValue);
+    captured.byBlack.sort(sortByValue);
+    
+    return {
+      byWhite: captured.byWhite,
+      byBlack: captured.byBlack,
+      whiteAdvantage: whiteMaterial - blackMaterial,
+      blackAdvantage: blackMaterial - whiteMaterial
+    };
+  }
+
+  updateCapturedPiecesDisplay() {
+    const captured = this.calculateCapturedPieces();
+    
+    const whiteCapturedEl = document.getElementById('whiteCaptured');
+    const blackCapturedEl = document.getElementById('blackCaptured');
+    const whiteAdvantageEl = document.getElementById('whiteAdvantage');
+    const blackAdvantageEl = document.getElementById('blackAdvantage');
+    
+    // Piece symbols
+    const pieceSymbols = {
+      white: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
+      black: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
+    };
+    
+    // Update White's captures (black pieces they took)
+    if (whiteCapturedEl) {
+      if (captured.byWhite.length > 0) {
+        whiteCapturedEl.innerHTML = captured.byWhite.map(p => 
+          `<span class="captured-piece black" title="${p.type}">${pieceSymbols.black[p.type]}</span>`
+        ).join('');
+      } else {
+        whiteCapturedEl.innerHTML = '<span class="no-captures">—</span>';
+      }
+    }
+    
+    // Update Black's captures (white pieces they took)
+    if (blackCapturedEl) {
+      if (captured.byBlack.length > 0) {
+        blackCapturedEl.innerHTML = captured.byBlack.map(p => 
+          `<span class="captured-piece white" title="${p.type}">${pieceSymbols.white[p.type]}</span>`
+        ).join('');
+      } else {
+        blackCapturedEl.innerHTML = '<span class="no-captures">—</span>';
+      }
+    }
+    
+    // Update advantage indicators
+    if (whiteAdvantageEl) {
+      if (captured.whiteAdvantage > 0) {
+        whiteAdvantageEl.textContent = `+${captured.whiteAdvantage}`;
+        whiteAdvantageEl.className = 'captured-advantage positive';
+      } else {
+        whiteAdvantageEl.textContent = '';
+        whiteAdvantageEl.className = 'captured-advantage';
+      }
+    }
+    
+    if (blackAdvantageEl) {
+      if (captured.blackAdvantage > 0) {
+        blackAdvantageEl.textContent = `+${captured.blackAdvantage}`;
+        blackAdvantageEl.className = 'captured-advantage positive';
+      } else {
+        blackAdvantageEl.textContent = '';
+        blackAdvantageEl.className = 'captured-advantage';
+      }
+    }
   }
 
   setupPeriodicUpdates() {
@@ -1539,6 +2180,25 @@ class ChessGameController {
           if (response.ok && response.data) {
             const newMoveCount = response.data.moves ? response.data.moves.length : 0;
             const currentMoveCount = this.gameData.moves ? this.gameData.moves.length : 0;
+            
+            // Check for draw offer changes
+            const newDrawOfferedBy = response.data.draw_offered_by_username;
+            const currentDrawOfferedBy = this.gameData.draw_offered_by_username;
+            
+            if (newDrawOfferedBy !== currentDrawOfferedBy) {
+              this.gameData.draw_offered_by_username = newDrawOfferedBy;
+              this.gameData.draw_offered_by = response.data.draw_offered_by;
+              
+              // Check if we need to show draw offer modal
+              if (newDrawOfferedBy && newDrawOfferedBy !== this.currentUser?.username) {
+                this.checkForDrawOffer();
+              } else if (!newDrawOfferedBy) {
+                // Draw offer was cleared (accepted, declined, or expired)
+                this.drawOfferPending = false;
+                this.drawOfferShownForId = null;
+                this.hideDrawReceivedModal();
+              }
+            }
             
             if (newMoveCount !== currentMoveCount) {
               console.log(`Polling detected move update: ${currentMoveCount} → ${newMoveCount} moves`);

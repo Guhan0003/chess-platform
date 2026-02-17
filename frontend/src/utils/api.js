@@ -652,6 +652,28 @@ class ChessAPI {
     });
   }
 
+  /**
+   * Offer a draw in a game
+   * @param {number} gameId - Game ID to offer draw in
+   */
+  async offerDraw(gameId) {
+    return this.request(`/games/${gameId}/draw-offer/`, {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Respond to a draw offer
+   * @param {number} gameId - Game ID
+   * @param {string} action - 'accept' or 'decline'
+   */
+  async respondDraw(gameId, action) {
+    return this.request(`/games/${gameId}/draw-respond/`, {
+      method: 'POST',
+      body: JSON.stringify({ action })
+    });
+  }
+
   // =================================
   // Profile API Methods
   // =================================

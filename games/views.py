@@ -1486,6 +1486,157 @@ def resign_game(request, game_id):
         )
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def offer_draw(request, game_id):
+    """
+    Offer a draw in a game.
+    Sets a draw_offer flag on the game for the opponent to accept/decline.
+    """
+    try:
+        game = Game.objects.get(id=game_id)
+        user = request.user
+        
+        # Verify user is part of this game
+        if game.white_player != user and game.black_player != user:
+            return Response(
+                {"detail": "You are not a player in this game."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Can only offer draw in active games
+        if game.status != 'active':
+            return Response(
+                {"detail": f"Cannot offer draw in a {game.status} game."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if it's a bot game
+        is_bot_game = (game.black_player and game.black_player.username.startswith('Bot_')) or \
+                      (game.white_player and game.white_player.username.startswith('Bot_'))
+        
+        if is_bot_game:
+            return Response({
+                'status': 'declined',
+                'message': 'The bot declined your draw offer',
+                'game_id': game_id
+            }, status=status.HTTP_200_OK)
+        
+        # Set draw offer - store who offered
+        game.draw_offered_by = user
+        game.save(update_fields=['draw_offered_by'])
+        
+        logger.info(f"Draw offered in game {game_id} by {user.username}")
+        
+        return Response({
+            'status': 'pending',
+            'message': 'Draw offer sent to opponent',
+            'game_id': game_id,
+            'offered_by': user.username
+        }, status=status.HTTP_200_OK)
+        
+    except Game.DoesNotExist:
+        return Response(
+            {"detail": "Game not found."}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error offering draw in game {game_id}: {e}")
+        return Response(
+            {"detail": f"Error offering draw: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def respond_draw(request, game_id):
+    """
+    Accept or decline a draw offer.
+    If accepted, the game ends in a draw.
+    """
+    try:
+        game = Game.objects.get(id=game_id)
+        user = request.user
+        action = request.data.get('action', '').lower()
+        
+        # Verify user is part of this game
+        if game.white_player != user and game.black_player != user:
+            return Response(
+                {"detail": "You are not a player in this game."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Verify there's a pending draw offer
+        if not hasattr(game, 'draw_offered_by') or not game.draw_offered_by:
+            return Response(
+                {"detail": "No pending draw offer."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verify the offer wasn't made by this user
+        if game.draw_offered_by == user:
+            return Response(
+                {"detail": "You cannot respond to your own draw offer."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if action == 'accept':
+            # End game as draw
+            game.status = 'draw'
+            game.termination = 'agreement'
+            game.draw_offered_by = None
+            game.save()
+            
+            # Update ratings
+            try:
+                from games.services.rating_service import update_ratings_after_game
+                rating_result = update_ratings_after_game(game)
+                logger.info(f"Ratings updated after draw: {rating_result}")
+            except Exception as e:
+                logger.error(f"Failed to update ratings after draw: {e}")
+            
+            logger.info(f"Draw accepted in game {game_id} by {user.username}")
+            
+            return Response({
+                'status': 'accepted',
+                'message': 'Draw accepted - game ended',
+                'game_id': game_id,
+                'game_status': 'draw'
+            }, status=status.HTTP_200_OK)
+            
+        elif action == 'decline':
+            # Clear draw offer
+            game.draw_offered_by = None
+            game.save(update_fields=['draw_offered_by'])
+            
+            logger.info(f"Draw declined in game {game_id} by {user.username}")
+            
+            return Response({
+                'status': 'declined',
+                'message': 'Draw offer declined',
+                'game_id': game_id
+            }, status=status.HTTP_200_OK)
+        
+        else:
+            return Response(
+                {"detail": "Invalid action. Use 'accept' or 'decline'."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+    except Game.DoesNotExist:
+        return Response(
+            {"detail": "Game not found."}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error responding to draw in game {game_id}: {e}")
+        return Response(
+            {"detail": f"Error responding to draw: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_rating_preview_view(request, game_id):

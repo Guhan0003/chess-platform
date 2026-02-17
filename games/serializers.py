@@ -27,6 +27,7 @@ class GameSerializer(serializers.ModelSerializer):
     black_player_rating = serializers.SerializerMethodField()
     moves = MoveSerializer(many=True, read_only=True)
     increment = serializers.SerializerMethodField()
+    draw_offered_by_username = serializers.CharField(source='draw_offered_by.username', read_only=True, allow_null=True)
     
     def get_white_player_rating(self, obj):
         """Extract rating from white player username if it's a computer"""
@@ -62,14 +63,15 @@ class GameSerializer(serializers.ModelSerializer):
             'black_player', 'black_player_username', 'black_player_rating',
             'status', 'fen', 'winner', 'result', 'termination',
             'time_control', 'white_time_left', 'black_time_left', 'increment', 'last_move_at',
-            'created_at', 'updated_at', 'moves'
+            'created_at', 'updated_at', 'moves',
+            'draw_offered_by', 'draw_offered_by_username'
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at', 'moves',
             'white_player', 'black_player',
             'white_player_username', 'black_player_username',
             'white_player_rating', 'black_player_rating',
-            'increment'
+            'increment', 'draw_offered_by_username'
         ]
 
 
