@@ -109,7 +109,6 @@ class ChessGameController {
     };
     return pieceSets[this.pieceSet] || pieceSets['unicode'];
   }
-  }
 
   /**
    * Initialize the game controller
