@@ -10,4 +10,5 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
+
 python -m daphne -b 127.0.0.1 -p 8000 chess_backend.asgi:application
