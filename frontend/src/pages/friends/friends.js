@@ -2,7 +2,7 @@
  * Chess Platform - Friends Page
  * Handles friend management, requests, and real-time status updates
  */
-
+     
 // Initialize globals
 let currentUser = null;
 let friends = [];

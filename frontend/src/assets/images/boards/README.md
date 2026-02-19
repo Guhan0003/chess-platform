@@ -3,7 +3,7 @@
 Place board textures/colors in subfolders here. Each theme should have its own folder.
 
 ## Folder Structure
-
+   
 ```
 boards/
 ├── classic/
