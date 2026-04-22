@@ -50,20 +50,20 @@ class GameConsumer(AsyncWebsocketConsumer):
         # Get game and verify access
         game = await self.get_game()
         if not game:
-            print(f"❌ WebSocket connection rejected: Game {self.game_id} not found")
+            logger.warning(f"WebSocket connection rejected: Game {self.game_id} not found")
             await self.close(code=4004)
             return
             
         # Check if user is a player in this game (allow anonymous for testing)
         if not self.user.is_anonymous:
             if not await self.is_player_in_game(self.user, game):
-                print(f"❌ WebSocket connection rejected: User {self.user.username} not in game {self.game_id}")
+                logger.warning(f"WebSocket connection rejected: User {self.user.username} not in game {self.game_id}")
                 await self.close(code=4003)
                 return
             self.player_color = await self.get_player_color(self.user, game)
         else:
             # For testing purposes, allow anonymous connections
-            print(f"⚠️ Anonymous WebSocket connection to game {self.game_id} (testing mode)")
+            logger.warning(f"Anonymous WebSocket connection to game {self.game_id} (testing mode)")
             self.user = AnonymousUser()
             self.player_color = 'white'  # Default for testing
         
@@ -95,7 +95,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             )
         
         logger.info(f"WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")
-        print(f"🚀 WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")  # Add console print
+        logger.info(f"WebSocket connected to game {self.game_id} - User: {self.user.username if not self.user.is_anonymous else 'Anonymous'}")
 
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection."""
@@ -199,7 +199,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'game_state': await self.get_game_state_data(game, board)
                 }
                 
-                print(f"📡 Broadcasting move: {from_square}→{to_square} to group {self.game_group_name}")
+                logger.debug(f"Broadcasting move: {from_square}->{to_square} to group {self.game_group_name}")
                 
                 await self.channel_layer.group_send(
                     self.game_group_name,
@@ -207,7 +207,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 )
                 
                 logger.info(f"Move made in game {self.game_id}: {from_square}-{to_square}")
-                print(f"✅ Move broadcast complete: {from_square}→{to_square}")
+                logger.debug(f"Move broadcast complete: {from_square}->{to_square}")
                 
             except ValueError as e:
                 await self.send_error(f"Invalid move: {str(e)}")
@@ -274,7 +274,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 token = params.get('token')
             
             if not token:
-                print(f"⚠️ No token provided in WebSocket connection")
+                logger.warning("No token provided in WebSocket connection")
                 return AnonymousUser()
             
             # Validate JWT token
@@ -288,16 +288,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                 
                 # Get user from database
                 user = User.objects.get(id=user_id)
-                print(f"✅ WebSocket authenticated user: {user.username}")
+                logger.info(f"WebSocket authenticated user: {user.username}")
                 return user
                 
             except (InvalidToken, TokenError, User.DoesNotExist) as e:
-                print(f"⚠️ WebSocket token validation failed: {e}")
+                logger.warning(f"WebSocket token validation failed: {e}")
                 return AnonymousUser()
                 
         except Exception as e:
             logger.error(f"Error authenticating user: {e}")
-            print(f"❌ WebSocket authentication error: {e}")
+            logger.error(f"WebSocket authentication error: {e}")
             return AnonymousUser()
 
     @database_sync_to_async
@@ -504,13 +504,13 @@ class TimerConsumer(AsyncWebsocketConsumer):
         # Verify game exists
         game = await self.get_game()
         if not game:
-            print(f"❌ Timer WebSocket: Game {self.game_id} not found")
+            logger.warning(f"Timer WebSocket: Game {self.game_id} not found")
             await self.close(code=4004)  # Not Found
             return
             
         # For authenticated users, verify they're in the game
         if not user.is_anonymous and not await self.is_player_in_game(user, game):
-            print(f"❌ Timer WebSocket: User {user.username} not in game {self.game_id}")
+            logger.warning(f"Timer WebSocket: User {user.username} not in game {self.game_id}")
             await self.close(code=4003)  # Forbidden
             return
         
@@ -522,7 +522,7 @@ class TimerConsumer(AsyncWebsocketConsumer):
         
         await self.accept()
         
-        print(f"🕐 Timer WebSocket connected to game {self.game_id}")
+        logger.info(f"Timer WebSocket connected to game {self.game_id}")
         
         # Send initial timer data
         timer_data = await self.get_timer_data(game)

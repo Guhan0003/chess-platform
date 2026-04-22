@@ -405,15 +405,15 @@ class Game(models.Model):
         channel_layer = get_channel_layer()
         group_name = f'game_{self.id}'
         
-        print(f"🔍 Channel layer available: {channel_layer is not None}")
-        print(f"🔍 Group name: {group_name}")
+        logger.debug(f"Channel layer available: {channel_layer is not None}")
+        logger.debug(f"Group name: {group_name}")
         
         if channel_layer:
             # Send notification in a separate thread for instant response
             def send_notification():
                 try:
-                    print(f"📡 Broadcasting move to WebSocket group: {group_name}")
-                    print(f"Move data: {move_data}")
+                    logger.debug(f"Broadcasting move to WebSocket group: {group_name}")
+                    logger.debug(f"Move data: {move_data}")
                     
                     async_to_sync(channel_layer.group_send)(
                         group_name,
@@ -435,10 +435,9 @@ class Game(models.Model):
                             }
                         }
                     )
-                    print(f"✅ WebSocket broadcast completed for game {self.id}")
+                    logger.debug(f"WebSocket broadcast completed for game {self.id}")
                 except Exception as e:
                     logger.warning(f"WebSocket notification failed: {e}")
-                    print(f"❌ WebSocket broadcast failed: {e}")
             
             # Execute notification asynchronously
             thread = threading.Thread(target=send_notification)

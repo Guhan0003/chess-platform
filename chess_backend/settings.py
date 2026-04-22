@@ -257,18 +257,105 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# Structured local log folders for development/testing
+TESTING_LOGS_DIR = os.path.join(BASE_DIR, "testing_logs")
+SERVER_LOGS_DIR = os.path.join(TESTING_LOGS_DIR, "server")
+GAMEPLAY_LOGS_DIR = os.path.join(TESTING_LOGS_DIR, "gameplay")
+os.makedirs(SERVER_LOGS_DIR, exist_ok=True)
+os.makedirs(GAMEPLAY_LOGS_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'exclude_professional_timer_access': {
+            '()': 'chess_backend.logging_filters.ExcludeProfessionalTimerAccessFilter',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s | %(levelname)s | %(name)s | %(message)s',
+        },
+        'simple': {
+            'format': '%(levelname)s | %(name)s | %(message)s',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'WARNING',
+        },
+        'console_without_timer_access': {
+            'class': 'logging.StreamHandler',
+            'filters': ['exclude_professional_timer_access'],
+            'formatter': 'simple',
+            'level': 'WARNING',
+        },
+        'server_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(SERVER_LOGS_DIR, 'server.log'),
+            'maxBytes': 2 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+            'level': 'INFO',
+        },
+        'access_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(SERVER_LOGS_DIR, 'access.log'),
+            'maxBytes': 3 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+            'level': 'INFO',
+            'filters': ['exclude_professional_timer_access'],
+        },
+        'gameplay_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(GAMEPLAY_LOGS_DIR, 'gameplay.log'),
+            'maxBytes': 3 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+            'level': 'INFO',
         },
     },
     'loggers': {
         'games.views': {
-            'handlers': ['console'],
+            'handlers': ['gameplay_file'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        'games.models': {
+            'handlers': ['gameplay_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'games.consumers': {
+            'handlers': ['gameplay_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['access_file', 'console_without_timer_access'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'daphne.access': {
+            'handlers': ['access_file', 'console_without_timer_access'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'daphne': {
+            'handlers': ['server_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['server_file', 'console'],
+            'level': 'WARNING',
+            'propagate': False,
         },
     },
 }

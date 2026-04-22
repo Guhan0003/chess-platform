@@ -683,7 +683,7 @@ class ChessAPI {
    * @param {Object} profileData - Profile data
    */
   async updateProfile(profileData) {
-    return this.request('/profiles/update/', {
+    return this.request('/auth/profile/', {
       method: 'PATCH',
       body: JSON.stringify(profileData)
     });
@@ -737,7 +737,7 @@ class ChessAPI {
    * Get user statistics
    */
   async getUserStats() {
-    return this.request('/profiles/stats/');
+    return this.request('/auth/stats/');
   }
 
   // =================================

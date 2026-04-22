@@ -30,6 +30,15 @@ urlpatterns = [
     # ================== RATING SYSTEM ENDPOINTS ==================
     path("<int:game_id>/rating-preview/", views.get_rating_preview_view, name="rating-preview"),
     # ================== END RATING SYSTEM ENDPOINTS ==================
+
+    # ================== INVITATION ENDPOINTS ==================
+    path("invitations/send/", views.send_invitation, name="send-invitation"),
+    path("invitations/", views.list_invitations, name="list-invitations"),
+    path("invitations/<int:invitation_id>/accept/", views.accept_invitation, name="accept-invitation"),
+    path("invitations/<int:invitation_id>/decline/", views.decline_invitation, name="decline-invitation"),
+    path("invitations/<int:invitation_id>/cancel/", views.cancel_invitation, name="cancel-invitation"),
+    path("time-controls/", views.get_time_controls, name="time-controls"),
+    # ================== END INVITATION ENDPOINTS ==================
     
     # ================== PUZZLE SYSTEM ENDPOINTS ==================
     path("puzzles/random/", puzzle_views.get_random_puzzle, name="puzzle-random"),

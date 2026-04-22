@@ -18,6 +18,7 @@ import traceback
 
 from .models import Game, Move, GameInvitation, TimeControl
 from .serializers import GameSerializer, MoveSerializer, GameInvitationSerializer
+from .utils.test_log_writer import get_testing_timer_logger
 
 
 # ================== PROFESSIONAL TIMER CONFIGURATION ==================
@@ -79,6 +80,7 @@ User = get_user_model()
 
 # Add logging
 logger = logging.getLogger(__name__)
+timer_test_logger = get_testing_timer_logger()
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -270,7 +272,7 @@ def make_move(request, pk):
         elif result == '0-1':
             game.winner = game.black_player
         logger.info(f"Game finished with result: {result}")
-        print(f"🏁 GAME OVER: Game {pk} finished with result: {result}")
+        logger.info(f"GAME OVER: Game {pk} finished with result: {result}")
         
         # Store result for rating update
         game.result = result
@@ -282,7 +284,7 @@ def make_move(request, pk):
             is_white_bot = 'computer' in game.white_player.username.lower()
             is_black_bot = 'computer' in game.black_player.username.lower()
             
-            print(f"📊 Rating update check: white_bot={is_white_bot}, black_bot={is_black_bot}")
+            logger.info(f"Rating update check: white_bot={is_white_bot}, black_bot={is_black_bot}")
             
             # Only update ratings if BOTH players are humans (not bots)
             if not is_white_bot and not is_black_bot:
@@ -293,7 +295,7 @@ def make_move(request, pk):
                     # Map bullet to blitz for rating purposes
                     if time_control_str == 'bullet':
                         time_control_str = 'blitz'
-                    print(f"📈 Calling update_game_ratings: result={result}, time_control={time_control_str}")
+                    logger.info(f"Calling update_game_ratings: result={result}, time_control={time_control_str}")
                     rating_result = update_game_ratings(
                         white_player=game.white_player,
                         black_player=game.black_player,
@@ -302,16 +304,13 @@ def make_move(request, pk):
                         game_instance=game
                     )
                     logger.info(f"Ratings updated for PvP game: {rating_result}")
-                    print(f"✅ Rating update successful: {rating_result.get('success', rating_result.get('skipped'))}")
+                    logger.info(f"Rating update successful: {rating_result.get('success', rating_result.get('skipped'))}")
                 except Exception as e:
                     logger.error(f"Failed to update ratings: {e}")
-                    print(f"❌ RATING UPDATE FAILED: {e}")
                     import traceback
                     logger.error(traceback.format_exc())
-                    print(traceback.format_exc())
             else:
                 logger.info(f"Skipping rating update - bot game (white_bot={is_white_bot}, black_bot={is_black_bot})")
-                print(f"⏭️ Skipping rating update - bot game")
         
         # CHECK AND UNLOCK ACHIEVEMENTS after game completion
         try:
@@ -361,15 +360,14 @@ def make_move(request, pk):
         'timestamp': timezone.now().isoformat()
     }
     
-    print(f"🎯 API VIEW: Move processed successfully: {from_sq}→{to_sq}")
-    print(f"🎯 API VIEW: About to call notify_move with data: {move_data}")
+    logger.info(f"API VIEW: Move processed successfully: {from_sq}->{to_sq}")
+    logger.debug(f"API VIEW: About to call notify_move with data: {move_data}")
     
     # Send immediate WebSocket notification (async operation, don't wait)
     try:
         game.notify_move(move_data)
-        print(f"✅ API VIEW: notify_move called successfully")
+        logger.debug("API VIEW: notify_move called successfully")
     except Exception as ws_error:
-        print(f"❌ API VIEW: WebSocket notification failed: {ws_error}")
         logger.warning(f"WebSocket notification failed: {ws_error}")
         # Continue without failing the move
 
@@ -605,7 +603,7 @@ def get_legal_moves(request, pk):
 @permission_classes([IsAuthenticated])
 def get_game_timer(request, pk):
     """Get timer status for a game with high-precision updates."""
-    logger.info(f"Timer request for game {pk} by user {request.user}")
+    logger.debug(f"Timer request for game {pk} by user {request.user}")
     
     try:
         game = get_object_or_404(Game, pk=pk)
@@ -1190,7 +1188,15 @@ def get_professional_timer(request, game_id):
             'black_player': game.black_player.username if game.black_player else 'Computer',
         })
         
-        logger.info(f"Professional timer state for game {game_id}: {timer_state}")
+        timer_test_logger.info(
+            "game=%s status=%s turn=%s white=%.2f black=%.2f moves=%s",
+            game.id,
+            timer_state.get("game_status"),
+            timer_state.get("current_turn"),
+            float(timer_state.get("white_time") or 0),
+            float(timer_state.get("black_time") or 0),
+            timer_state.get("move_count"),
+        )
         return Response(timer_state, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -1583,15 +1589,26 @@ def respond_draw(request, game_id):
         
         if action == 'accept':
             # End game as draw
-            game.status = 'draw'
-            game.termination = 'agreement'
+            game.status = 'finished'
+            game.result = '1/2-1/2'
+            game.termination = 'draw_agreement'
+            game.winner = None
             game.draw_offered_by = None
             game.save()
             
             # Update ratings
             try:
-                from games.services.rating_service import update_ratings_after_game
-                rating_result = update_ratings_after_game(game)
+                from games.services import update_game_ratings
+                time_control_str = game.time_control.split('_')[0] if game.time_control else 'rapid'
+                if time_control_str == 'bullet':
+                    time_control_str = 'blitz'
+                rating_result = update_game_ratings(
+                    white_player=game.white_player,
+                    black_player=game.black_player,
+                    game_result=game.result,
+                    time_control=time_control_str,
+                    game_instance=game
+                )
                 logger.info(f"Ratings updated after draw: {rating_result}")
             except Exception as e:
                 logger.error(f"Failed to update ratings after draw: {e}")
@@ -1602,7 +1619,7 @@ def respond_draw(request, game_id):
                 'status': 'accepted',
                 'message': 'Draw accepted - game ended',
                 'game_id': game_id,
-                'game_status': 'draw'
+                'game_status': game.status
             }, status=status.HTTP_200_OK)
             
         elif action == 'decline':
@@ -1659,8 +1676,10 @@ def get_rating_preview_view(request, game_id):
                 'error': 'Game does not have both players'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get time control
-        time_control = game.time_control.name if game.time_control else 'rapid'
+        # Game.time_control is stored as a string on Game model.
+        time_control = game.time_control.split('_')[0] if game.time_control else 'rapid'
+        if time_control == 'bullet':
+            time_control = 'blitz'
         rating_field = f'{time_control}_rating'
         games_field = f'{time_control}_games'
         
@@ -1704,6 +1723,11 @@ def get_rating_preview_view(request, game_id):
             'error': 'Failed to get rating preview',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_invitation(request):
     """Send a game invitation to another player"""
     try:
         to_player_id = request.data.get('to_player')

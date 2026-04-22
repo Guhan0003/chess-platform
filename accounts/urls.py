@@ -22,6 +22,7 @@ urlpatterns = [
     
     # Avatar upload endpoint
     path('avatar/upload/', views.upload_avatar, name='avatar-upload'),
+    path('avatar/delete/', views.delete_avatar, name='avatar-delete'),
     
     # Alternative enhanced profile endpoint (new enhanced version)
     path('profile/enhanced/', views.EnhancedUserProfileView.as_view(), name='profile-enhanced'),

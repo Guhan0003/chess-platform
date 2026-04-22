@@ -111,7 +111,7 @@ class TimerManager:
         # Thread safety
         self._lock = threading.Lock()
         
-        logger.info(f"Professional timer initialized: {self.time_control['name']}")
+        logger.debug(f"Professional timer initialized: {self.time_control['name']}")
     
     def start_game(self) -> Dict[str, Any]:
         """
